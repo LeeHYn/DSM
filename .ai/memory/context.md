@@ -1,6 +1,11 @@
-- **현재 상태**: 시스템 아키텍처 및 요구사항 기획(v1.3) 확정. 실 구현을 위한 프로젝트 초기 세팅 단계 진입.
+- **현재 상태**: 프로젝트 초기 세팅과 원격 푸시가 완료되었고, DSM_Back의 첫 실구현 마일스톤으로 백엔드 기반 구축 + DB/Prisma 세팅을 진행한다.
 - **작업 대상**:
   - `DSM_Back`: NestJS 기반 백엔드 API 서버
-  - `DSM_Front`: React Native 기반 모바일 클라이언트
-- **주요 쟁점**: 프론트엔드 초기화 시 Expo 사용 여부 확인 필요 (개발 생산성 및 푸시 알림 연동 등을 고려할 때 Expo 권장)
-- **다음 작업**: 사용자 승인 및 피드백 수렴 후 폴더 생성 및 초기화 스크립트 실행
+  - `DSM_Front`: React Native + Expo Router 기반 모바일 클라이언트
+- **마일스톤 5 결정 사항**:
+  - DB 접근 계층은 Prisma를 사용한다.
+  - DB는 PostgreSQL을 기준으로 스키마를 설계한다.
+  - 모든 서버/DB 시간 필드는 UTC 저장을 전제로 `DateTime` 및 PostgreSQL timestamptz를 사용한다.
+  - 테스트 환경에서는 PrismaService가 실제 DB 연결을 열지 않는다.
+  - 전역 요청 검증은 NestJS `ValidationPipe`로 처리하고, HTTP 오류 응답은 공통 필터로 표준화한다.
+- **다음 작업**: 마일스톤 5 승인 후 `docs/superpowers/plans/2026-06-01-dsm-back-foundation-prisma.md`에 따라 task 단위로 구현한다.
