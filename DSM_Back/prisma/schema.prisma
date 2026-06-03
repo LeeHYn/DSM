@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SocialProvider {
+  GOOGLE
+  KAKAO
+  APPLE
+}
+
+enum TaskDifficulty {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum RankingPeriod {
+  DAILY
+  WEEKLY
+  TOTAL
+}
+
+enum Tier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+  MASTER
+}
+
+model User {
+  id                    String                 @id @default(uuid())
+  email                 String?                @unique
+  nickname              String                 @unique
+  profileImageUrl       String?
+  totalScore            Int                    @default(0)
+  tier                  Tier                   @default(BRONZE)
+  notificationEnabled   Boolean                @default(true)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  socialAccounts        SocialAccount[]
+  refreshTokens         RefreshToken[]
+  fcmTokens             FcmToken[]
+  categories            Category[]
+  tasks                 Task[]
+  dailyScores           DailyScore[]
+  rankingSnapshots      RankingSnapshot[]
+  notificationSchedules NotificationSchedule[]
+
+  @@index([tier])
+}
+
+model SocialAccount {
+  id             String         @id @default(uuid())
+  provider       SocialProvider
+  providerUserId String
+  userId         String
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(6)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  userId    String
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model FcmToken {
+  id         String    @id @default(uuid())
+  token      String    @unique
+  platform   String
+  deviceId   String?
+  userId     String
+  lastSeenAt DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt  DateTime? @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(6)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  color     String
+  isDefault Boolean  @default(false)
+  userId    String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Task {
+  id                    String                 @id @default(uuid())
+  title                 String
+  description           String?
+  startAt               DateTime               @db.Timestamptz(6)
+  endAt                 DateTime               @db.Timestamptz(6)
+  completedAt           DateTime?              @db.Timestamptz(6)
+  difficulty            TaskDifficulty
+  status                TaskStatus             @default(PENDING)
+  notificationEnabled   Boolean                @default(true)
+  userId                String
+  categoryId            String?
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  deletedAt             DateTime?              @db.Timestamptz(6)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category              Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  notificationSchedules NotificationSchedule[]
+
+  @@index([userId, startAt])
+  @@index([userId, updatedAt])
+  @@index([categoryId])
+}
+
+model DailyScore {
+  id                  String   @id @default(uuid())
+  userId              String
+  scoreDate           DateTime @db.Date
+  registeredTaskCount Int      @default(0)
+  completedTaskCount  Int      @default(0)
+  rawScore            Int      @default(0)
+  adjustedScore       Int      @default(0)
+  cappedScore         Int      @default(0)
+  achievementRate     Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(6)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scoreDate])
+  @@index([scoreDate, cappedScore])
+}
+
+model RankingSnapshot {
+  id         String        @id @default(uuid())
+  userId     String
+  period     RankingPeriod
+  rank       Int
+  percentile Decimal       @db.Decimal(5, 2)
+  score      Int
+  snapshotAt DateTime      @db.Timestamptz(6)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(6)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([period, snapshotAt, rank])
+  @@index([userId, period, snapshotAt])
+}
+
+model NotificationSchedule {
+  id            String    @id @default(uuid())
+  taskId        String
+  userId        String
+  scheduledAt   DateTime  @db.Timestamptz(6)
+  sentAt        DateTime? @db.Timestamptz(6)
+  status        String    @default("PENDING")
+  failureReason String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+  task          Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledAt, status])
+  @@index([userId, scheduledAt])
+}
