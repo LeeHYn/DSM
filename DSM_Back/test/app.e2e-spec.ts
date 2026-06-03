@@ -25,7 +25,9 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body).toEqual({
           status: 'ok',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           timestamp: expect.any(String),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           uptime: expect.any(Number),
           database: {
             configured: true,
@@ -41,6 +43,7 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body).toEqual({
           statusCode: 404,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           timestamp: expect.any(String),
           path: '/missing-route',
           method: 'GET',

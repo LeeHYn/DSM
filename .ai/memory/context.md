@@ -1,11 +1,11 @@
-- **현재 상태**: 프로젝트 초기 세팅과 원격 푸시가 완료되었고, DSM_Back의 첫 실구현 마일스톤으로 백엔드 기반 구축 + DB/Prisma 세팅을 진행한다.
+- **현재 상태**: 마일스톤 5 완료. DSM_Back 기반 계층(환경변수 검증, Prisma/PostgreSQL 스키마, PrismaService, ValidationPipe, HTTP 예외 필터, CORS, GET /health) 구축 완료.
 - **작업 대상**:
   - `DSM_Back`: NestJS 기반 백엔드 API 서버
   - `DSM_Front`: React Native + Expo Router 기반 모바일 클라이언트
-- **마일스톤 5 결정 사항**:
-  - DB 접근 계층은 Prisma를 사용한다.
-  - DB는 PostgreSQL을 기준으로 스키마를 설계한다.
-  - 모든 서버/DB 시간 필드는 UTC 저장을 전제로 `DateTime` 및 PostgreSQL timestamptz를 사용한다.
-  - 테스트 환경에서는 PrismaService가 실제 DB 연결을 열지 않는다.
-  - 전역 요청 검증은 NestJS `ValidationPipe`로 처리하고, HTTP 오류 응답은 공통 필터로 표준화한다.
-- **다음 작업**: 마일스톤 5 승인 후 `docs/superpowers/plans/2026-06-01-dsm-back-foundation-prisma.md`에 따라 task 단위로 구현한다.
+- **기술 결정 사항**:
+  - DB 접근 계층: Prisma v6 (v7 breaking change로 다운그레이드)
+  - DB: PostgreSQL, 모든 시간 필드 UTC (timestamptz)
+  - 테스트 환경: PrismaService가 실제 DB 연결을 열지 않음 (NODE_ENV=test 체크)
+  - Jest: tsconfig.spec.json 사용 (module: commonjs) — nodenext 모듈 시스템과의 identity 이슈 방지
+  - 전역 요청 검증: NestJS ValidationPipe, HTTP 오류 응답: HttpExceptionFilter
+- **다음 작업**: 마일스톤 6 — 인증(Auth) 모듈 구현

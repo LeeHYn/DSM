@@ -2,9 +2,10 @@
 - [x] 마일스톤 2: `DSM_Back` (NestJS) 초기 세팅
 - [x] 마일스톤 3: `DSM_Front` (React Native/Expo) 초기 세팅
 - [x] 마일스톤 4: 생성된 프로젝트 구조 커밋 및 푸시
-- [/] 마일스톤 5: `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
-  - [ ] 환경변수 검증 및 테스트 환경 구성
-  - [ ] Prisma/PostgreSQL 스키마 작성 및 PrismaService 구성
-  - [ ] 전역 ValidationPipe, 공통 HTTP 예외 응답, CORS 구성
-  - [ ] `GET /health` 엔드포인트 추가
-  - [ ] unit/e2e/build/lint/prisma 검증
+- [x] 마일스톤 5: `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
+  - [x] 환경변수 검증 및 테스트 환경 구성
+  - [x] Prisma/PostgreSQL 스키마 작성 및 PrismaService 구성
+  - [x] 전역 ValidationPipe, 공통 HTTP 예외 응답, CORS 구성
+  - [x] `GET /health` 엔드포인트 추가
+  - [x] unit/e2e/build/lint/prisma 검증
+- [ ] 마일스톤 6: 인증(Auth) 모듈 구현
