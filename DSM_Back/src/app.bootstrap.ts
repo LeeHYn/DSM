@@ -1,4 +1,8 @@
-import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -7,7 +11,9 @@ type ValidationFailure = {
   constraints: Record<string, string>;
 };
 
-function flattenValidationErrors(errors: ValidationError[]): ValidationFailure[] {
+function flattenValidationErrors(
+  errors: ValidationError[],
+): ValidationFailure[] {
   return errors.flatMap((error) => {
     const current: ValidationFailure[] = error.constraints
       ? [
@@ -18,7 +24,9 @@ function flattenValidationErrors(errors: ValidationError[]): ValidationFailure[]
         ]
       : [];
 
-    const children = error.children?.length ? flattenValidationErrors(error.children) : [];
+    const children = error.children?.length
+      ? flattenValidationErrors(error.children)
+      : [];
 
     return [...current, ...children];
   });

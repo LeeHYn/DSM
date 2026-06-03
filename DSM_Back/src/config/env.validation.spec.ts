@@ -3,7 +3,8 @@ import { validateEnv } from './env.validation';
 const validConfig = {
   NODE_ENV: 'test',
   PORT: '3001',
-  DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/dsm_test?schema=public',
+  DATABASE_URL:
+    'postgresql://postgres:postgres@localhost:5432/dsm_test?schema=public',
   JWT_ACCESS_SECRET: 'test-access-secret-for-dsm-backend',
   JWT_REFRESH_SECRET: 'test-refresh-secret-for-dsm-backend',
 };

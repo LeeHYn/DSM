@@ -16,7 +16,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function normalizeExceptionResponse(response: string | object): NormalizedExceptionResponse {
+function normalizeExceptionResponse(
+  response: string | object,
+): NormalizedExceptionResponse {
   if (typeof response === 'string') {
     return {
       error: response,
@@ -58,7 +60,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const exceptionResponse =
-      exception instanceof HttpException ? exception.getResponse() : 'Internal server error';
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : 'Internal server error';
 
     const normalized = normalizeExceptionResponse(exceptionResponse);
 
