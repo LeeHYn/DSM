@@ -9,5 +9,7 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 5. `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
 6. `DSM_Back` 인증(Auth) 모듈 구현
 
-# 다음 마일스톤
 7. 일과(Task) CRUD API 구현
+
+# 다음 마일스톤
+8. 카테고리(Category) CRUD API 구현

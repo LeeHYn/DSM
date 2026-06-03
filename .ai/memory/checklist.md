@@ -10,4 +10,11 @@
   - [x] 로그아웃 (토큰 폐기)
   - [x] JwtAuthGuard (Bearer 토큰 검증)
   - [x] GET /auth/me (보호된 엔드포인트 예시)
-- [ ] 마일스톤 7: 일과(Task) CRUD API 구현
+- [x] 마일스톤 7: 일과(Task) CRUD API 구현
+  - [x] POST /tasks (생성)
+  - [x] GET /tasks?date=YYYY-MM-DD (목록 조회, 날짜 필터)
+  - [x] GET /tasks/:id (단건 조회)
+  - [x] PATCH /tasks/:id (수정)
+  - [x] DELETE /tasks/:id (소프트 삭제)
+  - [x] PATCH /tasks/:id/complete (완료 처리)
+  - [x] 유닛 테스트 (서비스 + 컨트롤러)

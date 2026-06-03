@@ -10,4 +10,5 @@
   - 인증: @nestjs/jwt, bcrypt (refresh token hash), google-auth-library, axios (Kakao)
   - Apple Sign In: 구조만 구현, 실제 검증은 Apple Developer 계정 확보 후 구현
   - Access token TTL: 15분 / Refresh token TTL: 30일
-- **다음 작업**: 마일스톤 7 — 일과(Task) CRUD API 구현
+- **Task CRUD**: POST/GET/PATCH/DELETE /tasks, PATCH /tasks/:id/complete. 소프트 삭제(deletedAt). 날짜 필터(startAt 기준 UTC day range).
+- **다음 작업**: 마일스톤 8 — 카테고리(Category) CRUD API 구현
