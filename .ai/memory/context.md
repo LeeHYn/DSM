@@ -1,4 +1,4 @@
-- **현재 상태**: 마일스톤 5 완료. DSM_Back 기반 계층(환경변수 검증, Prisma/PostgreSQL 스키마, PrismaService, ValidationPipe, HTTP 예외 필터, CORS, GET /health) 구축 완료.
+- **현재 상태**: 마일스톤 6 완료. Auth 모듈(JWT, 소셜 로그인, 리프레시 토큰 순환, 로그아웃, JwtAuthGuard) 구현 완료.
 - **작업 대상**:
   - `DSM_Back`: NestJS 기반 백엔드 API 서버
   - `DSM_Front`: React Native + Expo Router 기반 모바일 클라이언트
@@ -6,6 +6,8 @@
   - DB 접근 계층: Prisma v6 (v7 breaking change로 다운그레이드)
   - DB: PostgreSQL, 모든 시간 필드 UTC (timestamptz)
   - 테스트 환경: PrismaService가 실제 DB 연결을 열지 않음 (NODE_ENV=test 체크)
-  - Jest: tsconfig.spec.json 사용 (module: commonjs) — nodenext 모듈 시스템과의 identity 이슈 방지
-  - 전역 요청 검증: NestJS ValidationPipe, HTTP 오류 응답: HttpExceptionFilter
-- **다음 작업**: 마일스톤 6 — 인증(Auth) 모듈 구현
+  - Jest: tsconfig.spec.json 사용 (module: commonjs)
+  - 인증: @nestjs/jwt, bcrypt (refresh token hash), google-auth-library, axios (Kakao)
+  - Apple Sign In: 구조만 구현, 실제 검증은 Apple Developer 계정 확보 후 구현
+  - Access token TTL: 15분 / Refresh token TTL: 30일
+- **다음 작업**: 마일스톤 7 — 일과(Task) CRUD API 구현

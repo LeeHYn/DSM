@@ -39,6 +39,10 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  GOOGLE_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
   FCM_PROJECT_ID?: string;
 
   @IsOptional()

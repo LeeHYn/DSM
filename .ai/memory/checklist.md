@@ -3,9 +3,11 @@
 - [x] 마일스톤 3: `DSM_Front` (React Native/Expo) 초기 세팅
 - [x] 마일스톤 4: 생성된 프로젝트 구조 커밋 및 푸시
 - [x] 마일스톤 5: `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
-  - [x] 환경변수 검증 및 테스트 환경 구성
-  - [x] Prisma/PostgreSQL 스키마 작성 및 PrismaService 구성
-  - [x] 전역 ValidationPipe, 공통 HTTP 예외 응답, CORS 구성
-  - [x] `GET /health` 엔드포인트 추가
-  - [x] unit/e2e/build/lint/prisma 검증
-- [ ] 마일스톤 6: 인증(Auth) 모듈 구현
+- [x] 마일스톤 6: `DSM_Back` 인증(Auth) 모듈 구현
+  - [x] JWT 액세스/리프레시 토큰 발급
+  - [x] 소셜 로그인 (Google, Kakao — Apple은 개발자 계정 필요)
+  - [x] 리프레시 토큰 순환 (bcrypt 해시 저장)
+  - [x] 로그아웃 (토큰 폐기)
+  - [x] JwtAuthGuard (Bearer 토큰 검증)
+  - [x] GET /auth/me (보호된 엔드포인트 예시)
+- [ ] 마일스톤 7: 일과(Task) CRUD API 구현
