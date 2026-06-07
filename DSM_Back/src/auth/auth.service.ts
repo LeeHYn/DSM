@@ -44,50 +44,58 @@ export class AuthService {
   }
 
   async refreshTokens(rawRefreshToken: string): Promise<TokenResponseDto> {
-    const tokenRecord = await this.prisma.refreshToken.findMany({
-      where: {
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    });
+    const { id, secret } = this.parseRefreshToken(rawRefreshToken);
+    const record = await this.prisma.refreshToken.findUnique({ where: { id } });
 
-    let matched: (typeof tokenRecord)[0] | undefined;
-
-    for (const record of tokenRecord) {
-      const isMatch = await bcrypt.compare(rawRefreshToken, record.tokenHash);
-      if (isMatch) {
-        matched = record;
-        break;
-      }
-    }
-
-    if (!matched) {
+    if (
+      !record ||
+      record.revokedAt !== null ||
+      record.expiresAt <= new Date() ||
+      !(await bcrypt.compare(secret, record.tokenHash))
+    ) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
     await this.prisma.refreshToken.update({
-      where: { id: matched.id },
+      where: { id: record.id },
       data: { revokedAt: new Date() },
     });
 
-    return this.issueTokens(matched.userId);
+    return this.issueTokens(record.userId);
   }
 
   async logout(userId: string, rawRefreshToken: string): Promise<void> {
-    const records = await this.prisma.refreshToken.findMany({
-      where: { userId, revokedAt: null },
-    });
-
-    for (const record of records) {
-      const isMatch = await bcrypt.compare(rawRefreshToken, record.tokenHash);
-      if (isMatch) {
-        await this.prisma.refreshToken.update({
-          where: { id: record.id },
-          data: { revokedAt: new Date() },
-        });
-        return;
-      }
+    let parsed: { id: string; secret: string };
+    try {
+      parsed = this.parseRefreshToken(rawRefreshToken);
+    } catch {
+      return;
     }
+
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { id: parsed.id },
+    });
+    if (
+      !record ||
+      record.userId !== userId ||
+      record.revokedAt !== null ||
+      !(await bcrypt.compare(parsed.secret, record.tokenHash))
+    ) {
+      return;
+    }
+
+    await this.prisma.refreshToken.update({
+      where: { id: record.id },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  private parseRefreshToken(token: string): { id: string; secret: string } {
+    const idx = token.indexOf('.');
+    if (idx <= 0 || idx === token.length - 1) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    return { id: token.slice(0, idx), secret: token.slice(idx + 1) };
   }
 
   private async issueTokens(userId: string): Promise<TokenResponseDto> {
@@ -97,10 +105,9 @@ export class AuthService {
       expiresIn: ACCESS_TOKEN_TTL,
     });
 
-    const rawRefreshToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = await bcrypt.hash(rawRefreshToken, BCRYPT_ROUNDS);
-
-    await this.prisma.refreshToken.create({
+    const secret = crypto.randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(secret, BCRYPT_ROUNDS);
+    const record = await this.prisma.refreshToken.create({
       data: {
         userId,
         tokenHash,
@@ -108,7 +115,7 @@ export class AuthService {
       },
     });
 
-    return { accessToken, refreshToken: rawRefreshToken };
+    return { accessToken, refreshToken: `${record.id}.${secret}` };
   }
 
   private async findOrCreateUser(
