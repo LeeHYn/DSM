@@ -40,4 +40,12 @@
   - [x] Tasks 연동: create/update/remove/complete 시 재계산(update는 변경 전/후 양일)
   - [x] 유닛 테스트 (정책 8 + 서비스 5 + 컨트롤러 3, Tasks 트리거 검증 포함)
   - [x] 스키마/마이그레이션 변경 없음
-  - [ ] (보류) 랭킹/백분위(FR-04), Cron UTC 자정 마감
+  - [ ] (보류) Cron UTC 자정 마감
+- [x] 마일스톤 11: 랭킹/백분위(FR-04) 구현
+  - [x] rankings.policy: 순위(전체 유저 기준) + 상위% + UTC 일/주간 범위 헬퍼
+  - [x] RankingsService: getMyRanking(DAILY/WEEKLY/TOTAL), getLeaderboard(TOP-N), createSnapshot
+  - [x] GET /rankings?period=, GET /rankings/leaderboard?period=&limit=, POST /rankings/snapshot — JwtAuthGuard
+  - [x] 조회 시 실시간 계산 (DailyScore/User), 주간은 groupBy-having
+  - [x] 유닛 테스트 (정책 6 + 서비스 6 + 컨트롤러 4)
+  - [x] 스키마/마이그레이션 변경 없음
+  - [ ] (보류) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷

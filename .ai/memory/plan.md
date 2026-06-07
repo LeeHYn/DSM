@@ -13,6 +13,7 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 8. 카테고리(Category) CRUD API 구현
 9. 리프레시 토큰 조회 구조 개선 — 토큰에 레코드 ID 임베드(`<recordId>.<secret>`)로 O(1) 조회 (계획: docs/superpowers/plans/2026-06-06-dsm-refresh-token-lookup.md)
 10. 점수(DailyScore) 집계 로직 구현 — FR-03 점수 공식 + 누적 totalScore/티어, 일과 변경 시 재계산 + 조회 API (계획: docs/superpowers/plans/2026-06-07-dsm-daily-score.md)
+11. 랭킹/백분위(FR-04) 구현 — 일간/주간/누적 내 순위·상위%, TOP100 리더보드, RankingSnapshot 영속화. 조회 시 실시간 계산, 전체 유저 기준 (계획: docs/superpowers/plans/2026-06-07-dsm-rankings.md)
 
 # 다음 마일스톤
-11. 랭킹/백분위(RankingSnapshot, FR-04) 구현
+12. 알림(NotificationSchedule) + FCM 푸시, 또는 WebSocket 실시간 랭킹(NFR-02) — 우선순위 협의 필요

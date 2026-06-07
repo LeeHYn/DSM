@@ -7,6 +7,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RankingsModule } from './rankings/rankings.module';
 import { ScoresModule } from './scores/scores.module';
 import { TasksModule } from './tasks/tasks.module';
 
@@ -22,6 +23,7 @@ import { TasksModule } from './tasks/tasks.module';
     TasksModule,
     CategoriesModule,
     ScoresModule,
+    RankingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

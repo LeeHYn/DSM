@@ -1,4 +1,4 @@
-- **현재 상태**: 마일스톤 10 완료. Auth + Task CRUD + Category CRUD + 리프레시 토큰 O(1) + DailyScore 집계까지 구현. 전체 유닛 테스트 58개 통과(타입체크/Lint 0건).
+- **현재 상태**: 마일스톤 11 완료. Auth + Task CRUD + Category CRUD + 리프레시 토큰 O(1) + DailyScore 집계 + 랭킹/백분위까지 구현. 전체 유닛 테스트 74개 통과(타입체크/Lint 0건).
 - **작업 대상**:
   - `DSM_Back`: NestJS 기반 백엔드 API 서버
   - `DSM_Front`: React Native + Expo Router 기반 모바일 클라이언트

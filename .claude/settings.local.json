@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(Get-Command claude -ErrorAction SilentlyContinue; $env:PATH -split \";\" | Where-Object { $_ -match \"npm|node|claude\" })",
+      "PowerShell(npm list -g @anthropic-ai/claude-code 2>$null)",
+      "PowerShell(npm list -g claude 2>$null)",
+      "PowerShell(npm install -g @anthropic-ai/claude-code)",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git add DSM_Back/package.json DSM_Back/package-lock.json DSM_Back/prisma/schema.prisma DSM_Back/src/app.module.ts DSM_Back/src/prisma/prisma.service.ts DSM_Back/src/prisma/prisma.module.ts DSM_Back/src/prisma/prisma.service.spec.ts DSM_Back/tsconfig.spec.json DSM_Back/test/jest-e2e.json; git commit -m \"feat\\(back\\): add prisma database foundation\")",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git add DSM_Back/src/common/filters/http-exception.filter.ts DSM_Back/src/app.bootstrap.ts DSM_Back/src/main.ts DSM_Back/src/health/health.controller.ts DSM_Back/src/health/health.module.ts DSM_Back/src/health/health.controller.spec.ts DSM_Back/src/app.module.ts DSM_Back/test/app.e2e-spec.ts; git commit -m \"feat\\(back\\): add global app bootstrap and health endpoint\")",
+      "PowerShell(Set-Location \"C:\\\\DEV\\\\DSM_Back\"; npm run test:e2e 2>&1 | Select-Object -Last 8; $env:DATABASE_URL = \"postgresql://postgres:postgres@localhost:5432/dsm_test?schema=public\"; npm run prisma:validate 2>&1 | Select-Object -Last 3)",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git add .ai/memory/plan.md .ai/memory/context.md .ai/memory/checklist.md DSM_Back/src/health/health.controller.spec.ts DSM_Back/test/app.e2e-spec.ts; git commit -m \"docs: complete milestone 5 — DSM back foundation verified\")",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git status --short --branch; git log --oneline origin/main..HEAD)",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git diff --stat)",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git add DSM_Back/src/app.bootstrap.ts DSM_Back/src/common/filters/http-exception.filter.ts DSM_Back/src/config/env.validation.spec.ts DSM_Back/src/config/env.validation.ts DSM_Back/src/prisma/prisma.service.ts DSM_Back/test/set-env.ts; git commit -m \"style: apply prettier formatting\")",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git push origin main 2>&1)"
+    ]
+  }
+}

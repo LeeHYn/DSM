@@ -78,4 +78,7 @@ export class ScoresService {
     const date =
       typeof reference === 'string' ? new Date(reference) : reference;
     return new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), d
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    );
+  }
+}

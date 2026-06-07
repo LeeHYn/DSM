@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin\"; Set-Location \"C:\\\\DEV\"; git init; git remote add origin https://github.com/LeeHYn/DSM.git)"
+    ]
+  }
+}
