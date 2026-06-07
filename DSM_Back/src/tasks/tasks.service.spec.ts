@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { TaskDifficulty, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScoresService } from '../scores/scores.service';
 
 const MOCK_TASK = {
   id: 'task-uuid-1',
@@ -33,14 +34,17 @@ const makePrismaMock = () => ({
 describe('TasksService', () => {
   let service: TasksService;
   let prismaMock: ReturnType<typeof makePrismaMock>;
+  let scoresMock: { recompute: jest.Mock };
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
+    scoresMock = { recompute: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: ScoresService, useValue: scoresMock },
       ],
     }).compile();
 
@@ -61,8 +65,13 @@ describe('TasksService', () => {
       expect(result).toEqual(MOCK_TASK);
       expect(prismaMock.task.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({ userId: 'user-uuid-1' }),
         }),
+      );
+      expect(scoresMock.recompute).toHaveBeenCalledWith(
+        'user-uuid-1',
+        MOCK_TASK.startAt,
       );
     });
   });
@@ -86,7 +95,9 @@ describe('TasksService', () => {
 
       expect(prismaMock.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           where: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             startAt: expect.objectContaining({ gte: expect.any(Date) }),
           }),
         }),
@@ -138,6 +149,7 @@ describe('TasksService', () => {
 
       expect(prismaMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({ deletedAt: expect.any(Date) }),
         }),
       );
@@ -159,11 +171,17 @@ describe('TasksService', () => {
       expect(result.status).toBe(TaskStatus.COMPLETED);
       expect(prismaMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
             status: TaskStatus.COMPLETED,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             completedAt: expect.any(Date),
           }),
         }),
+      );
+      expect(scoresMock.recompute).toHaveBeenCalledWith(
+        'user-uuid-1',
+        completedTask.startAt,
       );
     });
   });

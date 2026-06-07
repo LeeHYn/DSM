@@ -1,16 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { type Task, TaskStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScoresService } from '../scores/scores.service';
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
 import type { TaskQueryDto } from './dto/task-query.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scores: ScoresService,
+  ) {}
 
-  create(userId: string, dto: CreateTaskDto): Promise<Task> {
-    return this.prisma.task.create({
+  async create(userId: string, dto: CreateTaskDto): Promise<Task> {
+    const task = await this.prisma.task.create({
       data: {
         userId,
         title: dto.title,
@@ -22,6 +26,8 @@ export class TasksService {
         notificationEnabled: dto.notificationEnabled ?? true,
       },
     });
+    await this.scores.recompute(userId, task.startAt);
+    return task;
   }
 
   findAll(userId: string, query: TaskQueryDto): Promise<Task[]> {
@@ -51,8 +57,8 @@ export class TasksService {
   }
 
   async update(userId: string, id: string, dto: UpdateTaskDto): Promise<Task> {
-    await this.findOne(userId, id);
-    return this.prisma.task.update({
+    const existing = await this.findOne(userId, id);
+    const task = await this.prisma.task.update({
       where: { id },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
@@ -67,21 +73,39 @@ export class TasksService {
         }),
       },
     });
+    await this.recomputeDays(userId, [existing.startAt, task.startAt]);
+    return task;
   }
 
   async remove(userId: string, id: string): Promise<void> {
-    await this.findOne(userId, id);
+    const task = await this.findOne(userId, id);
     await this.prisma.task.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+    await this.scores.recompute(userId, task.startAt);
   }
 
   async complete(userId: string, id: string): Promise<Task> {
     await this.findOne(userId, id);
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id },
       data: { status: TaskStatus.COMPLETED, completedAt: new Date() },
     });
+    await this.scores.recompute(userId, task.startAt);
+    return task;
+  }
+
+  /** Recompute each distinct UTC day touched by a mutation. */
+  private async recomputeDays(userId: string, dates: Date[]): Promise<void> {
+    const seen = new Set<string>();
+    for (const date of dates) {
+      const key = date.toISOString().slice(0, 10);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      await this.scores.recompute(userId, date);
+    }
   }
 }
