@@ -50,7 +50,10 @@ describe('TasksController', () => {
       controllers: [TasksController],
       providers: [
         { provide: TasksService, useValue: tasksServiceMock },
-        { provide: JwtService, useValue: { verify: jest.fn(), sign: jest.fn() } },
+        {
+          provide: JwtService,
+          useValue: { verify: jest.fn(), sign: jest.fn() },
+        },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         JwtAuthGuard,
       ],
