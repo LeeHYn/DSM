@@ -10,6 +10,9 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 6. `DSM_Back` 인증(Auth) 모듈 구현
 
 7. 일과(Task) CRUD API 구현
+8. 카테고리(Category) CRUD API 구현
+9. 리프레시 토큰 조회 구조 개선 — 토큰에 레코드 ID 임베드(`<recordId>.<secret>`)로 O(1) 조회 (계획: docs/superpowers/plans/2026-06-06-dsm-refresh-token-lookup.md)
+10. 점수(DailyScore) 집계 로직 구현 — FR-03 점수 공식 + 누적 totalScore/티어, 일과 변경 시 재계산 + 조회 API (계획: docs/superpowers/plans/2026-06-07-dsm-daily-score.md)
 
 # 다음 마일스톤
-8. 카테고리(Category) CRUD API 구현
+11. 랭킹/백분위(RankingSnapshot, FR-04) 구현

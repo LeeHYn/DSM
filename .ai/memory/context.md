@@ -1,4 +1,4 @@
-- **현재 상태**: 마일스톤 6 완료. Auth 모듈(JWT, 소셜 로그인, 리프레시 토큰 순환, 로그아웃, JwtAuthGuard) 구현 완료.
+- **현재 상태**: 마일스톤 10 완료. Auth + Task CRUD + Category CRUD + 리프레시 토큰 O(1) + DailyScore 집계까지 구현. 전체 유닛 테스트 58개 통과(타입체크/Lint 0건).
 - **작업 대상**:
   - `DSM_Back`: NestJS 기반 백엔드 API 서버
   - `DSM_Front`: React Native + Expo Router 기반 모바일 클라이언트
@@ -11,4 +11,7 @@
   - Apple Sign In: 구조만 구현, 실제 검증은 Apple Developer 계정 확보 후 구현
   - Access token TTL: 15분 / Refresh token TTL: 30일
 - **Task CRUD**: POST/GET/PATCH/DELETE /tasks, PATCH /tasks/:id/complete. 소프트 삭제(deletedAt). 날짜 필터(startAt 기준 UTC day range).
-- **다음 작업**: 마일스톤 8 — 카테고리(Category) CRUD API 구현
+- **Category CRUD**: POST/GET/PATCH/DELETE /categories. 사용자 소유 + 기본(isDefault, userId=null) 카테고리 조회. 기본 카테고리는 읽기 전용(수정/삭제 시 Forbidden), 타 사용자 카테고리는 NotFound로 숨김. 이름 중복 시 Conflict(409, P2002 매핑). 하드 삭제(Task.categoryId는 onDelete SetNull).
+- **리프레시 토큰(마일스톤 9)**: 토큰 포맷 `<recordId>.<secret>`. refreshTokens/logout은 parseRefreshToken으로 id 추출 → findUnique(PK) → 단일 bcrypt.compare(O(1)). revoked/expired/malformed/secret불일치 모두 401(logout은 멱등). 스키마 변경 없음. 기존 발급 토큰은 `.` 없어 무효 → 재로그인 필요(pre-production이라 허용). (선택) 재사용 감지 훅은 보류.
+- **점수(마일스톤 10)**: scores.policy(순수함수) — 난이도 10/20/30, 보정 100%→1.5·80%→1.3·60%→1.0·그외 0.7, 상한 DAILY_SCORE_CAP=900, 티어 6단계. ScoresService.recompute(userId, dateRef): 해당 UTC일 일과 집계 → DailyScore upsert(@@unique userId_scoreDate) → ΣcappedScore로 User.totalScore/티어 재계산(멱등). 조회: GET /scores?date=(기본 오늘), GET /scores/summary. TasksService가 create/update/remove/complete 후 recompute 호출(update는 변경 전·후 양일, 중복 제거). 스키마 변경 없음.
+- **다음 작업**: 마일스톤 11 — 랭킹/백분위(RankingSnapshot, FR-04). 점수의 Cron UTC 자정 마감도 후속 고려.
