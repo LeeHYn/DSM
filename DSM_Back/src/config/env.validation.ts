@@ -56,6 +56,10 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   REDIS_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  WS_CORS_ORIGINS?: string;
 }
 
 export function validateEnv(

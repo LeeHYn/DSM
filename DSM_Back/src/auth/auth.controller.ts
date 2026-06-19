@@ -39,7 +39,10 @@ export class AuthController {
     @Req() req: Request & { user: JwtPayload },
     @Body() dto: RefreshTokenDto,
   ): Promise<void> {
-    await this.authService.logout(req.user.sub, dto.refreshToken);
+    await this.authService.logout(req.user.sub, dto.refreshToken, {
+      token: dto.fcmToken,
+      deviceId: dto.deviceId,
+    });
   }
 
   @Get('me')

@@ -12,9 +12,15 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { SocialProvider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { JwtPayload } from './types/jwt-payload.type';
 import type { SocialProfile } from './types/social-profile.type';
 import type { TokenResponseDto } from './dto/token-response.dto';
+
+export type LogoutFcmTarget = {
+  token?: string;
+  deviceId?: string;
+};
 
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -28,6 +34,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.googleClient = new OAuth2Client(
       this.configService.get<string>('GOOGLE_CLIENT_ID'),
@@ -64,7 +71,11 @@ export class AuthService {
     return this.issueTokens(record.userId);
   }
 
-  async logout(userId: string, rawRefreshToken: string): Promise<void> {
+  async logout(
+    userId: string,
+    rawRefreshToken: string,
+    fcmTarget?: LogoutFcmTarget,
+  ): Promise<void> {
     let parsed: { id: string; secret: string };
     try {
       parsed = this.parseRefreshToken(rawRefreshToken);
@@ -88,6 +99,10 @@ export class AuthService {
       where: { id: record.id },
       data: { revokedAt: new Date() },
     });
+
+    if (fcmTarget?.token || fcmTarget?.deviceId) {
+      await this.notificationsService.revokeToken(userId, fcmTarget);
+    }
   }
 
   private parseRefreshToken(token: string): { id: string; secret: string } {

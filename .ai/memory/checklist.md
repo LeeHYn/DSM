@@ -49,3 +49,16 @@
   - [x] 유닛 테스트 (정책 6 + 서비스 6 + 컨트롤러 4)
   - [x] 스키마/마이그레이션 변경 없음
   - [ ] (보류) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷
+- [x] 마일스톤 12: `DSM_Back` 프로필/알림 설정 + FCM/NotificationSchedule + WebSocket 실시간 이벤트
+  - [x] 요구사항/아키텍처 문서 기반 미진행 백엔드 범위 파악
+  - [x] 설계 문서 작성 (`docs/superpowers/specs/2026-06-20-dsm-back-milestone-12-design.md`)
+  - [x] 구현 계획 작성 (`docs/superpowers/plans/2026-06-20-dsm-back-milestone-12.md`)
+  - [x] UsersModule: 내 프로필/소셜 연동/알림 설정 API
+  - [x] NotificationsModule: FCM 토큰 등록/폐기, 알림 예약/발송 처리
+  - [x] Tasks 연동: 생성/수정/삭제/완료 시 NotificationSchedule 갱신
+  - [x] RealtimeModule: WebSocket 점수/랭킹/리더보드/알림 이벤트
+  - [x] Auth logout 연동: 선택 FCM 토큰/기기 무효화
+  - [x] 전체 테스트/build/lint/e2e 검증
+  - [x] 소스 검토 및 리뷰보고서 작성
+  - [ ] (보류) Redis 랭킹 캐싱/Socket adapter, 다중 인스턴스 발송 중복 방지 고도화
+  - [ ] (보류) `multer`, `uuid` npm audit 잔여 의존성 대응

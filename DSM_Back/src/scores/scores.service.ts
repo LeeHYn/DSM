@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { type DailyScore, type Tier, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { REALTIME_EVENTS } from '../realtime/realtime-events';
 import { computeDailyScore, tierForScore } from './scores.policy';
 
 @Injectable()
 export class ScoresService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   /**
    * Recomputes the user's DailyScore for the UTC day of `reference`, then
@@ -41,6 +46,11 @@ export class ScoresService {
     });
 
     await this.recomputeUserTotal(userId);
+    this.events.emit(REALTIME_EVENTS.SCORE_RECOMPUTED, {
+      userId,
+      dailyScore,
+      scoreDate: dayStart,
+    });
     return dailyScore;
   }
 

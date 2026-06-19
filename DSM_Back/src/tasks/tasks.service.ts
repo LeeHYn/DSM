@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { type Task, TaskStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoresService } from '../scores/scores.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
 import type { TaskQueryDto } from './dto/task-query.dto';
@@ -11,6 +12,7 @@ export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scores: ScoresService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(userId: string, dto: CreateTaskDto): Promise<Task> {
@@ -26,6 +28,7 @@ export class TasksService {
         notificationEnabled: dto.notificationEnabled ?? true,
       },
     });
+    await this.notifications.upsertTaskSchedule(task);
     await this.scores.recompute(userId, task.startAt);
     return task;
   }
@@ -73,6 +76,7 @@ export class TasksService {
         }),
       },
     });
+    await this.notifications.upsertTaskSchedule(task);
     await this.recomputeDays(userId, [existing.startAt, task.startAt]);
     return task;
   }
@@ -83,6 +87,7 @@ export class TasksService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+    await this.notifications.cancelTaskSchedule(userId, task.id);
     await this.scores.recompute(userId, task.startAt);
   }
 
@@ -92,6 +97,7 @@ export class TasksService {
       where: { id },
       data: { status: TaskStatus.COMPLETED, completedAt: new Date() },
     });
+    await this.notifications.cancelTaskSchedule(userId, task.id);
     await this.scores.recompute(userId, task.startAt);
     return task;
   }

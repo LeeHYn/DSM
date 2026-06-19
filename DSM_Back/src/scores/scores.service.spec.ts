@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ScoresService } from './scores.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { REALTIME_EVENTS } from '../realtime/realtime-events';
 
 const makePrismaMock = () => ({
   task: { findMany: jest.fn() },
@@ -15,14 +17,17 @@ const makePrismaMock = () => ({
 describe('ScoresService', () => {
   let service: ScoresService;
   let prismaMock: ReturnType<typeof makePrismaMock>;
+  let eventsMock: { emit: jest.Mock };
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
+    eventsMock = { emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScoresService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: EventEmitter2, useValue: eventsMock },
       ],
     }).compile();
 
@@ -70,6 +75,14 @@ describe('ScoresService', () => {
         where: { id: 'user-1' },
         data: { totalScore: 3500, tier: 'GOLD' },
       });
+      expect(eventsMock.emit).toHaveBeenCalledWith(
+        REALTIME_EVENTS.SCORE_RECOMPUTED,
+        {
+          userId: 'user-1',
+          dailyScore: { id: 'ds-1' },
+          scoreDate: new Date('2026-06-03T00:00:00.000Z'),
+        },
+      );
     });
 
     it('caps the stored score at the daily limit', async () => {

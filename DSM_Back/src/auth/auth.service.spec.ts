@@ -5,6 +5,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MOCK_USER = {
   id: 'user-uuid-1',
@@ -52,10 +53,12 @@ describe('AuthService', () => {
   let service: AuthService;
   let prismaMock: ReturnType<typeof makePrismaMock>;
   let jwtMock: ReturnType<typeof makeJwtMock>;
+  let notificationsMock: { revokeToken: jest.Mock };
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
     jwtMock = makeJwtMock();
+    notificationsMock = { revokeToken: jest.fn().mockResolvedValue({}) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -63,6 +66,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: JwtService, useValue: jwtMock },
         { provide: ConfigService, useValue: makeConfigMock() },
+        { provide: NotificationsService, useValue: notificationsMock },
       ],
     }).compile();
 
@@ -186,12 +190,35 @@ describe('AuthService', () => {
       );
     });
 
+    it('revokes an optional FCM token after refresh token ownership is verified', async () => {
+      const secret = 'raw-secret';
+      const hash = await bcrypt.hash(secret, 1);
+
+      prismaMock.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: MOCK_USER.id,
+        tokenHash: hash,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+      });
+      prismaMock.refreshToken.update.mockResolvedValue({});
+
+      await service.logout(MOCK_USER.id, `rt-1.${secret}`, {
+        token: 'fcm-token-1',
+      });
+
+      expect(notificationsMock.revokeToken).toHaveBeenCalledWith(MOCK_USER.id, {
+        token: 'fcm-token-1',
+      });
+    });
+
     it('does nothing when no matching token exists', async () => {
       prismaMock.refreshToken.findUnique.mockResolvedValue(null);
 
       await expect(
         service.logout(MOCK_USER.id, 'rt-1.not-found'),
       ).resolves.toBeUndefined();
+      expect(notificationsMock.revokeToken).not.toHaveBeenCalled();
     });
   });
 });

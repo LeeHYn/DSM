@@ -60,6 +60,19 @@ describe('AuthController', () => {
     expect(result).toEqual(TOKEN_RESPONSE);
   });
 
+  it('logout delegates refresh token and optional FCM token to authService.logout', async () => {
+    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
+
+    await controller.logout(req, {
+      refreshToken: 'rt',
+      fcmToken: 'fcm-token-1',
+    });
+
+    expect(authServiceMock.logout).toHaveBeenCalledWith('user-uuid-1', 'rt', {
+      token: 'fcm-token-1',
+    });
+  });
+
   it('me returns userId from jwt payload', () => {
     const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
     expect(controller.me(req)).toEqual({ userId: 'user-uuid-1' });

@@ -4,6 +4,7 @@ import { TaskDifficulty, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoresService } from '../scores/scores.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MOCK_TASK = {
   id: 'task-uuid-1',
@@ -35,16 +36,25 @@ describe('TasksService', () => {
   let service: TasksService;
   let prismaMock: ReturnType<typeof makePrismaMock>;
   let scoresMock: { recompute: jest.Mock };
+  let notificationsMock: {
+    upsertTaskSchedule: jest.Mock;
+    cancelTaskSchedule: jest.Mock;
+  };
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
     scoresMock = { recompute: jest.fn().mockResolvedValue(undefined) };
+    notificationsMock = {
+      upsertTaskSchedule: jest.fn().mockResolvedValue(undefined),
+      cancelTaskSchedule: jest.fn().mockResolvedValue(0),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: ScoresService, useValue: scoresMock },
+        { provide: NotificationsService, useValue: notificationsMock },
       ],
     }).compile();
 
@@ -72,6 +82,9 @@ describe('TasksService', () => {
       expect(scoresMock.recompute).toHaveBeenCalledWith(
         'user-uuid-1',
         MOCK_TASK.startAt,
+      );
+      expect(notificationsMock.upsertTaskSchedule).toHaveBeenCalledWith(
+        MOCK_TASK,
       );
     });
   });
@@ -134,6 +147,23 @@ describe('TasksService', () => {
       });
 
       expect(result.title).toBe('Evening run');
+      expect(notificationsMock.upsertTaskSchedule).toHaveBeenCalledWith(
+        updated,
+      );
+    });
+
+    it('passes a non-pending status to notification scheduling for cancellation', async () => {
+      const updated = { ...MOCK_TASK, status: TaskStatus.CANCELLED };
+      prismaMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      prismaMock.task.update.mockResolvedValue(updated);
+
+      await service.update('user-uuid-1', 'task-uuid-1', {
+        status: TaskStatus.CANCELLED,
+      });
+
+      expect(notificationsMock.upsertTaskSchedule).toHaveBeenCalledWith(
+        updated,
+      );
     });
   });
 
@@ -147,6 +177,10 @@ describe('TasksService', () => {
 
       await service.remove('user-uuid-1', 'task-uuid-1');
 
+      expect(notificationsMock.cancelTaskSchedule).toHaveBeenCalledWith(
+        'user-uuid-1',
+        'task-uuid-1',
+      );
       expect(prismaMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -182,6 +216,10 @@ describe('TasksService', () => {
       expect(scoresMock.recompute).toHaveBeenCalledWith(
         'user-uuid-1',
         completedTask.startAt,
+      );
+      expect(notificationsMock.cancelTaskSchedule).toHaveBeenCalledWith(
+        'user-uuid-1',
+        'task-uuid-1',
       );
     });
   });
