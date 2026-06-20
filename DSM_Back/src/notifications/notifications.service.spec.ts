@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
-import { TaskDifficulty, TaskStatus } from '@prisma/client';
+import { NotificationMode, TaskDifficulty, TaskStatus } from '@prisma/client';
 import { NotificationsService } from './notifications.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
 import { FcmAdminService } from './fcm-admin.service';
@@ -40,6 +40,10 @@ const MOCK_SCHEDULE = {
   failureReason: null,
   createdAt: NOW,
   updatedAt: NOW,
+};
+
+const MOCK_SCHEDULE_USER = {
+  notificationMode: NotificationMode.SOUND,
 };
 
 const ACTIVE_SCHEDULE_STATUSES = [
@@ -619,7 +623,7 @@ describe('NotificationSchedulerService', () => {
 
   it('processes due schedules and marks successful sends as SENT', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.fcmToken.findMany.mockResolvedValue([{ token: 'fcm-token-1' }]);
@@ -635,6 +639,7 @@ describe('NotificationSchedulerService', () => {
     expect(fcmMock.sendTaskReminder).toHaveBeenCalledWith(
       ['fcm-token-1'],
       MOCK_TASK,
+      NotificationMode.SOUND,
     );
     expect(prismaMock.notificationSchedule.updateMany).toHaveBeenCalledWith({
       where: {
@@ -674,7 +679,7 @@ describe('NotificationSchedulerService', () => {
 
   it('does not emit due events or count sent when SENT transition no longer applies', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany
       .mockResolvedValueOnce({ count: 0 })
@@ -712,7 +717,7 @@ describe('NotificationSchedulerService', () => {
 
   it('marks resolved all-failed FCM sends as FAILED and revokes invalid tokens', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.fcmToken.findMany.mockResolvedValue([{ token: 'fcm-token-1' }]);
@@ -753,7 +758,7 @@ describe('NotificationSchedulerService', () => {
 
   it('does not overwrite schedules or count failed when FAILED transition no longer applies', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany
       .mockResolvedValueOnce({ count: 0 })
@@ -790,7 +795,7 @@ describe('NotificationSchedulerService', () => {
 
   it('records partial FCM failures while marking a schedule SENT', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.fcmToken.findMany.mockResolvedValue([
@@ -823,7 +828,7 @@ describe('NotificationSchedulerService', () => {
 
   it('marks due schedules as FAILED when FCM send fails', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.fcmToken.findMany.mockResolvedValue([{ token: 'fcm-token-1' }]);
@@ -848,7 +853,7 @@ describe('NotificationSchedulerService', () => {
 
   it('skips due schedules without active tokens by marking them FAILED', async () => {
     prismaMock.notificationSchedule.findMany.mockResolvedValue([
-      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+      { ...MOCK_SCHEDULE, task: MOCK_TASK, user: MOCK_SCHEDULE_USER },
     ]);
     prismaMock.notificationSchedule.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.fcmToken.findMany.mockResolvedValue([]);
@@ -887,7 +892,10 @@ describe('NotificationSchedulerService', () => {
           status: TaskStatus.PENDING,
         },
       },
-      include: { task: true },
+      include: {
+        task: true,
+        user: { select: { notificationMode: true } },
+      },
       orderBy: { scheduledAt: 'asc' },
       take: 50,
     });

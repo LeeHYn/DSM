@@ -44,6 +44,10 @@ Request body:
 
 Response is the same token pair shape as login.
 
+If a previously rotated refresh token is reused with a matching secret, the
+backend revokes all active refresh tokens for that user and returns `401`.
+Malformed, missing, expired, or wrong-secret refresh tokens return `401`.
+
 ### `POST /auth/logout`
 
 Protected. Revokes the refresh token. Optional `fcmToken` or `deviceId` also
@@ -71,6 +75,23 @@ Protected. Returns the authenticated user id.
 
 Protected. Returns the current user record.
 
+User records include:
+
+```json
+{
+  "id": "user-id",
+  "email": "user@example.com",
+  "nickname": "starter",
+  "profileImageUrl": null,
+  "totalScore": 120,
+  "tier": "BRONZE | SILVER | GOLD | PLATINUM | DIAMOND | MASTER",
+  "notificationEnabled": true,
+  "notificationMode": "SOUND | VIBRATE | SILENT",
+  "createdAt": "2026-06-20T00:00:00.000Z",
+  "updatedAt": "2026-06-20T00:00:00.000Z"
+}
+```
+
 ### `PATCH /users/me/profile`
 
 Protected.
@@ -92,9 +113,30 @@ Request body:
 
 ```json
 {
-  "notificationEnabled": true
+  "notificationEnabled": true,
+  "notificationMode": "SOUND | VIBRATE | SILENT"
 }
 ```
+
+`notificationMode` is optional. When `notificationEnabled=false`, pending
+notification schedules are cancelled.
+
+### `DELETE /users/me`
+
+Protected. Hard-deletes the authenticated user after refresh-token
+confirmation. Existing Prisma cascade relations remove user-owned social
+accounts, refresh tokens, FCM tokens, categories, tasks, daily scores, ranking
+snapshots, and notification schedules.
+
+Request body:
+
+```json
+{
+  "refreshToken": "<refreshTokenId>.<secret>"
+}
+```
+
+Response: `204 No Content`.
 
 ### `GET /users/me/social-accounts`
 
@@ -216,6 +258,10 @@ Protected. Marks the task complete and triggers score recomputation.
 
 ## Scores
 
+The backend finalizes the previous UTC day at `00:05 UTC`. Finalization
+recomputes scores for users with active tasks in that UTC day and recreates
+DAILY ranking snapshots for the finalized `scoreDate`.
+
 ### `GET /scores?date=YYYY-MM-DD`
 
 Protected. Returns the daily score row for the requested date, or `null`.
@@ -283,6 +329,16 @@ Task notifications are scheduled from task create/update flows when the user
 and the task both have notifications enabled. Milestone 13 enforces at most one
 active schedule per task for `PENDING` or `PROCESSING` states and recovers stale
 `PROCESSING` rows back to `PENDING`.
+
+FCM task reminder data includes:
+
+```json
+{
+  "type": "TASK_REMINDER",
+  "taskId": "task-id",
+  "notificationMode": "SOUND | VIBRATE | SILENT"
+}
+```
 
 ### `POST /notifications/fcm-tokens`
 

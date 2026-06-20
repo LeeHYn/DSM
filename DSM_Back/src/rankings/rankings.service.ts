@@ -94,6 +94,45 @@ export class RankingsService {
     });
   }
 
+  async createDailySnapshotsForDate(scoreDate: Date): Promise<number> {
+    const rows = await this.prisma.dailyScore.findMany({
+      where: { scoreDate },
+      orderBy: { cappedScore: 'desc' },
+      select: { userId: true, cappedScore: true },
+    });
+    const totalUsers = await this.prisma.user.count();
+
+    const deleteExisting = this.prisma.rankingSnapshot.deleteMany({
+      where: { period: RankingPeriod.DAILY, snapshotAt: scoreDate },
+    });
+
+    if (rows.length === 0) {
+      await deleteExisting;
+      return 0;
+    }
+
+    const createSnapshots = this.prisma.rankingSnapshot.createMany({
+      data: rows.map((row, index) => ({
+        userId: row.userId,
+        period: RankingPeriod.DAILY,
+        score: row.cappedScore,
+        rank: rankForSortedScore(rows, index),
+        percentile:
+          totalUsers === 0
+            ? 0
+            : Math.round(
+                (rankForSortedScore(rows, index) / totalUsers) * 10000,
+              ) / 100,
+        snapshotAt: scoreDate,
+      })),
+      skipDuplicates: true,
+    });
+
+    await this.prisma.$transaction([deleteExisting, createSnapshots]);
+
+    return rows.length;
+  }
+
   private async scoreForUser(
     userId: string,
     period: RankingPeriod,
@@ -227,4 +266,14 @@ export class RankingsService {
       };
     });
   }
+}
+
+function rankForSortedScore(
+  rows: Array<{ cappedScore: number }>,
+  index: number,
+): number {
+  const firstIndexWithScore = rows.findIndex(
+    (row) => row.cappedScore === rows[index].cappedScore,
+  );
+  return firstIndexWithScore + 1;
 }

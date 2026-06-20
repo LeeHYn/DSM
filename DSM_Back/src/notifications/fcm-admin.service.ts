@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Task } from '@prisma/client';
+import { NotificationMode, type Task } from '@prisma/client';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 
@@ -17,7 +17,11 @@ export class FcmAdminService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async sendTaskReminder(tokens: string[], task: Task): Promise<FcmSendResult> {
+  async sendTaskReminder(
+    tokens: string[],
+    task: Task,
+    notificationMode: NotificationMode,
+  ): Promise<FcmSendResult> {
     if (tokens.length === 0) {
       return { successCount: 0, failureCount: 0, invalidTokens: [] };
     }
@@ -37,6 +41,7 @@ export class FcmAdminService {
       data: {
         type: 'TASK_REMINDER',
         taskId: task.id,
+        notificationMode,
       },
     });
 

@@ -31,7 +31,7 @@
   - [x] refreshTokens/logout: findUnique(PK) + 단일 bcrypt.compare로 O(1) 조회
   - [x] parseRefreshToken 헬퍼 (malformed 토큰 방어)
   - [x] 엣지 케이스 테스트 (malformed/missing/revoked/expired/wrong-secret) — auth 8/8 통과
-  - [ ] (선택, 보류) 폐기 토큰 재사용 감지 훅
+  - [x] (마일스톤 15에서 완료) 폐기 토큰 재사용 감지 훅
   - [x] 스키마/마이그레이션 변경 없음 확인
 - [x] 마일스톤 10: 점수(DailyScore) 집계 로직 구현
   - [x] scores.policy: 난이도 점수(10/20/30) + 보정계수(1.5/1.3/1.0/0.7) + 상한 900 + 6단계 티어
@@ -40,7 +40,7 @@
   - [x] Tasks 연동: create/update/remove/complete 시 재계산(update는 변경 전/후 양일)
   - [x] 유닛 테스트 (정책 8 + 서비스 5 + 컨트롤러 3, Tasks 트리거 검증 포함)
   - [x] 스키마/마이그레이션 변경 없음
-  - [ ] (보류) Cron UTC 자정 마감
+  - [x] (마일스톤 15에서 완료) Cron UTC 자정 마감
 - [x] 마일스톤 11: 랭킹/백분위(FR-04) 구현
   - [x] rankings.policy: 순위(전체 유저 기준) + 상위% + UTC 일/주간 범위 헬퍼
   - [x] RankingsService: getMyRanking(DAILY/WEEKLY/TOTAL), getLeaderboard(TOP-N), createSnapshot
@@ -48,7 +48,7 @@
   - [x] 조회 시 실시간 계산 (DailyScore/User), 주간은 groupBy-having
   - [x] 유닛 테스트 (정책 6 + 서비스 6 + 컨트롤러 4)
   - [x] 스키마/마이그레이션 변경 없음
-  - [ ] (보류) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷
+  - [x] (마일스톤 13/15에서 완료) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷
 - [x] 마일스톤 12: `DSM_Back` 프로필/알림 설정 + FCM/NotificationSchedule + WebSocket 실시간 이벤트
   - [x] 요구사항/아키텍처 문서 기반 미진행 백엔드 범위 파악
   - [x] 설계 문서 작성 (`docs/superpowers/specs/2026-06-20-dsm-back-milestone-12-design.md`)
@@ -84,3 +84,12 @@
   - [x] React Query setup and smoke screens
   - [x] Socket.IO client wrapper
   - [x] Frontend verification and review report
+- [x] Milestone 15: `DSM_Back` backend closure before frontend product work
+  - [x] Scope selected: backend-only work without external Apple/storage dependencies
+  - [x] Design document written (`docs/superpowers/specs/2026-06-21-dsm-back-milestone-15-closure-design.md`)
+  - [x] Implementation plan written (`docs/superpowers/plans/2026-06-21-dsm-back-milestone-15-closure.md`)
+  - [x] Account deletion API
+  - [x] Notification mode settings
+  - [x] Refresh token reuse detection
+  - [x] UTC daily score finalization and daily ranking snapshots
+  - [x] Backend docs, verification, and review report

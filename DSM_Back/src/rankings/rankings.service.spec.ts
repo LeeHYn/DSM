@@ -5,6 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RankingsCacheService } from './rankings-cache.service';
 
 const makePrismaMock = () => ({
+  $transaction: jest.fn(
+    async <T extends unknown[]>(operations: readonly [...T]): Promise<T> =>
+      Promise.all(operations) as Promise<T>,
+  ),
   user: {
     count: jest.fn(),
     findUniqueOrThrow: jest.fn(),
@@ -17,7 +21,11 @@ const makePrismaMock = () => ({
     groupBy: jest.fn(),
     findMany: jest.fn(),
   },
-  rankingSnapshot: { create: jest.fn() },
+  rankingSnapshot: {
+    create: jest.fn(),
+    createMany: jest.fn(),
+    deleteMany: jest.fn(),
+  },
 });
 
 const makeRankingsCacheMock = () => ({
@@ -303,6 +311,127 @@ describe('RankingsService', () => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             snapshotAt: expect.any(Date),
           }),
+        }),
+      );
+    });
+  });
+
+  describe('createDailySnapshotsForDate', () => {
+    it('recreates daily ranking snapshots for the requested score date', async () => {
+      const scoreDate = new Date('2026-06-20T00:00:00.000Z');
+      prismaMock.dailyScore.findMany.mockResolvedValue([
+        { userId: 'u1', cappedScore: 300 },
+        { userId: 'u2', cappedScore: 100 },
+      ]);
+      prismaMock.user.count.mockResolvedValue(4);
+      prismaMock.rankingSnapshot.deleteMany.mockResolvedValue({ count: 1 });
+      prismaMock.rankingSnapshot.createMany.mockResolvedValue({ count: 2 });
+
+      const result = await service.createDailySnapshotsForDate(scoreDate);
+
+      expect(result).toBe(2);
+      expect(prismaMock.dailyScore.findMany).toHaveBeenCalledWith({
+        where: { scoreDate },
+        orderBy: { cappedScore: 'desc' },
+        select: { userId: true, cappedScore: true },
+      });
+      expect(prismaMock.rankingSnapshot.deleteMany).toHaveBeenCalledWith({
+        where: { period: RankingPeriod.DAILY, snapshotAt: scoreDate },
+      });
+      expect(prismaMock.rankingSnapshot.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            userId: 'u1',
+            period: RankingPeriod.DAILY,
+            score: 300,
+            rank: 1,
+            percentile: 25,
+            snapshotAt: scoreDate,
+          },
+          {
+            userId: 'u2',
+            period: RankingPeriod.DAILY,
+            score: 100,
+            rank: 2,
+            percentile: 50,
+            snapshotAt: scoreDate,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      expect(
+        prismaMock.rankingSnapshot.deleteMany.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        prismaMock.rankingSnapshot.createMany.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('deletes existing daily snapshots and skips createMany when no daily scores exist', async () => {
+      const scoreDate = new Date('2026-06-20T00:00:00.000Z');
+      prismaMock.dailyScore.findMany.mockResolvedValue([]);
+      prismaMock.user.count.mockResolvedValue(4);
+      prismaMock.rankingSnapshot.deleteMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.createDailySnapshotsForDate(scoreDate);
+
+      expect(result).toBe(0);
+      expect(prismaMock.rankingSnapshot.deleteMany).toHaveBeenCalledWith({
+        where: { period: RankingPeriod.DAILY, snapshotAt: scoreDate },
+      });
+      expect(prismaMock.rankingSnapshot.createMany).not.toHaveBeenCalled();
+    });
+
+    it('uses competition ranking for tied daily scores', async () => {
+      const scoreDate = new Date('2026-06-20T00:00:00.000Z');
+      prismaMock.dailyScore.findMany.mockResolvedValue([
+        { userId: 'u1', cappedScore: 300 },
+        { userId: 'u2', cappedScore: 300 },
+        { userId: 'u3', cappedScore: 100 },
+      ]);
+      prismaMock.user.count.mockResolvedValue(4);
+      prismaMock.rankingSnapshot.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.rankingSnapshot.createMany.mockResolvedValue({ count: 3 });
+
+      await service.createDailySnapshotsForDate(scoreDate);
+
+      expect(prismaMock.rankingSnapshot.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              userId: 'u1',
+              rank: 1,
+              percentile: 25,
+            }) as unknown,
+            expect.objectContaining({
+              userId: 'u2',
+              rank: 1,
+              percentile: 25,
+            }) as unknown,
+            expect.objectContaining({
+              userId: 'u3',
+              rank: 3,
+              percentile: 75,
+            }) as unknown,
+          ]) as unknown,
+          skipDuplicates: true,
+        }),
+      );
+    });
+
+    it('uses skipDuplicates to avoid duplicate rows during concurrent snapshot recreation', async () => {
+      const scoreDate = new Date('2026-06-20T00:00:00.000Z');
+      prismaMock.dailyScore.findMany.mockResolvedValue([
+        { userId: 'u1', cappedScore: 300 },
+      ]);
+      prismaMock.user.count.mockResolvedValue(1);
+      prismaMock.rankingSnapshot.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.rankingSnapshot.createMany.mockResolvedValue({ count: 0 });
+
+      await service.createDailySnapshotsForDate(scoreDate);
+
+      expect(prismaMock.rankingSnapshot.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipDuplicates: true,
         }),
       );
     });

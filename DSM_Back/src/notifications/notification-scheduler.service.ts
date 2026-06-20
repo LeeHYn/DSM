@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron } from '@nestjs/schedule';
 import {
+  NotificationMode,
   type NotificationSchedule,
   type Task,
   TaskStatus,
@@ -16,7 +17,10 @@ import {
   NOTIFICATION_SCHEDULE_STATUS,
 } from './notification-events';
 
-type DueSchedule = NotificationSchedule & { task: Task };
+type DueSchedule = NotificationSchedule & {
+  task: Task;
+  user: { notificationMode: NotificationMode };
+};
 
 export type ProcessDueSchedulesResult = {
   processed: number;
@@ -71,7 +75,10 @@ export class NotificationSchedulerService {
           status: TaskStatus.PENDING,
         },
       },
-      include: { task: true },
+      include: {
+        task: true,
+        user: { select: { notificationMode: true } },
+      },
       orderBy: { scheduledAt: 'asc' },
       take:
         take ??
@@ -105,6 +112,7 @@ export class NotificationSchedulerService {
         const sendResult = await this.fcmAdminService.sendTaskReminder(
           tokens,
           schedule.task,
+          schedule.user.notificationMode,
         );
         await this.revokeInvalidTokens(
           schedule.userId,

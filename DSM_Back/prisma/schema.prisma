@@ -40,6 +40,12 @@ enum Tier {
   MASTER
 }
 
+enum NotificationMode {
+  SOUND
+  VIBRATE
+  SILENT
+}
+
 model User {
   id                    String                 @id @default(uuid())
   email                 String?                @unique
@@ -48,6 +54,7 @@ model User {
   totalScore            Int                    @default(0)
   tier                  Tier                   @default(BRONZE)
   notificationEnabled   Boolean                @default(true)
+  notificationMode      NotificationMode       @default(SOUND)
   createdAt             DateTime               @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
   socialAccounts        SocialAccount[]
@@ -171,7 +178,7 @@ model RankingSnapshot {
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([period, snapshotAt, rank])
-  @@index([userId, period, snapshotAt])
+  @@unique([userId, period, snapshotAt])
 }
 
 model NotificationSchedule {

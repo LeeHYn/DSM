@@ -32,3 +32,20 @@
 - Realtime integration starts with `src/lib/realtime/socket-client.ts`, which authenticates Socket.IO through the `auth.token` handshake and exposes ranking subscribe/unsubscribe helpers.
 - ESLint is pinned through `eslint.config.js` using `eslint-config-expo/flat` to avoid `expo lint` auto-configuration during verification.
 - Remaining `npm audit --omit=dev` advisories after non-breaking fix are 16 moderate transitive Expo/React Native items that require breaking `--force` dependency changes.
+
+## 2026-06-21 Milestone 15 Planning
+- User selected backend-only closure before frontend product work.
+- Backend closure will implement only work that does not require external Apple Developer or object storage credentials.
+- Account deletion will be hard delete with refresh-token confirmation because the current schema already cascades user-owned records and no retention policy exists yet.
+- Notification mode will be stored on `User` as SOUND/VIBRATE/SILENT and surfaced through existing notification settings.
+- Refresh token reuse detection will revoke all active sessions only when a revoked token is presented with a matching secret.
+- Daily finalization will run at 00:05 UTC for the previous UTC day and create DAILY ranking snapshots.
+
+## 2026-06-21 Milestone 15 Implementation
+- `DELETE /users/me` requires an authenticated access token plus a refresh token that belongs to the same user, is not revoked, is not expired, and matches the stored bcrypt hash. The endpoint hard-deletes the user and relies on existing Prisma cascades.
+- `NotificationMode` is persisted on `User` with default `SOUND`. `PATCH /users/me/notification-settings` keeps `notificationEnabled` required and accepts optional `notificationMode`.
+- FCM reminder payloads keep the existing notification title/body and add `data.notificationMode` for DSM_Front device handling.
+- Refresh token reuse detection is limited to revoked tokens whose secret matches the stored hash; wrong-secret revoked tokens are rejected without revoking other sessions.
+- UTC daily finalization is owned by `ScoresModule`. The cron runs at `00:05 UTC`, selects active task owners for the previous UTC day, calls `ScoresService.recompute`, and asks `RankingsService` to recreate DAILY snapshots.
+- DAILY snapshot recreation uses competition ranking for ties, deletes/recreates inside a transaction for non-empty rows, and uses a unique `(userId, period, snapshotAt)` constraint plus `skipDuplicates` to reduce concurrent duplicate risk.
+- Still deferred: real Apple Sign In verification, profile image object storage, and breaking dependency upgrades.

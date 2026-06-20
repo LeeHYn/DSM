@@ -16,6 +16,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import type { JwtPayload } from './types/jwt-payload.type';
 import type { SocialProfile } from './types/social-profile.type';
 import type { TokenResponseDto } from './dto/token-response.dto';
+import { parseRefreshToken } from './refresh-token.util';
 
 export type LogoutFcmTarget = {
   token?: string;
@@ -51,15 +52,22 @@ export class AuthService {
   }
 
   async refreshTokens(rawRefreshToken: string): Promise<TokenResponseDto> {
-    const { id, secret } = this.parseRefreshToken(rawRefreshToken);
+    const { id, secret } = parseRefreshToken(rawRefreshToken);
     const record = await this.prisma.refreshToken.findUnique({ where: { id } });
 
-    if (
-      !record ||
-      record.revokedAt !== null ||
-      record.expiresAt <= new Date() ||
-      !(await bcrypt.compare(secret, record.tokenHash))
-    ) {
+    if (!record) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const secretMatches = await bcrypt.compare(secret, record.tokenHash);
+    if (record.revokedAt !== null) {
+      if (secretMatches) {
+        await this.revokeActiveRefreshTokens(record.userId);
+      }
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (record.expiresAt <= new Date() || !secretMatches) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
@@ -78,7 +86,7 @@ export class AuthService {
   ): Promise<void> {
     let parsed: { id: string; secret: string };
     try {
-      parsed = this.parseRefreshToken(rawRefreshToken);
+      parsed = parseRefreshToken(rawRefreshToken);
     } catch {
       return;
     }
@@ -105,12 +113,11 @@ export class AuthService {
     }
   }
 
-  private parseRefreshToken(token: string): { id: string; secret: string } {
-    const idx = token.indexOf('.');
-    if (idx <= 0 || idx === token.length - 1) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
-    }
-    return { id: token.slice(0, idx), secret: token.slice(idx + 1) };
+  private async revokeActiveRefreshTokens(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   private async issueTokens(userId: string): Promise<TokenResponseDto> {

@@ -31,6 +31,7 @@ const makePrismaMock = () => ({
     create: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
 });
 
@@ -132,6 +133,43 @@ describe('AuthService', () => {
       await expect(service.refreshTokens('rt-1.s')).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+
+    it('revokes all active sessions when a rotated refresh token is reused', async () => {
+      const hash = await bcrypt.hash('secret', 1);
+      prismaMock.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: MOCK_USER.id,
+        tokenHash: hash,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: new Date(),
+      });
+      prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 2 });
+
+      await expect(service.refreshTokens('rt-1.secret')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: MOCK_USER.id, revokedAt: null },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: { revokedAt: expect.any(Date) },
+      });
+    });
+
+    it('does not revoke active sessions when a revoked refresh token has the wrong secret', async () => {
+      const hash = await bcrypt.hash('correct', 1);
+      prismaMock.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: MOCK_USER.id,
+        tokenHash: hash,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: new Date(),
+      });
+
+      await expect(service.refreshTokens('rt-1.wrong')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(prismaMock.refreshToken.updateMany).not.toHaveBeenCalled();
     });
 
     it('throws when the record is expired', async () => {

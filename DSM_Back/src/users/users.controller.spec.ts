@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { SocialProvider, Tier } from '@prisma/client';
+import { NotificationMode, SocialProvider, Tier } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -14,12 +14,14 @@ const MOCK_USER = {
   totalScore: 120,
   tier: Tier.BRONZE,
   notificationEnabled: true,
+  notificationMode: NotificationMode.SOUND,
   createdAt: new Date('2026-06-20T00:00:00.000Z'),
   updatedAt: new Date('2026-06-20T00:00:00.000Z'),
 };
 
 const makeUsersServiceMock = () => ({
   getMe: jest.fn().mockResolvedValue(MOCK_USER),
+  deleteMe: jest.fn().mockResolvedValue(undefined),
   updateProfile: jest.fn().mockResolvedValue(MOCK_USER),
   updateNotificationSettings: jest.fn().mockResolvedValue(MOCK_USER),
   getSocialAccounts: jest
@@ -72,7 +74,10 @@ describe('UsersController', () => {
   });
 
   it('updateNotificationSettings delegates to usersService.updateNotificationSettings', async () => {
-    const dto = { notificationEnabled: false };
+    const dto = {
+      notificationEnabled: false,
+      notificationMode: NotificationMode.SILENT,
+    };
 
     await controller.updateNotificationSettings(makeAuthRequest(), dto);
 
@@ -80,6 +85,14 @@ describe('UsersController', () => {
       'user-uuid-1',
       dto,
     );
+  });
+
+  it('deleteMe delegates to usersService.deleteMe', async () => {
+    const dto = { refreshToken: 'rt-1.secret' };
+
+    await controller.deleteMe(makeAuthRequest(), dto);
+
+    expect(usersServiceMock.deleteMe).toHaveBeenCalledWith('user-uuid-1', dto);
   });
 
   it('getSocialAccounts delegates to usersService.getSocialAccounts', async () => {

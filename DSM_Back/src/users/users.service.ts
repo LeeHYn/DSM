@@ -2,10 +2,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { type SocialProvider, type User, Prisma } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { parseRefreshToken } from '../auth/refresh-token.util';
 import { NOTIFICATION_SCHEDULE_STATUS } from '../notifications/notification-events';
 import { PrismaService } from '../prisma/prisma.service';
+import type { DeleteAccountDto } from './dto/delete-account.dto';
 import type { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -48,7 +52,12 @@ export class UsersService {
     try {
       const userUpdate = this.prisma.user.update({
         where: { id: userId },
-        data: { notificationEnabled: dto.notificationEnabled },
+        data: {
+          notificationEnabled: dto.notificationEnabled,
+          ...(dto.notificationMode !== undefined && {
+            notificationMode: dto.notificationMode,
+          }),
+        },
       });
 
       if (dto.notificationEnabled) {
@@ -73,6 +82,25 @@ export class UsersService {
     } catch (error) {
       throw this.mapKnownError(error);
     }
+  }
+
+  async deleteMe(userId: string, dto: DeleteAccountDto): Promise<void> {
+    const parsed = parseRefreshToken(dto.refreshToken);
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { id: parsed.id },
+    });
+
+    if (
+      !record ||
+      record.userId !== userId ||
+      record.revokedAt !== null ||
+      record.expiresAt <= new Date() ||
+      !(await bcrypt.compare(parsed.secret, record.tokenHash))
+    ) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
   }
 
   getSocialAccounts(userId: string): Promise<SocialAccountProvider[]> {

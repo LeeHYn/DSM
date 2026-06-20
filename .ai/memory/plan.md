@@ -61,3 +61,19 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - Audit: non-breaking `npm audit fix` applied. `npm audit --omit=dev` still reports 16 moderate transitive advisories requiring breaking `--force` dependency changes, so they are deferred to a dependency-upgrade milestone.
 - Review report: `docs/reviews/2026-06-20-dsm-front-milestone-14-review.md`
 - Next recommended milestone: `DSM_Front` product UX screens and native device integration (OAuth UX, FCM token registration, task create/update flows, profile settings).
+
+## 2026-06-21 Milestone 15 Planned: DSM_Back Backend Closure
+- Scope option selected by user: backend-only closure without external Apple/storage dependencies.
+- Included: account deletion API, notification mode settings, refresh token reuse detection with active-session revoke, UTC daily score finalization and daily ranking snapshot cron.
+- Excluded: Apple Sign In real verification, profile image object storage, and forced breaking dependency upgrades.
+- Design: `docs/superpowers/specs/2026-06-21-dsm-back-milestone-15-closure-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-06-21-dsm-back-milestone-15-closure.md`
+
+## 2026-06-21 Milestone 15 Completed: DSM_Back Backend Closure
+- Implemented: `DELETE /users/me` with owned, active, non-expired refresh-token confirmation and hard delete through existing cascade relations.
+- Implemented: `NotificationMode` (`SOUND`, `VIBRATE`, `SILENT`) on `User`, optional mode updates through notification settings, and FCM task reminder `data.notificationMode`.
+- Implemented: refresh token reuse detection that revokes all active sessions when a revoked token is presented with a matching secret.
+- Implemented: UTC daily finalization cron at `00:05 UTC`, previous UTC day recomputation, and DAILY ranking snapshot recreation.
+- Added resilience: `RankingSnapshot(userId, period, snapshotAt)` unique guard, transactional delete/create for non-empty daily snapshots, and `createMany(skipDuplicates)`.
+- Verification: `npm test -- --runInBand` 27 suites/191 tests, `npm run test:e2e` 1 suite/2 tests, `prisma:validate`, `build`, and `lint` passed.
+- Review report: `docs/reviews/2026-06-21-dsm-back-milestone-15-review.md`
