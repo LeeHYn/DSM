@@ -5,6 +5,7 @@ import { RankingGateway } from './ranking.gateway';
 import { RankingRealtimeService } from './ranking-realtime.service';
 import { REALTIME_EVENTS } from './realtime-events';
 import { RankingsService } from '../rankings/rankings.service';
+import { RankingsCacheService } from '../rankings/rankings-cache.service';
 
 const makeGatewayMock = () => ({
   emitToUser: jest.fn(),
@@ -14,22 +15,31 @@ const makeGatewayMock = () => ({
 const makeRankingsMock = () => ({
   getMyRanking: jest.fn(),
   getLeaderboard: jest.fn(),
+  getFreshLeaderboard: jest.fn(),
+});
+
+const makeRankingsCacheMock = () => ({
+  invalidateAllLeaderboards: jest.fn(),
 });
 
 describe('RankingRealtimeService', () => {
   let service: RankingRealtimeService;
   let gatewayMock: ReturnType<typeof makeGatewayMock>;
   let rankingsMock: ReturnType<typeof makeRankingsMock>;
+  let rankingsCacheMock: ReturnType<typeof makeRankingsCacheMock>;
 
   beforeEach(async () => {
     gatewayMock = makeGatewayMock();
     rankingsMock = makeRankingsMock();
+    rankingsCacheMock = makeRankingsCacheMock();
+    rankingsCacheMock.invalidateAllLeaderboards.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RankingRealtimeService,
         { provide: RankingGateway, useValue: gatewayMock },
         { provide: RankingsService, useValue: rankingsMock },
+        { provide: RankingsCacheService, useValue: rankingsCacheMock },
       ],
     }).compile();
 
@@ -84,14 +94,15 @@ describe('RankingRealtimeService', () => {
 
   it('emits leaderboard.updated to each subscribed period room', async () => {
     rankingsMock.getMyRanking.mockResolvedValue({ rank: 1 });
-    rankingsMock.getLeaderboard
+    rankingsMock.getFreshLeaderboard
       .mockResolvedValueOnce([{ userId: 'daily-leader' }])
       .mockResolvedValueOnce([{ userId: 'weekly-leader' }])
       .mockResolvedValueOnce([{ userId: 'total-leader' }]);
 
     await service.handleScoreRecomputed({ userId: 'user-1' });
 
-    expect(rankingsMock.getLeaderboard).toHaveBeenCalledTimes(3);
+    expect(rankingsMock.getFreshLeaderboard).toHaveBeenCalledTimes(3);
+    expect(rankingsMock.getLeaderboard).not.toHaveBeenCalled();
     expect(gatewayMock.emitToRankingPeriod).toHaveBeenCalledWith(
       RankingPeriod.DAILY,
       REALTIME_EVENTS.LEADERBOARD_UPDATED,
@@ -116,6 +127,50 @@ describe('RankingRealtimeService', () => {
         leaderboard: [{ userId: 'total-leader' }],
       },
     );
+  });
+
+  it('waits for cached leaderboard invalidation before score.updated and leaderboard fetch', async () => {
+    let invalidationResolved = false;
+    rankingsCacheMock.invalidateAllLeaderboards.mockImplementation(async () => {
+      await Promise.resolve();
+      invalidationResolved = true;
+    });
+    gatewayMock.emitToUser.mockImplementation((_userId, eventName) => {
+      if (eventName === REALTIME_EVENTS.SCORE_UPDATED) {
+        expect(invalidationResolved).toBe(true);
+      }
+    });
+    rankingsMock.getMyRanking.mockResolvedValue({ rank: 1 });
+    rankingsMock.getFreshLeaderboard.mockResolvedValue([]);
+
+    await service.handleScoreRecomputed({ userId: 'user-1' });
+
+    expect(rankingsCacheMock.invalidateAllLeaderboards).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(
+      rankingsCacheMock.invalidateAllLeaderboards.mock.invocationCallOrder[0],
+    ).toBeLessThan(gatewayMock.emitToUser.mock.invocationCallOrder[0]);
+    expect(
+      rankingsCacheMock.invalidateAllLeaderboards.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      rankingsMock.getFreshLeaderboard.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('continues realtime updates when leaderboard cache invalidation fails', async () => {
+    rankingsCacheMock.invalidateAllLeaderboards.mockRejectedValueOnce(
+      new Error('redis unavailable'),
+    );
+    rankingsMock.getMyRanking.mockResolvedValue({ rank: 1 });
+    rankingsMock.getFreshLeaderboard.mockResolvedValue([]);
+
+    await expect(
+      service.handleScoreRecomputed({ userId: 'user-1' }),
+    ).resolves.toBeUndefined();
+
+    expect(rankingsMock.getFreshLeaderboard).toHaveBeenCalledTimes(3);
+    expect(gatewayMock.emitToRankingPeriod).toHaveBeenCalledTimes(3);
   });
 
   it('does not reject when ranking recomputation fails', async () => {

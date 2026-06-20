@@ -2,9 +2,15 @@ import { UnauthorizedException } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { RankingPeriod } from '@prisma/client';
+import { RedisService } from '../redis/redis.service';
 import { RankingGateway } from './ranking.gateway';
 import { REALTIME_EVENTS, websocketCorsOrigin } from './realtime-events';
+
+jest.mock('@socket.io/redis-adapter', () => ({
+  createAdapter: jest.fn(),
+}));
 
 const makeJwtMock = () => ({
   verify: jest.fn(),
@@ -25,17 +31,24 @@ const makeClientMock = (token?: string) => ({
   disconnect: jest.fn(),
 });
 
+const makeRedisMock = () => ({
+  createAdapterClients: jest.fn().mockResolvedValue(null),
+});
+
 describe('RankingGateway', () => {
   let gateway: RankingGateway;
   let jwtMock: ReturnType<typeof makeJwtMock>;
   let configMock: ReturnType<typeof makeConfigMock>;
+  let redisMock: ReturnType<typeof makeRedisMock>;
 
   beforeEach(() => {
     jwtMock = makeJwtMock();
     configMock = makeConfigMock();
+    redisMock = makeRedisMock();
     gateway = new RankingGateway(
       jwtMock as unknown as JwtService,
       configMock as unknown as ConfigService,
+      redisMock as unknown as RedisService,
     );
   });
 
@@ -139,6 +152,33 @@ describe('RankingGateway', () => {
     expect(emit).toHaveBeenCalledWith(REALTIME_EVENTS.LEADERBOARD_UPDATED, {
       leaders: [],
     });
+  });
+
+  it('keeps the default Socket.IO adapter when Redis adapter clients are disabled', async () => {
+    const server = { adapter: jest.fn() };
+
+    await gateway.afterInit(server as never);
+
+    expect(redisMock.createAdapterClients).toHaveBeenCalledTimes(1);
+    expect(createAdapter).not.toHaveBeenCalled();
+    expect(server.adapter).not.toHaveBeenCalled();
+  });
+
+  it('installs the Redis Socket.IO adapter when Redis adapter clients are enabled', async () => {
+    const adapterFactory = jest.fn();
+    const pubClient = { name: 'pub' };
+    const subClient = { name: 'sub' };
+    const server = { adapter: jest.fn() };
+    redisMock.createAdapterClients.mockResolvedValue({
+      pubClient,
+      subClient,
+    });
+    (createAdapter as jest.Mock).mockReturnValue(adapterFactory);
+
+    await gateway.afterInit(server as never);
+
+    expect(createAdapter).toHaveBeenCalledWith(pubClient, subClient);
+    expect(server.adapter).toHaveBeenCalledWith(adapterFactory);
   });
 
   it('uses an explicit websocket CORS allowlist when configured', () => {

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { type RankingSnapshot, RankingPeriod, Tier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeRanking, startOfUtcDay, weeklyRange } from './rankings.policy';
+import { RankingsCacheService } from './rankings-cache.service';
 
 export interface MyRanking {
   period: RankingPeriod;
@@ -22,7 +23,10 @@ export interface LeaderboardEntry {
 
 @Injectable()
 export class RankingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rankingsCache: RankingsCacheService,
+  ) {}
 
   async getMyRanking(
     userId: string,
@@ -35,7 +39,31 @@ export class RankingsService {
     return { period, score, rank, percentile, totalUsers };
   }
 
-  getLeaderboard(
+  async getLeaderboard(
+    period: RankingPeriod,
+    limit: number,
+  ): Promise<LeaderboardEntry[]> {
+    const cachedLeaderboard = await this.rankingsCache.getLeaderboard(
+      period,
+      limit,
+    );
+    if (cachedLeaderboard !== null) {
+      return cachedLeaderboard;
+    }
+
+    return this.getFreshLeaderboard(period, limit);
+  }
+
+  async getFreshLeaderboard(
+    period: RankingPeriod,
+    limit: number,
+  ): Promise<LeaderboardEntry[]> {
+    const leaderboard = await this.computeLeaderboard(period, limit);
+    await this.rankingsCache.setLeaderboard(period, limit, leaderboard);
+    return leaderboard;
+  }
+
+  private computeLeaderboard(
     period: RankingPeriod,
     limit: number,
   ): Promise<LeaderboardEntry[]> {

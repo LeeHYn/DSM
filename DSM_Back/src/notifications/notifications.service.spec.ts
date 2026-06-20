@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { TaskDifficulty, TaskStatus } from '@prisma/client';
 import { NotificationsService } from './notifications.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
@@ -41,6 +42,11 @@ const MOCK_SCHEDULE = {
   updatedAt: NOW,
 };
 
+const ACTIVE_SCHEDULE_STATUSES = [
+  NOTIFICATION_SCHEDULE_STATUS.PENDING,
+  NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+];
+
 const makePrismaMock = () => {
   const mock = {
     $transaction: jest.fn(),
@@ -76,12 +82,17 @@ const makePrismaMock = () => {
       return Promise.all(operation);
     },
   );
+  mock.notificationSchedule.updateMany.mockResolvedValue({ count: 0 });
 
   return mock;
 };
 
 const makeFcmMock = () => ({
   sendTaskReminder: jest.fn(),
+});
+
+const makeConfigMock = (values: Record<string, number | undefined> = {}) => ({
+  get: jest.fn((key: string) => values[key]),
 });
 
 describe('NotificationsService', () => {
@@ -240,10 +251,192 @@ describe('NotificationsService', () => {
       where: {
         userId: 'user-uuid-1',
         taskId: 'task-uuid-1',
-        status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
       },
       orderBy: { createdAt: 'desc' },
     });
+  });
+
+  it('updates an existing processing schedule instead of creating a duplicate active schedule', async () => {
+    const processingSchedule = {
+      ...MOCK_SCHEDULE,
+      id: 'processing-schedule-uuid-1',
+      status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+      failureReason: 'FCM unavailable',
+    };
+    prismaMock.notificationSchedule.findFirst.mockResolvedValue(
+      processingSchedule,
+    );
+    prismaMock.notificationSchedule.update.mockResolvedValue({
+      ...processingSchedule,
+      scheduledAt: new Date('2026-06-20T09:00:00Z'),
+      status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+      failureReason: null,
+    });
+
+    const result = await service.upsertTaskSchedule({
+      ...MOCK_TASK,
+      startAt: new Date('2026-06-20T09:00:00Z'),
+    });
+
+    expect(result.status).toBe(NOTIFICATION_SCHEDULE_STATUS.PENDING);
+    expect(prismaMock.notificationSchedule.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-uuid-1',
+        taskId: 'task-uuid-1',
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(prismaMock.notificationSchedule.update).toHaveBeenCalledWith({
+      where: { id: 'processing-schedule-uuid-1' },
+      data: expect.objectContaining({
+        scheduledAt: new Date('2026-06-20T09:00:00Z'),
+        status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+        sentAt: null,
+        failureReason: null,
+      }) as unknown,
+    });
+    expect(prismaMock.notificationSchedule.create).not.toHaveBeenCalled();
+  });
+
+  it('re-reads and updates an active schedule in a fresh transaction after a create conflict', async () => {
+    const conflictedSchedule = {
+      ...MOCK_SCHEDULE,
+      id: 'conflicted-schedule-uuid-1',
+      status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+    };
+    const createConflict = {
+      code: 'P2002',
+      clientVersion: '6.19.3',
+    };
+    const abortedTransactionSchedule = {
+      ...prismaMock.notificationSchedule,
+      findFirst: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockRejectedValue(new Error('aborted transaction was reused')),
+      create: jest.fn().mockRejectedValue(createConflict),
+      update: jest.fn(),
+    };
+    const fallbackTransactionSchedule = {
+      ...prismaMock.notificationSchedule,
+      findFirst: jest.fn().mockResolvedValue(conflictedSchedule),
+      create: jest.fn(),
+      update: jest.fn().mockResolvedValue({
+        ...conflictedSchedule,
+        status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+        failureReason: null,
+      }),
+    };
+    const transactionEvents: string[] = [];
+    prismaMock.$transaction
+      .mockImplementationOnce(
+        async (
+          operation: (client: typeof prismaMock) => Promise<unknown>,
+        ): Promise<unknown> => {
+          transactionEvents.push('initial transaction started');
+          try {
+            return await operation({
+              ...prismaMock,
+              notificationSchedule: abortedTransactionSchedule,
+            });
+          } catch (error) {
+            transactionEvents.push('initial transaction rejected');
+            throw error;
+          }
+        },
+      )
+      .mockImplementationOnce(
+        async (
+          operation: (client: typeof prismaMock) => Promise<unknown>,
+        ): Promise<unknown> => {
+          transactionEvents.push('fallback transaction started');
+          return await operation({
+            ...prismaMock,
+            notificationSchedule: fallbackTransactionSchedule,
+          });
+        },
+      );
+
+    const result = await service.upsertTaskSchedule(MOCK_TASK);
+
+    expect(result.id).toBe('conflicted-schedule-uuid-1');
+    expect(transactionEvents).toEqual([
+      'initial transaction started',
+      'initial transaction rejected',
+      'fallback transaction started',
+    ]);
+    expect(abortedTransactionSchedule.findFirst).toHaveBeenCalledTimes(1);
+    expect(abortedTransactionSchedule.update).not.toHaveBeenCalled();
+    expect(fallbackTransactionSchedule.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-uuid-1',
+        taskId: 'task-uuid-1',
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(fallbackTransactionSchedule.update).toHaveBeenCalledWith({
+      where: { id: 'conflicted-schedule-uuid-1' },
+      data: {
+        scheduledAt: MOCK_TASK.startAt,
+        status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+        sentAt: null,
+        failureReason: null,
+      },
+    });
+  });
+
+  it('rethrows the original create conflict when fallback cannot find an active schedule', async () => {
+    const createConflict = {
+      code: 'P2002',
+      clientVersion: '6.19.3',
+    };
+    const abortedTransactionSchedule = {
+      ...prismaMock.notificationSchedule,
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockRejectedValue(createConflict),
+      update: jest.fn(),
+    };
+    const fallbackTransactionSchedule = {
+      ...prismaMock.notificationSchedule,
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn(),
+      update: jest.fn(),
+    };
+    prismaMock.$transaction
+      .mockImplementationOnce(
+        async (
+          operation: (client: typeof prismaMock) => Promise<unknown>,
+        ): Promise<unknown> =>
+          operation({
+            ...prismaMock,
+            notificationSchedule: abortedTransactionSchedule,
+          }),
+      )
+      .mockImplementationOnce(
+        async (
+          operation: (client: typeof prismaMock) => Promise<unknown>,
+        ): Promise<unknown> =>
+          operation({
+            ...prismaMock,
+            notificationSchedule: fallbackTransactionSchedule,
+          }),
+      );
+
+    await expect(service.upsertTaskSchedule(MOCK_TASK)).rejects.toBe(
+      createConflict,
+    );
+    expect(fallbackTransactionSchedule.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-uuid-1',
+        taskId: 'task-uuid-1',
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(fallbackTransactionSchedule.update).not.toHaveBeenCalled();
   });
 
   it('cancels task schedules when task notifications are disabled', async () => {
@@ -258,7 +451,7 @@ describe('NotificationsService', () => {
       where: {
         userId: 'user-uuid-1',
         taskId: 'task-uuid-1',
-        status: { in: [NOTIFICATION_SCHEDULE_STATUS.PENDING] },
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
       },
       data: {
         status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED,
@@ -280,7 +473,7 @@ describe('NotificationsService', () => {
       where: {
         userId: 'user-uuid-1',
         taskId: 'task-uuid-1',
-        status: { in: [NOTIFICATION_SCHEDULE_STATUS.PENDING] },
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
       },
       data: {
         status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED,
@@ -302,7 +495,7 @@ describe('NotificationsService', () => {
       where: {
         userId: 'user-uuid-1',
         taskId: 'task-uuid-1',
-        status: { in: [NOTIFICATION_SCHEDULE_STATUS.PENDING] },
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
       },
       data: {
         status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED,
@@ -326,6 +519,28 @@ describe('NotificationsService', () => {
     });
     expect(prismaMock.notificationSchedule.update).not.toHaveBeenCalled();
   });
+
+  it('cancels pending and processing schedules for a task', async () => {
+    prismaMock.notificationSchedule.updateMany.mockResolvedValue({ count: 2 });
+
+    const result = await service.cancelTaskSchedule(
+      'user-uuid-1',
+      'task-uuid-1',
+    );
+
+    expect(result).toBe(2);
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-uuid-1',
+        taskId: 'task-uuid-1',
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
+      },
+      data: {
+        status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED,
+        failureReason: null,
+      },
+    });
+  });
 });
 
 describe('NotificationSchedulerService', () => {
@@ -333,11 +548,13 @@ describe('NotificationSchedulerService', () => {
   let prismaMock: ReturnType<typeof makePrismaMock>;
   let fcmMock: ReturnType<typeof makeFcmMock>;
   let eventsMock: { emit: jest.Mock };
+  let configMock: ReturnType<typeof makeConfigMock>;
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
     fcmMock = makeFcmMock();
     eventsMock = { emit: jest.fn() };
+    configMock = makeConfigMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -346,11 +563,57 @@ describe('NotificationSchedulerService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: FcmAdminService, useValue: fcmMock },
         { provide: EventEmitter2, useValue: eventsMock },
+        { provide: ConfigService, useValue: configMock },
       ],
     }).compile();
 
     scheduler = module.get<NotificationSchedulerService>(
       NotificationSchedulerService,
+    );
+  });
+
+  it('recovers stale processing schedules before fetching due schedules', async () => {
+    const timeoutSeconds = 120;
+    configMock.get.mockImplementation((key: string) =>
+      key === 'NOTIFICATION_PROCESSING_TIMEOUT_SECONDS'
+        ? timeoutSeconds
+        : undefined,
+    );
+    prismaMock.notificationSchedule.findMany.mockResolvedValue([]);
+
+    await scheduler.processDueSchedules(NOW, 10);
+
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenCalledWith({
+      where: {
+        status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        updatedAt: {
+          lt: new Date(NOW.getTime() - timeoutSeconds * 1000),
+        },
+      },
+      data: {
+        status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+        failureReason: 'RECOVERED_STALE_PROCESSING',
+      },
+    });
+    expect(
+      prismaMock.notificationSchedule.updateMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      prismaMock.notificationSchedule.findMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('uses the configured due schedule batch size when take is omitted', async () => {
+    configMock.get.mockImplementation((key: string) =>
+      key === 'NOTIFICATION_DUE_BATCH_SIZE' ? 25 : undefined,
+    );
+    prismaMock.notificationSchedule.findMany.mockResolvedValue([]);
+
+    await scheduler.processDueSchedules(NOW);
+
+    expect(prismaMock.notificationSchedule.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 25,
+      }) as unknown,
     );
   });
 
@@ -386,14 +649,19 @@ describe('NotificationSchedulerService', () => {
       },
       data: { status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING },
     });
-    expect(prismaMock.notificationSchedule.update).toHaveBeenLastCalledWith({
-      where: { id: 'schedule-uuid-1' },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.SENT,
-        sentAt: expect.any(Date) as unknown,
-        failureReason: null,
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.SENT,
+          sentAt: expect.any(Date) as unknown,
+          failureReason: null,
+        },
       },
-    });
+    );
     expect(eventsMock.emit).toHaveBeenCalledWith(
       NOTIFICATION_EVENTS.DUE,
       expect.objectContaining({
@@ -401,6 +669,44 @@ describe('NotificationSchedulerService', () => {
         taskId: 'task-uuid-1',
         scheduleId: 'schedule-uuid-1',
       }) as unknown,
+    );
+  });
+
+  it('does not emit due events or count sent when SENT transition no longer applies', async () => {
+    prismaMock.notificationSchedule.findMany.mockResolvedValue([
+      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+    ]);
+    prismaMock.notificationSchedule.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    prismaMock.fcmToken.findMany.mockResolvedValue([{ token: 'fcm-token-1' }]);
+    fcmMock.sendTaskReminder.mockResolvedValue({
+      successCount: 1,
+      failureCount: 0,
+      invalidTokens: [],
+    });
+
+    const result = await scheduler.processDueSchedules(NOW);
+
+    expect(result).toEqual({ processed: 1, sent: 0, failed: 0, skipped: 0 });
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.SENT,
+          sentAt: expect.any(Date) as unknown,
+          failureReason: null,
+        },
+      },
+    );
+    expect(prismaMock.notificationSchedule.update).not.toHaveBeenCalled();
+    expect(eventsMock.emit).not.toHaveBeenCalledWith(
+      NOTIFICATION_EVENTS.DUE,
+      expect.anything(),
     );
   });
 
@@ -427,13 +733,55 @@ describe('NotificationSchedulerService', () => {
       },
       data: { revokedAt: expect.any(Date) as unknown },
     });
-    expect(prismaMock.notificationSchedule.update).toHaveBeenLastCalledWith({
-      where: { id: 'schedule-uuid-1' },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
-        failureReason: 'FCM_SEND_FAILED',
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+          failureReason: 'FCM_SEND_FAILED',
+        },
       },
+    );
+    expect(eventsMock.emit).not.toHaveBeenCalledWith(
+      NOTIFICATION_EVENTS.DUE,
+      expect.anything(),
+    );
+  });
+
+  it('does not overwrite schedules or count failed when FAILED transition no longer applies', async () => {
+    prismaMock.notificationSchedule.findMany.mockResolvedValue([
+      { ...MOCK_SCHEDULE, task: MOCK_TASK },
+    ]);
+    prismaMock.notificationSchedule.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    prismaMock.fcmToken.findMany.mockResolvedValue([{ token: 'fcm-token-1' }]);
+    fcmMock.sendTaskReminder.mockResolvedValue({
+      successCount: 0,
+      failureCount: 1,
+      invalidTokens: [],
     });
+
+    const result = await scheduler.processDueSchedules(NOW);
+
+    expect(result).toEqual({ processed: 1, sent: 0, failed: 0, skipped: 0 });
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+          failureReason: 'FCM_SEND_FAILED',
+        },
+      },
+    );
+    expect(prismaMock.notificationSchedule.update).not.toHaveBeenCalled();
     expect(eventsMock.emit).not.toHaveBeenCalledWith(
       NOTIFICATION_EVENTS.DUE,
       expect.anything(),
@@ -458,14 +806,19 @@ describe('NotificationSchedulerService', () => {
     const result = await scheduler.processDueSchedules(NOW);
 
     expect(result).toEqual({ processed: 1, sent: 1, failed: 0, skipped: 0 });
-    expect(prismaMock.notificationSchedule.update).toHaveBeenLastCalledWith({
-      where: { id: 'schedule-uuid-1' },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.SENT,
-        sentAt: expect.any(Date) as unknown,
-        failureReason: 'PARTIAL_FCM_FAILURE:1',
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.SENT,
+          sentAt: expect.any(Date) as unknown,
+          failureReason: 'PARTIAL_FCM_FAILURE:1',
+        },
       },
-    });
+    );
   });
 
   it('marks due schedules as FAILED when FCM send fails', async () => {
@@ -479,13 +832,18 @@ describe('NotificationSchedulerService', () => {
     const result = await scheduler.processDueSchedules(NOW);
 
     expect(result).toEqual({ processed: 1, sent: 0, failed: 1, skipped: 0 });
-    expect(prismaMock.notificationSchedule.update).toHaveBeenLastCalledWith({
-      where: { id: 'schedule-uuid-1' },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
-        failureReason: 'FCM unavailable',
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+          failureReason: 'FCM unavailable',
+        },
       },
-    });
+    );
   });
 
   it('skips due schedules without active tokens by marking them FAILED', async () => {
@@ -499,13 +857,18 @@ describe('NotificationSchedulerService', () => {
 
     expect(result).toEqual({ processed: 1, sent: 0, failed: 1, skipped: 1 });
     expect(fcmMock.sendTaskReminder).not.toHaveBeenCalled();
-    expect(prismaMock.notificationSchedule.update).toHaveBeenLastCalledWith({
-      where: { id: 'schedule-uuid-1' },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
-        failureReason: 'NO_ACTIVE_FCM_TOKEN',
+    expect(prismaMock.notificationSchedule.updateMany).toHaveBeenLastCalledWith(
+      {
+        where: {
+          id: 'schedule-uuid-1',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+          failureReason: 'NO_ACTIVE_FCM_TOKEN',
+        },
       },
-    });
+    );
   });
 
   it('only fetches due PENDING schedules', async () => {

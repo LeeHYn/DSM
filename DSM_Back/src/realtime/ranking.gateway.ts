@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
+  OnGatewayInit,
   MessageBody,
   OnGatewayConnection,
   SubscribeMessage,
@@ -10,9 +11,11 @@ import {
   WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { RankingPeriod } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
 import type { JwtPayload } from '../auth/types/jwt-payload.type';
+import { RedisService } from '../redis/redis.service';
 import {
   isRankingPeriod,
   rankingRoom,
@@ -39,14 +42,24 @@ type RankingSubscriptionPayload = {
 @WebSocketGateway({
   cors: { origin: websocketCorsOrigin() },
 })
-export class RankingGateway implements OnGatewayConnection {
+export class RankingGateway implements OnGatewayConnection, OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
   ) {}
+
+  async afterInit(server: Server): Promise<void> {
+    const clients = await this.redisService.createAdapterClients();
+    if (!clients) {
+      return;
+    }
+
+    server.adapter(createAdapter(clients.pubClient, clients.subClient));
+  }
 
   handleConnection(client: AuthenticatedSocket): void {
     try {

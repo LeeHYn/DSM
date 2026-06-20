@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RankingPeriod } from '@prisma/client';
 import { RankingsService } from './rankings.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RankingsCacheService } from './rankings-cache.service';
 
 const makePrismaMock = () => ({
   user: {
@@ -19,17 +20,27 @@ const makePrismaMock = () => ({
   rankingSnapshot: { create: jest.fn() },
 });
 
+const makeRankingsCacheMock = () => ({
+  getLeaderboard: jest.fn(),
+  setLeaderboard: jest.fn(),
+});
+
 describe('RankingsService', () => {
   let service: RankingsService;
   let prismaMock: ReturnType<typeof makePrismaMock>;
+  let rankingsCacheMock: ReturnType<typeof makeRankingsCacheMock>;
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
+    rankingsCacheMock = makeRankingsCacheMock();
+    rankingsCacheMock.getLeaderboard.mockResolvedValue(null);
+    rankingsCacheMock.setLeaderboard.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RankingsService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: RankingsCacheService, useValue: rankingsCacheMock },
       ],
     }).compile();
 
@@ -53,6 +64,8 @@ describe('RankingsService', () => {
         percentile: 20,
         totalUsers: 50,
       });
+      expect(rankingsCacheMock.getLeaderboard).not.toHaveBeenCalled();
+      expect(rankingsCacheMock.setLeaderboard).not.toHaveBeenCalled();
     });
 
     it("ranks by today's daily score", async () => {
@@ -87,6 +100,32 @@ describe('RankingsService', () => {
   });
 
   describe('getLeaderboard', () => {
+    it('returns a cached leaderboard without querying the database', async () => {
+      const cachedLeaderboard = [
+        {
+          rank: 1,
+          userId: 'cached-user',
+          nickname: 'Cached',
+          tier: 'GOLD',
+          profileImageUrl: null,
+          score: 777,
+        },
+      ];
+      rankingsCacheMock.getLeaderboard.mockResolvedValueOnce(cachedLeaderboard);
+
+      const result = await service.getLeaderboard(RankingPeriod.TOTAL, 100);
+
+      expect(result).toBe(cachedLeaderboard);
+      expect(rankingsCacheMock.getLeaderboard).toHaveBeenCalledWith(
+        RankingPeriod.TOTAL,
+        100,
+      );
+      expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.dailyScore.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.dailyScore.groupBy).not.toHaveBeenCalled();
+      expect(rankingsCacheMock.setLeaderboard).not.toHaveBeenCalled();
+    });
+
     it('returns a ranked total leaderboard', async () => {
       prismaMock.user.findMany.mockResolvedValue([
         {
@@ -125,6 +164,11 @@ describe('RankingsService', () => {
           score: 500,
         },
       ]);
+      expect(rankingsCacheMock.setLeaderboard).toHaveBeenCalledWith(
+        RankingPeriod.TOTAL,
+        100,
+        result,
+      );
     });
 
     it('joins weekly group sums with user info', async () => {
@@ -157,6 +201,85 @@ describe('RankingsService', () => {
           score: 200,
         },
       ]);
+    });
+
+    it('stores the computed leaderboard when the cache misses', async () => {
+      rankingsCacheMock.getLeaderboard.mockResolvedValueOnce(null);
+      prismaMock.dailyScore.findMany.mockResolvedValue([
+        {
+          cappedScore: 117,
+          user: {
+            id: 'u1',
+            nickname: 'A',
+            tier: 'SILVER',
+            profileImageUrl: null,
+          },
+        },
+      ]);
+
+      const result = await service.getLeaderboard(RankingPeriod.DAILY, 25);
+
+      expect(result).toEqual([
+        {
+          rank: 1,
+          userId: 'u1',
+          nickname: 'A',
+          tier: 'SILVER',
+          profileImageUrl: null,
+          score: 117,
+        },
+      ]);
+      expect(rankingsCacheMock.setLeaderboard).toHaveBeenCalledWith(
+        RankingPeriod.DAILY,
+        25,
+        result,
+      );
+    });
+  });
+
+  describe('getFreshLeaderboard', () => {
+    it('bypasses stale cached entries, computes from the database, and refreshes the cache', async () => {
+      rankingsCacheMock.getLeaderboard.mockResolvedValueOnce([
+        {
+          rank: 1,
+          userId: 'cached-user',
+          nickname: 'Cached',
+          tier: 'GOLD',
+          profileImageUrl: null,
+          score: 777,
+        },
+      ]);
+      prismaMock.user.findMany.mockResolvedValue([
+        {
+          id: 'fresh-user',
+          nickname: 'Fresh',
+          tier: 'SILVER',
+          profileImageUrl: null,
+          totalScore: 123,
+        },
+      ]);
+
+      const result = await service.getFreshLeaderboard(RankingPeriod.TOTAL, 10);
+
+      expect(result).toEqual([
+        {
+          rank: 1,
+          userId: 'fresh-user',
+          nickname: 'Fresh',
+          tier: 'SILVER',
+          profileImageUrl: null,
+          score: 123,
+        },
+      ]);
+      expect(rankingsCacheMock.getLeaderboard).not.toHaveBeenCalled();
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 10 }),
+      );
+      expect(rankingsCacheMock.setLeaderboard).toHaveBeenCalledWith(
+        RankingPeriod.TOTAL,
+        10,
+        result,
+      );
     });
   });
 

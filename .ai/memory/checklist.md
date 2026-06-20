@@ -60,5 +60,16 @@
   - [x] Auth logout 연동: 선택 FCM 토큰/기기 무효화
   - [x] 전체 테스트/build/lint/e2e 검증
   - [x] 소스 검토 및 리뷰보고서 작성
-  - [ ] (보류) Redis 랭킹 캐싱/Socket adapter, 다중 인스턴스 발송 중복 방지 고도화
-  - [ ] (보류) `multer`, `uuid` npm audit 잔여 의존성 대응
+  - [x] (마일스톤 13에서 완료) Redis 랭킹 캐싱/Socket adapter, 다중 인스턴스 발송 중복 방지 고도화
+  - [x] (마일스톤 13에서 문서화) `multer`, `uuid` npm audit 잔여 의존성 대응
+- [x] 마일스톤 13: `DSM_Back` 후속 안정화 + 운영성 + 누락 P0
+  - [x] 설계 문서 작성 (`docs/superpowers/specs/2026-06-20-dsm-back-milestone-13-stabilization-design.md`)
+  - [x] 구현 계획 작성 (`docs/superpowers/plans/2026-06-20-dsm-back-milestone-13-stabilization.md`)
+  - [x] 일일 일과 등록 개수 20개 제한
+  - [x] NotificationSchedule DB 레벨 중복 방지 및 stale PROCESSING 복구
+  - [x] Redis 랭킹 캐싱 및 Socket.IO adapter
+  - [x] Task 4 품질 리뷰: 점수 재계산/실시간 leaderboard stale cache 방지
+  - [x] `npm audit` 잔여 의존성 대응
+  - [x] API/WebSocket/환경변수 계약 문서화
+  - [x] 전체 테스트/build/lint/e2e/audit 검증 및 리뷰보고서 작성
+  - [x] 최종 독립 코드 리뷰 승인

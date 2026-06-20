@@ -11,6 +11,11 @@ import type { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
 import type { RevokeFcmTokenDto } from './dto/revoke-fcm-token.dto';
 import { NOTIFICATION_SCHEDULE_STATUS } from './notification-events';
 
+const ACTIVE_SCHEDULE_STATUSES = [
+  NOTIFICATION_SCHEDULE_STATUS.PENDING,
+  NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+];
+
 export type RevokeFcmTokenResult = {
   revokedCount: number;
 };
@@ -102,41 +107,63 @@ export class NotificationsService {
       return null;
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
-        const existing = await tx.notificationSchedule.findFirst({
-          where: {
-            userId: task.userId,
-            taskId: task.id,
-            status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
-          },
-          orderBy: { createdAt: 'desc' },
-        });
+    const data = {
+      scheduledAt: task.startAt,
+      status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+      sentAt: null,
+      failureReason: null,
+    };
 
-        const data = {
-          scheduledAt: task.startAt,
-          status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
-          sentAt: null,
-          failureReason: null,
-        };
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const existing = await this.findActiveTaskSchedule(
+            tx,
+            task.userId,
+            task.id,
+          );
 
-        if (existing) {
+          if (existing) {
+            return tx.notificationSchedule.update({
+              where: { id: existing.id },
+              data,
+            });
+          }
+
+          return tx.notificationSchedule.create({
+            data: {
+              ...data,
+              userId: task.userId,
+              taskId: task.id,
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (!this.isUniqueConflict(error)) {
+        throw error;
+      }
+
+      return this.prisma.$transaction(
+        async (tx) => {
+          const conflicted = await this.findActiveTaskSchedule(
+            tx,
+            task.userId,
+            task.id,
+          );
+          if (!conflicted) {
+            throw error;
+          }
+
           return tx.notificationSchedule.update({
-            where: { id: existing.id },
+            where: { id: conflicted.id },
             data,
           });
-        }
-
-        return tx.notificationSchedule.create({
-          data: {
-            ...data,
-            userId: task.userId,
-            taskId: task.id,
-          },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    }
   }
 
   async cancelTaskSchedule(userId: string, taskId: string): Promise<number> {
@@ -144,7 +171,7 @@ export class NotificationsService {
       where: {
         userId,
         taskId,
-        status: { in: [NOTIFICATION_SCHEDULE_STATUS.PENDING] },
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
       },
       data: {
         status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED,
@@ -153,5 +180,29 @@ export class NotificationsService {
     });
 
     return result.count;
+  }
+
+  private isUniqueConflict(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    );
+  }
+
+  private findActiveTaskSchedule(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    taskId: string,
+  ) {
+    return tx.notificationSchedule.findFirst({
+      where: {
+        userId,
+        taskId,
+        status: { in: ACTIVE_SCHEDULE_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

@@ -17,10 +17,34 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
     - 설계: `docs/superpowers/specs/2026-06-20-dsm-back-milestone-12-design.md`
     - 구현 계획: `docs/superpowers/plans/2026-06-20-dsm-back-milestone-12.md`
     - 리뷰보고서: `docs/reviews/2026-06-20-dsm-back-review.md`
+13. `DSM_Back` 후속 안정화 + 운영성 + 누락 P0
+    - 일일 일과 등록 20개 제한
+    - NotificationSchedule DB 중복 방지 및 stale PROCESSING 복구
+    - Redis 기반 리더보드 캐시 및 Socket.IO adapter
+    - npm audit 잔여 취약점 문서화
+    - API/WebSocket/환경변수 계약 문서화
+    - 설계: `docs/superpowers/specs/2026-06-20-dsm-back-milestone-13-stabilization-design.md`
+    - 구현 계획: `docs/superpowers/plans/2026-06-20-dsm-back-milestone-13-stabilization.md`
+    - API 계약: `docs/api/DSM_Back_API_v0.md`
+    - 리뷰보고서: `docs/reviews/2026-06-20-dsm-back-milestone-13-review.md`
 
 # 다음 마일스톤
-13. `DSM_Back` 후속 안정화
-    - Redis 기반 랭킹 캐싱 및 Socket.IO adapter
-    - NotificationSchedule 배치/중복 방지 고도화
-    - 회원 탈퇴, 프로필 이미지 스토리지
-    - `npm audit` 잔여 의존성 대응
+14. `DSM_Front` 연동 기반 구축
+    - API client/base URL/env 분리
+    - access/refresh token 저장 및 refresh flow
+    - 인증 상태 기반 라우팅
+    - Tasks/Categories/Scores/Rankings/Notifications 화면 연동 시작
+
+## 2026-06-20 Milestone 13 Task 4 Quality Review: Ranking Leaderboard Cache
+- 목표: 점수 재계산 후 `score.recomputed`/`score.updated`/`leaderboard.updated` 관측자가 stale leaderboard cache를 읽지 않도록 순서를 보장한다.
+- 계획:
+  1. `ScoresService.recompute()` 테스트를 먼저 추가해 leaderboard cache invalidation이 `SCORE_RECOMPUTED` emit 전에 await되는지 검증한다.
+  2. `ScoresService`에 `RankingsCacheService` 의존성을 주입하고, invalidation 실패는 경고 로그 후 swallow하도록 구현한다.
+  3. `RankingsService` 테스트를 먼저 추가해 fresh leaderboard 경로가 stale cache를 무시하고 DB 계산 결과를 반환하며 cache를 최신값으로 저장하는지 검증한다.
+  4. `RankingsService`에 `getFreshLeaderboard(period, limit)`를 추가하고 기존 `getLeaderboard()`의 cache-aside 동작은 유지한다.
+  5. `RankingRealtimeService` 테스트를 먼저 갱신해 invalidation 이후 `score.updated`/ranking/leaderboard signal 순서와 fresh leaderboard 사용을 검증한다.
+  6. `RankingRealtimeService`에서 `score.updated` emit을 invalidation 뒤로 이동하고, leaderboard broadcast는 `getFreshLeaderboard()`를 사용한다.
+  7. `ScoresModule` provider/import wiring을 맞춘 뒤 요청된 Jest 범위와 build를 실행한다.
+
+# 후속 후보
+- 회원 탈퇴, 프로필 이미지 스토리지, 알림 방식 세부 설정, Apple Sign In 실제 검증

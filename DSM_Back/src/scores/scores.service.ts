@@ -1,15 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { type DailyScore, type Tier, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RankingsCacheService } from '../rankings/rankings-cache.service';
 import { REALTIME_EVENTS } from '../realtime/realtime-events';
 import { computeDailyScore, tierForScore } from './scores.policy';
 
 @Injectable()
 export class ScoresService {
+  private readonly logger = new Logger(ScoresService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly events: EventEmitter2,
+    private readonly rankingsCache: RankingsCacheService,
   ) {}
 
   /**
@@ -46,6 +50,7 @@ export class ScoresService {
     });
 
     await this.recomputeUserTotal(userId);
+    await this.invalidateLeaderboards();
     this.events.emit(REALTIME_EVENTS.SCORE_RECOMPUTED, {
       userId,
       dailyScore,
@@ -84,11 +89,25 @@ export class ScoresService {
     });
   }
 
+  private async invalidateLeaderboards(): Promise<void> {
+    try {
+      await this.rankingsCache.invalidateAllLeaderboards();
+    } catch (error) {
+      this.logger.warn(
+        `Leaderboard cache invalidation failed after score recompute: ${this.errorMessage(error)}`,
+      );
+    }
+  }
+
   private startOfUtcDay(reference: Date | string): Date {
     const date =
       typeof reference === 'string' ? new Date(reference) : reference;
     return new Date(
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
     );
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 }

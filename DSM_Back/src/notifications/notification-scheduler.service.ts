@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron } from '@nestjs/schedule';
 import {
@@ -33,6 +34,7 @@ export class NotificationSchedulerService {
     private readonly notificationsService: NotificationsService,
     private readonly fcmAdminService: FcmAdminService,
     private readonly events: EventEmitter2,
+    private readonly configService: ConfigService,
   ) {}
 
   @Cron('*/1 * * * *')
@@ -47,8 +49,10 @@ export class NotificationSchedulerService {
 
   async processDueSchedules(
     now = new Date(),
-    take = 50,
+    take?: number,
   ): Promise<ProcessDueSchedulesResult> {
+    await this.recoverStaleProcessingSchedules(now);
+
     const result: ProcessDueSchedulesResult = {
       processed: 0,
       sent: 0,
@@ -69,7 +73,9 @@ export class NotificationSchedulerService {
       },
       include: { task: true },
       orderBy: { scheduledAt: 'asc' },
-      take,
+      take:
+        take ??
+        this.getPositiveIntegerConfig('NOTIFICATION_DUE_BATCH_SIZE', 50),
     });
 
     for (const schedule of schedules as DueSchedule[]) {
@@ -84,12 +90,14 @@ export class NotificationSchedulerService {
       );
 
       if (tokens.length === 0) {
-        result.failed += 1;
-        result.skipped += 1;
-        await this.markFailed(
+        const markedFailed = await this.markFailed(
           schedule.id,
           NOTIFICATION_FAILURE_REASON.NO_ACTIVE_FCM_TOKEN,
         );
+        if (markedFailed) {
+          result.failed += 1;
+          result.skipped += 1;
+        }
         continue;
       }
 
@@ -104,26 +112,70 @@ export class NotificationSchedulerService {
         );
 
         if (sendResult.successCount === 0 && sendResult.failureCount > 0) {
-          result.failed += 1;
-          await this.markFailed(schedule.id, 'FCM_SEND_FAILED');
+          const markedFailed = await this.markFailed(
+            schedule.id,
+            'FCM_SEND_FAILED',
+          );
+          if (markedFailed) {
+            result.failed += 1;
+          }
           continue;
         }
 
-        result.sent += 1;
-        await this.markSent(
+        const markedSent = await this.markSent(
           schedule.id,
           sendResult.failureCount > 0
             ? `PARTIAL_FCM_FAILURE:${sendResult.failureCount}`
             : null,
         );
-        this.emitNotificationDue(schedule);
+        if (markedSent) {
+          result.sent += 1;
+          this.emitNotificationDue(schedule);
+        }
       } catch (error) {
-        result.failed += 1;
-        await this.markFailed(schedule.id, this.getFailureReason(error));
+        const markedFailed = await this.markFailed(
+          schedule.id,
+          this.getFailureReason(error),
+        );
+        if (markedFailed) {
+          result.failed += 1;
+        }
       }
     }
 
     return result;
+  }
+
+  private async recoverStaleProcessingSchedules(now: Date): Promise<number> {
+    const timeoutSeconds = this.getPositiveIntegerConfig(
+      'NOTIFICATION_PROCESSING_TIMEOUT_SECONDS',
+      300,
+    );
+    const staleBefore = new Date(now.getTime() - timeoutSeconds * 1000);
+
+    const result = await this.prisma.notificationSchedule.updateMany({
+      where: {
+        status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        updatedAt: { lt: staleBefore },
+      },
+      data: {
+        status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+        failureReason: 'RECOVERED_STALE_PROCESSING',
+      },
+    });
+
+    return result.count;
+  }
+
+  private getPositiveIntegerConfig(key: string, fallback: number): number {
+    const value = this.configService.get<number | string>(key);
+    const parsed = typeof value === 'number' ? value : Number(value);
+
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+
+    return fallback;
   }
 
   private async markProcessing(scheduleId: string): Promise<boolean> {
@@ -147,28 +199,38 @@ export class NotificationSchedulerService {
   private markSent(
     scheduleId: string,
     failureReason: string | null,
-  ): Promise<NotificationSchedule> {
-    return this.prisma.notificationSchedule.update({
-      where: { id: scheduleId },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.SENT,
-        sentAt: new Date(),
-        failureReason,
-      },
-    });
+  ): Promise<boolean> {
+    return this.prisma.notificationSchedule
+      .updateMany({
+        where: {
+          id: scheduleId,
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.SENT,
+          sentAt: new Date(),
+          failureReason,
+        },
+      })
+      .then((result) => result.count === 1);
   }
 
   private markFailed(
     scheduleId: string,
     failureReason: string,
-  ): Promise<NotificationSchedule> {
-    return this.prisma.notificationSchedule.update({
-      where: { id: scheduleId },
-      data: {
-        status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
-        failureReason,
-      },
-    });
+  ): Promise<boolean> {
+    return this.prisma.notificationSchedule
+      .updateMany({
+        where: {
+          id: scheduleId,
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+          failureReason,
+        },
+      })
+      .then((result) => result.count === 1);
   }
 
   private getFailureReason(error: unknown): string {
@@ -193,7 +255,9 @@ export class NotificationSchedulerService {
         revokedAt: null,
         token: { in: tokens },
       },
-      data: { revokedAt: new Date() },
+      data: {
+        revokedAt: new Date(),
+      },
     });
   }
 

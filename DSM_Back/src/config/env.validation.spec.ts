@@ -20,6 +20,24 @@ describe('validateEnv', () => {
     expect(config.JWT_REFRESH_SECRET).toBe(validConfig.JWT_REFRESH_SECRET);
   });
 
+  it('accepts optional notification scheduler settings as positive integers', () => {
+    const config = validateEnv({
+      ...validConfig,
+      NOTIFICATION_DUE_BATCH_SIZE: '25',
+      NOTIFICATION_PROCESSING_TIMEOUT_SECONDS: '120',
+      RANKING_CACHE_TTL_SECONDS: '45',
+      WS_CORS_ORIGINS: 'http://localhost:3000,http://localhost:19006',
+    });
+    const configRecord = config as unknown as Record<string, unknown>;
+
+    expect(configRecord.NOTIFICATION_DUE_BATCH_SIZE).toBe(25);
+    expect(configRecord.NOTIFICATION_PROCESSING_TIMEOUT_SECONDS).toBe(120);
+    expect(configRecord.RANKING_CACHE_TTL_SECONDS).toBe(45);
+    expect(config.WS_CORS_ORIGINS).toBe(
+      'http://localhost:3000,http://localhost:19006',
+    );
+  });
+
   it('rejects an empty DATABASE_URL', () => {
     expect(() =>
       validateEnv({
@@ -36,5 +54,19 @@ describe('validateEnv', () => {
         JWT_ACCESS_SECRET: 'short',
       }),
     ).toThrow(/JWT_ACCESS_SECRET/);
+  });
+
+  it('rejects non-positive notification scheduler and ranking cache settings', () => {
+    const validate = () =>
+      validateEnv({
+        ...validConfig,
+        NOTIFICATION_DUE_BATCH_SIZE: '0',
+        NOTIFICATION_PROCESSING_TIMEOUT_SECONDS: '-1',
+        RANKING_CACHE_TTL_SECONDS: '0',
+      });
+
+    expect(validate).toThrow(/NOTIFICATION_DUE_BATCH_SIZE/);
+    expect(validate).toThrow(/NOTIFICATION_PROCESSING_TIMEOUT_SECONDS/);
+    expect(validate).toThrow(/RANKING_CACHE_TTL_SECONDS/);
   });
 });

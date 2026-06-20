@@ -58,6 +58,24 @@ export class EnvironmentVariables {
   REDIS_URL?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RANKING_CACHE_TTL_SECONDS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  NOTIFICATION_DUE_BATCH_SIZE?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  NOTIFICATION_PROCESSING_TIMEOUT_SECONDS?: number;
+
+  @IsOptional()
   @IsString()
   WS_CORS_ORIGINS?: string;
 }
