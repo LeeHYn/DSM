@@ -73,3 +73,14 @@
   - [x] API/WebSocket/환경변수 계약 문서화
   - [x] 전체 테스트/build/lint/e2e/audit 검증 및 리뷰보고서 작성
   - [x] 최종 독립 코드 리뷰 승인
+- [x] Milestone 14: `DSM_Front` integration foundation
+  - [x] Design document written (`docs/superpowers/specs/2026-06-20-dsm-front-milestone-14-integration-foundation-design.md`)
+  - [x] Implementation plan written (`docs/superpowers/plans/2026-06-20-dsm-front-milestone-14-integration-foundation.md`)
+  - [x] API URL/env config
+  - [x] Shared HTTP client with token refresh
+  - [x] Secure token storage
+  - [x] Auth provider and protected route groups
+  - [x] Typed API modules for DSM_Back API v0
+  - [x] React Query setup and smoke screens
+  - [x] Socket.IO client wrapper
+  - [x] Frontend verification and review report

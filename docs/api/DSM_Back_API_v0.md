@@ -100,6 +100,14 @@ Request body:
 
 Protected. Returns connected social account providers.
 
+Response:
+
+```json
+[
+  { "provider": "GOOGLE | KAKAO | APPLE" }
+]
+```
+
 ## Categories
 
 ### `POST /categories`
@@ -163,7 +171,7 @@ Request body:
   "description": "optional",
   "startAt": "2026-06-20T09:00:00.000Z",
   "endAt": "2026-06-20T10:00:00.000Z",
-  "difficulty": "EASY | MEDIUM | HARD",
+  "difficulty": "LOW | MEDIUM | HIGH",
   "categoryId": "optional-category-id",
   "notificationEnabled": true
 }
@@ -189,8 +197,8 @@ Request body accepts any subset of:
   "description": "optional",
   "startAt": "2026-06-20T09:00:00.000Z",
   "endAt": "2026-06-20T10:00:00.000Z",
-  "difficulty": "EASY | MEDIUM | HARD",
-  "status": "PENDING | COMPLETED",
+  "difficulty": "LOW | MEDIUM | HIGH",
+  "status": "PENDING | COMPLETED | CANCELLED",
   "categoryId": "optional-category-id",
   "notificationEnabled": true
 }
@@ -212,6 +220,24 @@ Protected. Marks the task complete and triggers score recomputation.
 
 Protected. Returns the daily score row for the requested date, or `null`.
 Omitting `date` uses the current server date.
+
+Response:
+
+```json
+{
+  "id": "daily-score-id",
+  "userId": "user-id",
+  "scoreDate": "2026-06-20T00:00:00.000Z",
+  "registeredTaskCount": 5,
+  "completedTaskCount": 4,
+  "rawScore": 80,
+  "adjustedScore": 104,
+  "cappedScore": 104,
+  "achievementRate": "80",
+  "createdAt": "2026-06-20T00:00:00.000Z",
+  "updatedAt": "2026-06-20T00:00:00.000Z"
+}
+```
 
 ### `GET /scores/summary`
 

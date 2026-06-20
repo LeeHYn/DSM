@@ -48,3 +48,16 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 
 # 후속 후보
 - 회원 탈퇴, 프로필 이미지 스토리지, 알림 방식 세부 설정, Apple Sign In 실제 검증
+## 2026-06-20 Milestone 14 Planning: DSM_Front Integration Foundation
+- Scope: `DSM_Front` integration foundation only. Build API URL config, shared HTTP client, token storage, auth provider, protected route groups, typed API modules, React Query setup, initial authenticated smoke screens, and Socket.IO client wrapper.
+- Design: `docs/superpowers/specs/2026-06-20-dsm-front-milestone-14-integration-foundation-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-06-20-dsm-front-milestone-14-integration-foundation.md`
+- Deferred: full visual redesign, native social login UX, push permission/token registration, offline sync, production release setup, and polished product screens.
+- Execution recommendation: Subagent-Driven Development with one task per integration slice.
+
+## 2026-06-21 Milestone 14 Completed: DSM_Front Integration Foundation
+- Implemented: Expo public env config, React Query provider, auth provider, SecureStore/localStorage token persistence, refresh-aware HTTP client, protected Expo Router groups, typed DSM_Back API modules, dashboard/tasks/rankings smoke screens, and Socket.IO ranking subscription wrapper.
+- Verification: `npm run typecheck`, `npm run lint`, and `npm run verify` pass in `DSM_Front`.
+- Audit: non-breaking `npm audit fix` applied. `npm audit --omit=dev` still reports 16 moderate transitive advisories requiring breaking `--force` dependency changes, so they are deferred to a dependency-upgrade milestone.
+- Review report: `docs/reviews/2026-06-20-dsm-front-milestone-14-review.md`
+- Next recommended milestone: `DSM_Front` product UX screens and native device integration (OAuth UX, FCM token registration, task create/update flows, profile settings).
