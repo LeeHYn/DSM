@@ -1,1 +1,1 @@
-C:/dsm/.ai/system_prompt.md
+.ai/system_prompt.md

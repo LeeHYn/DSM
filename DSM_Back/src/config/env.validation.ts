@@ -37,9 +37,9 @@ export class EnvironmentVariables {
   @MinLength(32)
   JWT_REFRESH_SECRET!: string;
 
-  @IsOptional()
   @IsString()
-  GOOGLE_CLIENT_ID?: string;
+  @IsNotEmpty()
+  GOOGLE_CLIENT_ID!: string;
 
   @IsOptional()
   @IsString()

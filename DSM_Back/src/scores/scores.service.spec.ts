@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { type Prisma } from '@prisma/client';
 import { ScoresService } from './scores.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -109,6 +110,37 @@ describe('ScoresService', () => {
         where: { id: 'user-1' },
         data: { totalScore: 0, tier: 'BRONZE' },
       });
+    });
+
+    it('routes every recompute query through the supplied transaction client', async () => {
+      const transactionMock = makePrismaMock();
+      transactionMock.task.findMany.mockResolvedValue([
+        { status: 'COMPLETED', difficulty: 'LOW' },
+      ]);
+      transactionMock.dailyScore.upsert.mockResolvedValue({ id: 'ds-tx' });
+      transactionMock.dailyScore.aggregate.mockResolvedValue({
+        _sum: { cappedScore: 15 },
+      });
+      transactionMock.user.update.mockResolvedValue({});
+
+      const result = await service.recompute(
+        'user-1',
+        '2026-06-03',
+        transactionMock as unknown as Prisma.TransactionClient,
+      );
+
+      expect(result).toEqual({ id: 'ds-tx' });
+      expect(transactionMock.task.findMany).toHaveBeenCalledTimes(1);
+      expect(transactionMock.dailyScore.upsert).toHaveBeenCalledTimes(1);
+      expect(transactionMock.dailyScore.aggregate).toHaveBeenCalledTimes(1);
+      expect(transactionMock.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { totalScore: 15, tier: 'BRONZE' },
+      });
+      expect(prismaMock.task.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.dailyScore.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.dailyScore.aggregate).not.toHaveBeenCalled();
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
   });
 

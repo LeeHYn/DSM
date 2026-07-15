@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { type DailyScore, type Tier, TaskStatus } from '@prisma/client';
+import {
+  type DailyScore,
+  type Prisma,
+  type Tier,
+  TaskStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeDailyScore, tierForScore } from './scores.policy';
 
@@ -14,12 +19,13 @@ export class ScoresService {
   async recompute(
     userId: string,
     reference: Date | string,
+    client: Prisma.TransactionClient = this.prisma,
   ): Promise<DailyScore> {
     const dayStart = this.startOfUtcDay(reference);
     const nextDay = new Date(dayStart);
     nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
-    const tasks = await this.prisma.task.findMany({
+    const tasks = await client.task.findMany({
       where: {
         userId,
         deletedAt: null,
@@ -34,13 +40,13 @@ export class ScoresService {
         .map((task) => task.difficulty),
     });
 
-    const dailyScore = await this.prisma.dailyScore.upsert({
+    const dailyScore = await client.dailyScore.upsert({
       where: { userId_scoreDate: { userId, scoreDate: dayStart } },
       create: { userId, scoreDate: dayStart, ...result },
       update: { ...result },
     });
 
-    await this.recomputeUserTotal(userId);
+    await this.recomputeUserTotal(userId, client);
     return dailyScore;
   }
 
@@ -61,14 +67,17 @@ export class ScoresService {
     });
   }
 
-  private async recomputeUserTotal(userId: string): Promise<void> {
-    const aggregate = await this.prisma.dailyScore.aggregate({
+  private async recomputeUserTotal(
+    userId: string,
+    client: Prisma.TransactionClient,
+  ): Promise<void> {
+    const aggregate = await client.dailyScore.aggregate({
       where: { userId },
       _sum: { cappedScore: true },
     });
     const totalScore = aggregate._sum.cappedScore ?? 0;
 
-    await this.prisma.user.update({
+    await client.user.update({
       where: { id: userId },
       data: { totalScore, tier: tierForScore(totalScore) },
     });

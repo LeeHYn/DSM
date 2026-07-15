@@ -49,3 +49,51 @@
   - [x] 유닛 테스트 (정책 6 + 서비스 6 + 컨트롤러 4)
   - [x] 스키마/마이그레이션 변경 없음
   - [ ] (보류) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷
+- [x] 지원 작업: 서브 에이전트 운영 체계 구축
+  - [x] `.ai/agents/README.md` 공통 운영 계약 및 역할 레지스트리 작성
+  - [x] `investigator`, `planner`, `backend-developer`, `frontend-developer`, `reviewer` 역할 문서 작성
+  - [x] `.ai/system_prompt.md`에 서브 에이전트 위임 프로토콜 연결
+  - [x] `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`를 저장소 로컬 `.ai/system_prompt.md`에 연결
+  - [x] 거부 시나리오 검증: 역할과 필수 위임 필드가 누락된 서브 에이전트가 수정 없이 중단
+  - [x] 허용 시나리오 검증: `reviewer`가 완전한 위임 계약으로 읽기 전용 감사 수행
+  - [x] 리뷰 findings 반영: memory 책임, SSOT 범위, migration, 외부 공식 문서 조회, 승인 상태의 모순 제거
+  - [x] 최종 read-only 재감사: 이전 findings 6건 해소, 신규 findings 없음
+- [x] 지원 작업: 에이전트 간 Context Compiler 역할 구축
+  - [x] `.ai/agents/context-compiler.md` 읽기 전용 encode/decode 역할 계약 작성
+  - [x] `.ai/agents/README.md` 역할 레지스트리와 선택적 사용 경계 연결
+  - [x] `.ai/system_prompt.md`에 다중 문서·에이전트 handoff 호출 조건과 원문 비대체 원칙 연결
+  - [x] `AgentEnvelope v1` JSON 예시 파싱 및 필수 키 18개 검증
+  - [x] 허용·round-trip 시나리오: `구현 승인 대기`와 정확한 파일 경로 보존
+  - [x] 거부 시나리오: 필수 필드 누락과 해결되지 않은 conflict 감지
+  - [x] 경계 시나리오: envelope가 필수 SSOT 원문 읽기를 대체하지 않음을 확인
+  - [x] `.ai/memory/plan.md`, `context.md`, `checklist.md` 승인·결정·완료 상태 동기화
+- [x] 지원 작업: Context Compiler 하이브리드 Handoff 확장
+  - [x] `English Task Prompt` 영어 Markdown 실행 프롬프트 계약 추가
+  - [x] `Required Markdown Reads` 정확한 `.md` 경로·이유·`full|sections` 읽기 계약 추가
+  - [x] `AgentEnvelope v1.1`에 delivery·language·Markdown read·translation 필드 추가
+  - [x] `.ai/agents/README.md`와 `.ai/system_prompt.md` 하이브리드 라우팅 연결
+  - [x] `.ai/memory/context.md` 기술 결정 동기화
+  - [x] 영어 번역 검증: 실행 지시는 영어, 결과 보고 언어 기본값은 한국어(`ko`)
+  - [x] 원문 보존 검증: `.ai/system_prompt.md`, 소스 경로와 `구현 승인 대기` 유지
+  - [x] Markdown 라우팅 검증: 정확한 경로, read scope, 파일 존재와 `full|sections` 모드 확인
+  - [x] 거부 시나리오 검증: 필수 Markdown 누락 또는 번역 conflict 시 실행용 handoff 중단
+  - [x] 계획·결정·체크리스트 승인·완료 상태 동기화
+- [x] 지원 작업: 현재 프로그램 전체 읽기 전용 코드 리뷰
+  - [x] `DSM_Back` 소스·테스트·Prisma schema·설정·package/lockfile 전체 검토
+  - [x] `DSM_Front` 소스·스크립트·설정·package/lockfile 전체 검토
+  - [x] 인증·인가·점수 원자성·랭킹·UTC 경계·오류 처리·운영 설정 교차 검토
+  - [x] 백엔드 Jest `--runInBand --no-cache`: 16 suites, 78 tests 통과
+  - [x] 백엔드 `tsc --noEmit --incremental false`: 통과
+  - [x] 프런트 `tsc --noEmit --incremental false`: CSS module type 선언 누락 1건 확인
+  - [x] lockfile 2개 JSON parse 및 root dependency 일치 확인
+  - [x] findings 현재 줄 번호 재검증 및 제품 파일 무변경 확인
+  - [x] 후속 수정: 사용자 지정 5건을 별도 승인 품질 수정 작업으로 수행
+- [x] 품질 수정: 사용자 지정 즉시 처리 5건
+  - [x] Google 로그인 audience 검증 강제
+  - [x] Refresh token 동시 재사용 차단
+  - [x] Task의 타 사용자 Category 연결 차단
+  - [x] Task 변경과 점수 재계산 원자성 보장
+  - [x] 프런트 CSS module TypeScript 오류 해소
+  - [x] reviewer P2 반영: Serializable isolation + Prisma P2034 bounded retry
+  - [x] 독립 reviewer 재검토: 기존 finding 해결, 신규 finding 없음
+  - [x] 최종 검증: 백엔드 16 suites·99 tests, 백엔드·프런트 TypeScript 통과

@@ -10,7 +10,7 @@ import { OAuth2Client } from 'google-auth-library';
 import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { SocialProvider } from '@prisma/client';
+import { SocialProvider, type Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from './types/jwt-payload.type';
 import type { SocialProfile } from './types/social-profile.type';
@@ -19,19 +19,22 @@ import type { TokenResponseDto } from './dto/token-response.dto';
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const BCRYPT_ROUNDS = 10;
+type RefreshTokenClient = Pick<Prisma.TransactionClient, 'refreshToken'>;
 
 @Injectable()
 export class AuthService {
-  private googleClient: OAuth2Client;
+  private readonly googleClientId: string;
+  private readonly googleClient: OAuth2Client;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.googleClient = new OAuth2Client(
-      this.configService.get<string>('GOOGLE_CLIENT_ID'),
+    this.googleClientId = this.configService.getOrThrow<string>(
+      'GOOGLE_CLIENT_ID',
     );
+    this.googleClient = new OAuth2Client(this.googleClientId);
   }
 
   async socialLogin(
@@ -46,22 +49,34 @@ export class AuthService {
   async refreshTokens(rawRefreshToken: string): Promise<TokenResponseDto> {
     const { id, secret } = this.parseRefreshToken(rawRefreshToken);
     const record = await this.prisma.refreshToken.findUnique({ where: { id } });
+    const checkedAt = new Date();
 
     if (
       !record ||
       record.revokedAt !== null ||
-      record.expiresAt <= new Date() ||
+      record.expiresAt <= checkedAt ||
       !(await bcrypt.compare(secret, record.tokenHash))
     ) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: record.id },
-      data: { revokedAt: new Date() },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const revokedAt = new Date();
+      const revoked = await tx.refreshToken.updateMany({
+        where: {
+          id: record.id,
+          revokedAt: null,
+          expiresAt: { gt: revokedAt },
+        },
+        data: { revokedAt },
+      });
 
-    return this.issueTokens(record.userId);
+      if (revoked.count !== 1) {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      }
+
+      return this.issueTokens(record.userId, tx);
+    });
   }
 
   async logout(userId: string, rawRefreshToken: string): Promise<void> {
@@ -98,7 +113,10 @@ export class AuthService {
     return { id: token.slice(0, idx), secret: token.slice(idx + 1) };
   }
 
-  private async issueTokens(userId: string): Promise<TokenResponseDto> {
+  private async issueTokens(
+    userId: string,
+    client: RefreshTokenClient = this.prisma,
+  ): Promise<TokenResponseDto> {
     const payload: JwtPayload = { sub: userId, type: 'access' };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
@@ -107,7 +125,7 @@ export class AuthService {
 
     const secret = crypto.randomBytes(32).toString('hex');
     const tokenHash = await bcrypt.hash(secret, BCRYPT_ROUNDS);
-    const record = await this.prisma.refreshToken.create({
+    const record = await client.refreshToken.create({
       data: {
         userId,
         tokenHash,
@@ -181,7 +199,7 @@ export class AuthService {
     try {
       const ticket = await this.googleClient.verifyIdToken({
         idToken,
-        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+        audience: this.googleClientId,
       });
       const payload = ticket.getPayload();
       if (!payload?.sub) {
