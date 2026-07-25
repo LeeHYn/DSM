@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; font-family: 'Noto Sans KR', -apple-system, sans-serif; }
+  h1, h2, h3 { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #d8dade; padding: 8px 10px; font-size: 13px; text-align: left; }
+  th { background: #f2f3f5; }
+  code { background: #f2f3f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .tag { display:inline-block; background:#eef1e8; color:#4b6a1f; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; margin-right:6px; }
+  .card { border:1px solid #dde0e4; border-radius:10px; padding:14px 16px; break-inside: avoid; margin-bottom:12px; }
+  .card h3 { margin:0 0 6px; font-size:15px; }
+  .card p { margin:0 0 6px; font-size:13.5px; color:#333; }
+  .card ul { margin:6px 0 0; padding-left:18px; font-size:13.5px; }
+</style>
+</helmet>
+<style>doc-page:not(:defined){visibility:hidden}</style>
+<x-import component-from-global-scope="doc-page" from="./doc-page.js" size="letter" margin="0.85in" hint-size="850,1100">
+
+<h1>데일리업 · Phase 1 프로토타입 문서</h1>
+<p style="color:#666; margin-top:-8px;">MVP 인터랙티브 프로토타입 화면 정리 · 2026년 7월 19일</p>
+
+<h2>1. 개요</h2>
+<p>일과 완료 기반 점수·랭킹 습관관리 앱의 Phase 1 MVP 프로토타입입니다. 안드로이드 프레임 안에서 로그인부터 랭킹, 마이페이지까지 전체 사용자 흐름을 인터랙티브하게 확인할 수 있습니다. 다크 모드가 기본값이며, 마이페이지 설정에서 라이트 모드로 전환할 수 있습니다.</p>
+
+<h2>2. 화면 구성 (총 8개)</h2>
+
+<div class="card">
+  <h3>① 로그인</h3>
+  <p>서비스 진입 화면. 소셜 로그인 버튼 제공.</p>
+  <ul>
+    <li>Google / Kakao 로그인 (로딩 상태 표시 후 튜토리얼로 이동)</li>
+    <li>Apple 로그인은 준비 중 상태로 비활성 표시</li>
+    <li>하단 이용약관·개인정보처리방침 링크</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>② 온보딩 튜토리얼 (3페이지)</h3>
+  <p>최초 로그인 시 노출되는 3단계 소개 화면.</p>
+  <ul>
+    <li>1) 일과 등록과 완료 2) 난이도와 일일 점수 상한 3) 랭킹과 6단계 티어</li>
+    <li>건너뛰기 가능, 마지막 페이지에서 "시작하기"로 홈 진입</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>③ 홈 (일과 목록)</h3>
+  <p>당일 일과와 점수 현황을 보여주는 메인 화면. 하단 탭의 첫 번째 탭.</p>
+  <ul>
+    <li>오늘 점수(최대 900점), GOLD 티어 배지, 진행률 바, 누적 점수</li>
+    <li>일과 리스트: 체크로 완료 처리(낙관적 업데이트 + 실패 시 롤백), 탭하여 상세 진입</li>
+    <li>우측 하단 FAB(+)로 새 일과 추가</li>
+    <li>로딩 / 빈 상태 / 오류 / 오프라인 상태 UI 포함</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>④ 새 일과 추가 (모달)</h3>
+  <p>홈 화면 FAB 또는 빈 상태 버튼으로 진입하는 하단 시트.</p>
+  <ul>
+    <li>제목(필수), 설명, 시작/종료 시간(종료 &gt; 시작 검증), 난이도(낮음/보통/높음), 카테고리 칩 선택, 완료 알림 토글</li>
+    <li>유효성 오류 인라인 표시 후 저장</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>⑤ 일과 상세 (모달)</h3>
+  <p>일과 리스트 항목 탭 시 진입하는 하단 시트.</p>
+  <ul>
+    <li>제목/시간/카테고리/난이도/설명 표시</li>
+    <li>완료 처리·취소, 삭제(확인 단계 포함)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>⑥ 랭킹</h3>
+  <p>하단 탭의 두 번째 탭. 일간/주간/누적 랭킹을 확인.</p>
+  <ul>
+    <li>기간 세그먼트 전환(일간/주간/누적)</li>
+    <li>내 순위 카드(순위·상위 퍼센트·점수), 리더보드 리스트(순위·닉네임·티어·점수)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>⑦ 마이페이지</h3>
+  <p>하단 탭의 세 번째 탭. 프로필과 설정 메뉴.</p>
+  <ul>
+    <li>프로필(닉네임·티어 배지·누적 점수)</li>
+    <li>설정 메뉴: 화면 테마(다크/라이트 토글), 프로필·계정 관리, 알림 설정, 나의 통계, 도움말·규칙·법적 정보(준비 중), 로그아웃</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>⑧ 하단 탭 내비게이션 · 공통 UI</h3>
+  <p>홈/랭킹/마이 탭 전환은 항상 하단 탭 바에서 이루어지며, 토스트 알림이 모든 화면 공통으로 하단에 표시됩니다.</p>
+</div>
+
+<h2 style="break-before: page;">3. 상태 및 인터랙션</h2>
+<table>
+  <thead><tr><th>구분</th><th>내용</th></tr></thead>
+  <tbody>
+    <tr><td>로딩</td><td>스켈레톤 카드/리스트, pulse 애니메이션</td></tr>
+    <tr><td>빈 상태</td><td>점선 박스 + 안내 문구 + "새 일과 추가" CTA</td></tr>
+    <tr><td>오류</td><td>오류 배너 + "다시 시도" 버튼</td></tr>
+    <tr><td>오프라인</td><td>상단 오프라인 배너, 일과 리스트 상호작용 비활성화</td></tr>
+    <tr><td>일과 완료 처리</td><td>낙관적 업데이트(즉시 UI 반영) → 실패 시 자동 롤백 + 토스트 안내</td></tr>
+  </tbody>
+</table>
+<p>하단 개발 도구 바(홈 탭 노출 시)에서 정상/로딩/빈 상태/오류/오프라인 상태를 즉시 전환하며 테스트할 수 있습니다.</p>
+
+<h2>4. 디자인 톤</h2>
+<p><span class="tag">다크 모드 (기본)</span><span class="tag">라이트 모드</span> 게이미피케이션 스타일. 포인트 컬러는 라임 그린(브랜드 액센트), 골드는 티어·랭킹 배지에 사용. 폰트는 Noto Sans KR.</p>
+
+<h2>5. 참고</h2>
+<p>원본 요구사항 문서: <code>2026-07-19-frontend-page-requirements.md</code> · 프로토타입 파일: <code>DSM Prototype.dc.html</code></p>
+
+</x-import>
+
+</x-dc>
+</body>
+</html>

@@ -1,21 +1,19 @@
-- **현재 상태**: 마일스톤 11 완료. Auth + Task CRUD + Category CRUD + 리프레시 토큰 O(1) + DailyScore 집계 + 랭킹/백분위까지 구현. 2026-07-15 지정 품질 보완 5건 완료 후 전체 유닛 테스트 99개와 백엔드·프런트 TypeScript 검사가 통과한다.
-- **작업 대상**:
-  - `DSM_Back`: NestJS 기반 백엔드 API 서버
-  - `DSM_Front`: React Native + Expo Router 기반 모바일 클라이언트
-- **기술 결정 사항**:
-  - DB 접근 계층: Prisma v6 (v7 breaking change로 다운그레이드)
-  - DB: PostgreSQL, 모든 시간 필드 UTC (timestamptz)
-  - 테스트 환경: PrismaService가 실제 DB 연결을 열지 않음 (NODE_ENV=test 체크)
-  - Jest: tsconfig.spec.json 사용 (module: commonjs)
-  - 인증: @nestjs/jwt, bcrypt (refresh token hash), google-auth-library, axios (Kakao)
-  - Apple Sign In: 구조만 구현, 실제 검증은 Apple Developer 계정 확보 후 구현
-  - Access token TTL: 15분 / Refresh token TTL: 30일
-- **Task CRUD**: POST/GET/PATCH/DELETE /tasks, PATCH /tasks/:id/complete. 소프트 삭제(deletedAt). 날짜 필터(startAt 기준 UTC day range).
-- **Category CRUD**: POST/GET/PATCH/DELETE /categories. 사용자 소유 + 기본(isDefault, userId=null) 카테고리 조회. 기본 카테고리는 읽기 전용(수정/삭제 시 Forbidden), 타 사용자 카테고리는 NotFound로 숨김. 이름 중복 시 Conflict(409, P2002 매핑). 하드 삭제(Task.categoryId는 onDelete SetNull).
-- **리프레시 토큰(마일스톤 9)**: 토큰 포맷 `<recordId>.<secret>`. refreshTokens/logout은 parseRefreshToken으로 id 추출 → findUnique(PK) → 단일 bcrypt.compare(O(1)). revoked/expired/malformed/secret불일치 모두 401(logout은 멱등). 스키마 변경 없음. 기존 발급 토큰은 `.` 없어 무효 → 재로그인 필요(pre-production이라 허용). (선택) 재사용 감지 훅은 보류.
-- **품질 보완 5건(2026-07-15)**: `GOOGLE_CLIENT_ID`는 non-empty 필수 설정이며 `AuthService`가 한 번 읽은 값을 Google client와 token audience에 재사용한다. refresh rotation은 `revokedAt=null`, non-expired 조건의 `updateMany` 단일 승자와 replacement token 생성을 같은 transaction에서 처리한다. Task create/update는 actor 소유 또는 default Category만 허용한다. `TasksService`가 create/update/remove/complete의 `Serializable` transaction을 소유하고 `P2034`를 최대 2회 재시도하며, `ScoresService`는 전달된 transaction client로 Task·DailyScore·User query를 모두 실행한다. 프런트는 `src/types/css-modules.d.ts`로 Expo web CSS module default export type을 선언한다.
-- **점수(마일스톤 10)**: scores.policy(순수함수) — 난이도 10/20/30, 보정 100%→1.5·80%→1.3·60%→1.0·그외 0.7, 상한 DAILY_SCORE_CAP=900, 티어 6단계. ScoresService.recompute(userId, dateRef): 해당 UTC일 일과 집계 → DailyScore upsert(@@unique userId_scoreDate) → ΣcappedScore로 User.totalScore/티어 재계산(멱등). 조회: GET /scores?date=(기본 오늘), GET /scores/summary. TasksService가 create/update/remove/complete 후 recompute 호출(update는 변경 전·후 양일, 중복 제거). 스키마 변경 없음.
-- **랭킹(마일스톤 11)**: rankings.policy(순수) — computeRanking(higherCount,totalUsers)→rank=higher+1, percentile=round(rank/total*100,2), 전체 유저 기준. RankingsService: getMyRanking(period)=score/rank/percentile/totalUsers, getLeaderboard(period,limit≤100), createSnapshot→RankingSnapshot. 기간: DAILY=오늘 cappedScore, WEEKLY=최근7일 합(groupBy-having), TOTAL=User.totalScore. 조회 시 실시간 계산. GET /rankings, /rankings/leaderboard, POST /rankings/snapshot. 스키마 변경 없음.
-- **다음 작업**: 마일스톤 12 후보 — 알림(NotificationSchedule)+FCM 푸시, WebSocket 실시간 랭킹(NFR-02), 또는 랭킹 배치/Redis 캐싱. 우선순위 협의 필요.
-- **서브 에이전트 운영 체계(2026-07-10, 2026-07-15 확장)**: `.ai/agents/README.md`를 공통 계약 SSOT로 두고 `investigator`, `context-compiler`, `planner`, `backend-developer`, `frontend-developer`, `reviewer` 역할을 분리했다. `context-compiler`는 복잡한 다중 문서·에이전트 handoff를 영어 `English Task Prompt`, 원본 문서 직접 읽기 목록인 `Required Markdown Reads`, 권한·범위 제어용 `AgentEnvelope v1.1` JSON으로 구성된 `Handoff Package v1`로 변환하거나 구조화 결과를 사람용 보고로 복원하는 읽기 전용 역할이다. 실행 지시와 설명은 영어로 전달하지만 경로·명령·코드 심볼·역할명·gate 이름·수치는 원문 그대로 보존하며, SSOT와 구조 보존이 필요한 Markdown은 대상 에이전트가 직접 읽는다. handoff package는 필수 SSOT 원문 읽기를 대체하지 않는다. 메인 에이전트가 계획·승인·공유 memory 갱신과 최종 diff 통합을 담당한다. 모든 위임은 역할, 목표, 읽기 범위, 정확한 수정 파일 allowlist, 금지 범위, 검증, 완료 조건을 포함하며 한 단계의 수정 파일은 1~2개로 제한한다. 역할 문서는 상위 권한을 확장할 수 없고, 병렬 에이전트의 파일 소유권이 겹치면 작업을 중단한다. 루트 `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`는 저장소 상대 경로 `.ai/system_prompt.md`를 참조한다.
-- **사용자 실행 정책(2026-07-15)**: 제품 코드·테스트·설정의 조사·구현·리뷰 작업은 항상 목적에 맞는 `.ai/agents/` 역할의 서브 에이전트를 통해 수행한다. 메인 에이전트는 계획·승인·공유 memory·파일 소유권·최종 diff와 검증 통합을 담당하며, exact writable allowlist가 겹치지 않게 배정하고 독립 reviewer 재검토를 거친다.
+# 현재 프로젝트 맥락
+
+- **상태**: 마일스톤 12A 완료. 12B backend·지속형 local DB·change-gate 완료; 실제 FCM dispatch는 12C 전 비활성. Auth + Task/Category CRUD + refresh O(1) + DailyScore + ranking + FCM token/schedule + per-device dispatcher 구현.
+- **검증 기준선(2026-07-20)**: backend Jest 22 suites·198 tests, e2e 1 suite·2 tests, direct AppModule compile, backend TypeScript, scoped lint·Prettier, Prisma validate·2 migrations up-to-date·zero drift 통과.
+- **대상/stack**: `DSM_Back` NestJS + Prisma v6 + PostgreSQL UTC `timestamptz`; `DSM_Front` React Native + Expo Router SDK 55. Jest는 `tsconfig.spec.json` CommonJS. test에서 Prisma 실제 연결 차단.
+- **Auth**: `@nestjs/jwt`, bcrypt refresh hash, Google/Kakao. `GOOGLE_CLIENT_ID` 필수·audience 검증. refresh `<recordId>.<secret>`, conditional revoke 단일 승자 + replacement create 동일 transaction. Apple 검증은 계정 확보 후.
+- **Task/Category/Score**: Task mutation·schedule sync·score recompute 동일 Serializable transaction, Prisma `P2034` 최대 2회 재시도. actor 소유/default Category만 할당. UTC day score 10/20/30 × 1.5/1.3/1.0/0.7, cap 900, 6 tiers.
+- **Ranking**: DAILY/WEEKLY/TOTAL 실시간 계산, leaderboard·snapshot API. Redis/batch/WebSocket 미구현.
+- **알림 12A**: FCM token 등록·same-user 갱신·revoke. foreign-owner token/FID in-place 이전은 mutation 전 409. Task 상태와 `NotificationSchedule` 원자 동기화.
+- **알림 12B**: ADC-only provider, 30초 Cron, schedule 100·delivery 500, 5분 lease·60초 heartbeat, per-device 결과·최대 3회 명시적 failure retry. `sendStartedAt` 이후 모호 결과는 terminal `UNKNOWN`; 자동 재발송 금지. payload는 account-neutral data-only `REMINDER_SYNC`/version.
+- **finding**: F-004·F-010·F-014 포함 12건 `RECHECKED`; F-007 send recall 불가·client 표시 직후 취소 race만 사용자 `ACCEPTED_RISK`. 12C 전 `FCM_DISPATCH_ENABLED=false`.
+- **local DB**: Docker Desktop 4.82.0, Engine/CLI 29.6.1, Compose 5.3.0, WSL 2.7.10. PostgreSQL 17 Alpine, `127.0.0.1:5432`, UTC, healthcheck, `unless-stopped`, named volume. migrations `20260716_init`, `20260720_notification_delivery_outcome_policy` 적용·zero drift.
+- **front Phase 1**: `design/` 5 PNG + prototype 기준 dark-first login/tutorial/home/ranking/my, Task CRUD prototype, loading/empty/error/offline, theme/logout. 909×540·390×844 Browser QA. 실제 OAuth/backend/FCM/WebSocket/DB 연결 미구현.
+- **다음 작업**: front secure session·API client → 12C permission + logout/account-switch Installation rotation + authenticated current-state sync/display → test project/device ADC·FCM sandbox → dispatch 활성 판단 → WebSocket → Redis/batch.
+- **운영**: `.ai/agents/README.md` 역할 계약; 제품 조사·구현·review는 적합한 역할 sub-agent, main은 계획·승인·memory·diff 통합. 고위험은 `change-gate`, release 전 `release-audit`; audit JSONL은 증거·상태 이력.
+- **오류 재사용**: 오류 작업 전 `error-resolution-playbook.md` 검색. 환경·root cause 일치 `VERIFIED`만 현재 범위에서 적용·재검증. `MITIGATION_ONLY`는 gate·잔여 위험 유지.
+- **memory backup**: `*.original.md`는 local 복구 snapshot, Git 제외·비활성. 2026-07-20 Anthropic compression script의 Windows CP949 bug로 기존 context pre-image가 손실돼 Git HEAD·plan·architecture·checklist에서 상세 snapshot을 재구성했다.
+- **Obsidian Vault 연결(2026-07-20)**: `C:\AiWiki`를 Obsidian 1.12.7의 단일 local Vault로 등록했다. `C:\AiWiki\AiProject`는 여러 프로젝트를 담는 일반 directory다.
+- **Obsidian DSM 문서 큐레이션·일반 컨테이너 전환(2026-07-22)**: `C:\AiWiki\AiProject\DSM`은 일반 directory이고, `Current` junction은 `C:\DEV\.ai\docs`, `Planning` junction은 `C:\DEV\Planing Document`를 가리킨다. `Overview.md`는 Current 4개와 Planning v1.3 4개를 연결하며 기획 문서 4개의 architecture 링크도 새 Current 경로를 사용한다. 원본 `C:\DEV`와 두 junction target은 보존됐다. 전환 전 IndexedDB cache는 삭제하지 않고 `.pre-dsm-20260721` exact backup으로 이동했으며 Obsidian workspace와 새 cache가 정상 생성됐다. 사용자 action-time 승인 후 stale 제외 필터 11개를 UI에서 제거하고 보관함 cache를 재구축했으며 `app.json` readback은 `userIgnoreFilters: null`이다. Quick Switcher에서 Overview·현재 architecture는 검색되고 `node_modules`·`AGENTS.md`·`superpowers`는 파일 결과가 없음을 확인했다. 복구 절차는 `ER-20260722-001`로 기록했다.

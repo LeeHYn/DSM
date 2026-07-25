@@ -1,412 +1,574 @@
 # 목표
-DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 
-# 완료된 마일스톤
-1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기
-2. `DSM_Back` (NestJS) 초기 세팅
-3. `DSM_Front` (React Native/Expo) 초기 세팅
-4. 생성된 프로젝트 구조를 Git에 커밋 및 원격 저장소에 푸시
-5. `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
-6. `DSM_Back` 인증(Auth) 모듈 구현
+DSM full-stack을 단계 구현한다. 기능 + test + 문서 + 승인·검증 이력을 함께 유지한다. 현재 제품 목표: front 실제 auth/API 연결과 12C notification client gate 후 sandbox FCM 검증.
 
-7. 일과(Task) CRUD API 구현
-8. 카테고리(Category) CRUD API 구현
-9. 리프레시 토큰 조회 구조 개선 — 토큰에 레코드 ID 임베드(`<recordId>.<secret>`)로 O(1) 조회 (계획: docs/superpowers/plans/2026-06-06-dsm-refresh-token-lookup.md)
-10. 점수(DailyScore) 집계 로직 구현 — FR-03 점수 공식 + 누적 totalScore/티어, 일과 변경 시 재계산 + 조회 API (계획: docs/superpowers/plans/2026-06-07-dsm-daily-score.md)
-11. 랭킹/백분위(FR-04) 구현 — 일간/주간/누적 내 순위·상위%, TOP100 리더보드, RankingSnapshot 영속화. 조회 시 실시간 계산, 전체 유저 기준 (계획: docs/superpowers/plans/2026-06-07-dsm-rankings.md)
+# Memory SSOT
 
-# 다음 마일스톤
-12. **12A 알림 기반** — FCM 토큰 수명주기 API + Task-`NotificationSchedule` 동기화
-   - 상세 계획: `.ai/docs/2026-07-10-milestone-12a-notification-foundation.md`
-   - 범위: 토큰 등록·갱신·재활성화·폐기, Task mutation과 `PENDING/CANCELLED` 예약 상태 동기화, 단위 테스트
-   - 제외: 실제 Firebase 발송·Cron(12B), 프런트 알림(12C), WebSocket(13), Redis/랭킹 배치(14)
-   - 판정: 기존 Prisma 모델과 Nest 의존성으로 구현 가능. 12A에는 새 패키지·Firebase 자격증명·schema migration이 필요하지 않음(실제 DB의 현 schema 적용 여부는 구현 전 별도 확인)
-   - **계획 작성 승인 기록**: 2026-07-10 사용자가 알림 방향으로 작업 진행을 승인함
-   - **상태**: 상세 계획 작성 완료 — **구현 승인 대기**
+- `plan.md`: 현재 목표, 기술 계약, 승인, 다음 실행 계획
+- `context.md`: 현재 구현·환경·위험 snapshot
+- `checklist.md`: `[ ]|[/]|[x]` 공정 상태
+- `error-resolution-playbook.md`: 오류 발생 시 조건부 검색하는 검증 해결 지식
+- `*.original.md`: local recovery only. Git·일반 검색·handoff·재압축 제외.
+- 상세 architecture: `.ai/docs/2026-07-15-current-project-architecture.md`
+- 상세 audit: `.ai/audits/20260716-change-gate-notification-12b/findings.jsonl`
+- 압축 전 전체 계획: `.ai/memory/plan.original.md`
 
-# 지원 작업 계획: 서브 에이전트 운영 체계
+# 현재 상태 — 2026-07-20
 
-## 목표
-- `.ai/agents/`를 저장소의 서브 에이전트 역할 문서 SSOT로 만든다.
-- 각 역할에 책임, 읽기 범위, 수정 가능한 파일/경로, 금지 사항, 승인 필요 작업, 완료 보고 형식을 명시한다.
-- 이후 메인 에이전트가 서브 에이전트를 생성할 때 공통 규칙과 해당 역할 문서를 반드시 읽어 프롬프트에 반영하도록 연결한다.
+- M1~M11 완료: project setup, Auth, Task, Category, refresh O(1), DailyScore, Ranking.
+- M12A 완료: FCM token lifecycle + Task-`NotificationSchedule` 원자 동기화.
+- M12B backend·local DB·change-gate 완료. 실제 FCM sandbox와 12C client gate 미완료이므로 parent status `[/]`.
+- backend Jest 22 suites·198 tests, e2e 1 suite·2 tests, direct AppModule compile, TypeScript, scoped ESLint·Prettier, Prisma validation, 2 migrations up-to-date·zero drift, `git diff --check` 통과.
+- audit 13 findings: F-007 `ACCEPTED_RISK`, 나머지 12 `RECHECKED`. 미해결 P0/P1 없음.
+- front design Phase 1 prototype 완료; 실제 OAuth/backend/FCM/WebSocket/DB 연결 미구현.
 
-## 역할 문서
-1. `.ai/agents/README.md`: 공통 운영 계약, 우선순위, 위임 프롬프트 필수 항목, 동시 작업 충돌 방지 규칙
-2. `.ai/agents/investigator.md`: 저장소 조사 전용, task assignment의 `read scope`에 지정된 소스만 읽기 가능, 파일 수정 금지
-3. `.ai/agents/planner.md`: 계획 수립 전용, 소스 수정 금지, 승인된 `.ai/memory/plan.md` 및 계획 문서만 수정 가능
-4. `.ai/agents/backend-developer.md`: 할당받은 `DSM_Back/` 파일과 대응 테스트만 수정 가능
-5. `.ai/agents/frontend-developer.md`: 할당받은 `DSM_Front/` 파일과 대응 테스트만 수정 가능하며 `DSM_Front/AGENTS.md`의 Expo v55 규칙 준수
-6. `.ai/agents/reviewer.md`: 소스와 diff 검증 전용, 소스 수정 금지, 승인된 리뷰 보고서 경로만 수정 가능
+# 다음 작업
 
-## 공통 권한과 한계
-- 모든 개발 역할은 위임 프롬프트에 명시된 정확한 파일 allowlist 안에서만 수정한다.
-- 모든 역할은 작업 시작 전 `.ai/memory/plan.md`, `context.md`, `checklist.md`를 읽되, 역할 문서가 허용하지 않으면 공유 memory 파일을 수정하지 않는다.
-- 하위 디렉터리에 더 구체적인 `AGENTS.md`가 있으면 해당 규칙을 함께 적용하며, 충돌 시 더 높은 우선순위와 더 제한적인 규칙을 따른다.
-- 동시에 실행되는 에이전트끼리 수정 파일이 겹치면 작업을 시작하지 않고 메인 에이전트에 보고한다.
-- 서브 에이전트는 사용자 승인 없이 커밋, 푸시, 브랜치 변경, 의존성 설치, DB 마이그레이션, 외부 서비스 호출, 비밀정보 접근, 파괴적 명령을 실행하지 않는다.
-- 범위 밖 변경이 필요하면 임의 확장하지 않고 사유와 필요한 파일을 보고한 뒤 중단한다.
-- 검증 명령은 역할과 위임 범위 안에서만 실행하며, 실패를 숨기거나 우회하지 않는다.
-- 완료 시 수정 파일, 실행한 검증, 실패/잔여 위험, 범위 준수 여부를 정해진 형식으로 보고한다.
+## 권장 순서
 
-## 적용 연결
-1. `.ai/system_prompt.md`에 서브 에이전트 생성 전 `.ai/agents/README.md`와 선택 역할 문서를 읽는 절차를 추가한다.
-2. 루트 진입 문서(`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`)의 현재 유효하지 않은 `C:/dsm/.ai/system_prompt.md` 참조를 저장소 로컬 `.ai/system_prompt.md`로 정리한다.
-3. 메인 에이전트가 위임 시 역할명, 목표, 읽기 범위, 수정 파일 allowlist, 금지 범위, 검증 명령, 완료 조건을 명시하도록 강제한다.
+1. Front secure session + REST API client
+2. M12C:
+   - notification permission
+   - logout/account-switch Firebase Installation/token rotation
+   - data-only signal 수신
+   - authenticated current-state fetch/display
+   - cancelled/completed/deleted Task 표시 금지
+3. 별도 Firebase test project/device에서 ADC·FCM sandbox
+4. evidence 확인 후 `FCM_DISPATCH_ENABLED` 활성 판단
+5. M13 WebSocket realtime ranking
+6. M14 Redis/batch caching
 
-## 실행 순서
-1. 사용자 승인 후 `.ai/agents/README.md`와 역할 문서를 1~2개씩 작성한다.
-2. 각 단계마다 문서의 경로 권한과 금지 규칙을 상호 검토한다.
-3. `.ai/system_prompt.md`와 루트 진입 문서를 최소 단위로 연결한다.
-4. 가상 위임 시나리오로 역할별 허용/거부 사례를 점검하고 `.ai/memory/checklist.md`에 결과를 기록한다.
+## 다음 단계 승인 전 경계
 
-## 승인 게이트
-- 이 계획의 승인 전에는 `.ai/agents/` 생성, 역할 문서 작성, 시스템 지침 및 루트 진입 문서 수정을 시작하지 않는다.
-- **승인 기록**: 2026-07-10 사용자가 이 지원 작업 계획의 구현을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-10 공통 계약 1개와 역할 문서 5개, 시스템 지침 연결, 루트 진입 문서 연결과 역할 계약 감사·수정을 완료했다.
+- front 제품 파일 수정 금지
+- 실제 Firebase credential 조회·message send 금지
+- 원격/운영 DB 접근·migration 금지
+- deploy·Git write 금지
+- 다음 계획은 exact 1~2-file stage와 verification을 먼저 기록하고 사용자 승인 후 실행
 
-# 지원 작업 계획: 에이전트 간 Context Compiler 역할
+# 핵심 기술 계약
 
-## 목표
-- 에이전트가 다른 에이전트에 프롬프트를 전달하거나 여러 문서에서 작업 문맥을 추출할 때, 자연어를 고정된 기계 판독형 중간 표현인 `AgentEnvelope v1`로 변환하는 읽기 전용 역할을 추가한다.
-- 번역 과정에서 권한 우선순위, 부정 표현, 숫자, 정확한 경로, 승인 상태와 중단 조건이 누락되거나 의미가 바뀌지 않도록 원문 추적성을 유지한다.
-- 대상 에이전트가 결과를 다시 사람이 읽는 보고로 풀어낼 수 있도록 encode/decode 계약을 함께 정의한다.
+## Backend/DB
 
-## 역할 결정
-- 역할명: `context-compiler`
-- 기본 모드: `read-only`, `exact writable allowlist: none`
-- 이 역할은 실제 기계어·바이너리 코드나 소스 코드를 생성하지 않는다. 입력 문맥을 구조화된 JSON envelope로 컴파일한다.
-- 이 역할은 `.ai/system_prompt.md`, `.ai/agents/README.md`, 선택 역할 문서와 적용되는 `AGENTS.md`의 필수 원문 읽기를 대체하지 않는다.
-- 문서에 없는 결정을 만들거나 충돌을 임의 해결하지 않고, `confirmed`, `inferred`, `unknown`, `conflict`를 구분한다.
+- NestJS + Prisma v6 + PostgreSQL. 모든 persisted time은 UTC `timestamptz`.
+- test에서 Prisma actual connection 차단.
+- Jest: `tsconfig.spec.json`, CommonJS.
+- Docker local DB: Desktop 4.82.0, Engine/CLI 29.6.1, Compose 5.3.0, WSL 2.7.10.
+- PostgreSQL 17 Alpine: `127.0.0.1:5432`, UTC, healthcheck, `unless-stopped`, named volume `dsm-back-postgres-data`.
+- migrations:
+  - `20260716_init`
+  - `20260720_notification_delivery_outcome_policy`
+- local migration apply·status·datasource↔datamodel zero drift·catalog·FK·index query plan·restart persistence 검증 완료.
+- 원격/운영 DB는 별도 승인.
 
-## `AgentEnvelope v1` 최소 계약
-1. `protocol`, `mode`, `target_role`
-2. 기존 위임 필수 필드인 `objective`, `read_scope`, `exact_writable_allowlist`, `forbidden_scope`, `verification`, `done_condition`
-3. `instruction_precedence`, `verbatim_constraints`, `source_map`
-4. `confirmed_facts`, `inferences`, `unknowns`, `conflicts`
-5. `output_contract`, `stop_conditions`
+## Auth
 
-## 적용 범위
-- encode: 사용자·메인 에이전트의 자연어 요청과 허용된 문서 범위를 `AgentEnvelope v1` JSON으로 변환한다.
-- decode: 에이전트의 구조화 결과를 한국어 보고로 변환하되, finding·실패·잔여 위험을 숨기거나 완화하지 않는다.
-- 여러 문서 또는 여러 에이전트 사이의 복잡한 handoff에 사용한다. 단순 단일 파일 작업에는 메인 에이전트가 불필요한 중간 단계를 생략할 수 있다.
-- 민감정보, `read scope` 밖 문서, 외부 서비스와 저장소 상태 변경은 다루지 않는다.
+- Access TTL 15분, Refresh TTL 30일.
+- Google/Kakao 구현; Apple actual verification 보류.
+- `GOOGLE_CLIENT_ID` non-empty required; Google client와 `verifyIdToken.audience`에 같은 값.
+- refresh format `<recordId>.<secret>`; PK lookup + 1 bcrypt compare.
+- rotation: `revokedAt=null`, `expiresAt>now` conditional `updateMany` single winner + replacement create 같은 transaction.
+- malformed/missing/revoked/expired/wrong-secret은 401.
+- `AuthModule` exports `JwtModule` + `JwtAuthGuard`; protected feature modules import `AuthModule`.
 
-## 수정 대상과 실행 순서
-1. 역할 계약 추가 및 레지스트리 연결
-   - `.ai/agents/context-compiler.md`
-   - `.ai/agents/README.md`
-2. 호출 조건과 비대체 원칙 연결
-   - `.ai/system_prompt.md`
-3. 정적 계약 검증 후 진행 상태 기록
-   - `.ai/memory/checklist.md`
+## Task/Category/Score
 
-각 단계는 정확한 파일 1~2개만 수정한다. 기존 사용자의 미커밋 변경은 보존하며, 역할 문서와 공통 계약의 충돌 여부를 diff로 다시 확인한다.
+- Task endpoints: create/list/get/update/soft-delete/complete.
+- Task mutation, schedule sync, score recompute는 같은 Serializable transaction.
+- Prisma `P2034`만 전체 callback 최대 2회 retry; 다른 error 즉시 전파.
+- Category assign: actor-owned 또는 default만. foreign/missing 모두 NotFound.
+- score: difficulty 10/20/30, factor 1.5/1.3/1.0/0.7, daily cap 900, 6 tiers.
+- update가 UTC day 이동 시 old/new distinct day 재계산.
 
-## 검증 시나리오
-- 허용: 다중 문서에서 목표·정확한 경로·승인 게이트를 출처와 함께 envelope로 변환한다.
-- 거부: 필수 위임 필드가 빠졌거나 원문 간 충돌이 해결되지 않은 상태에서 정상 envelope를 생성한다.
-- 보존: `하지 않는다`, 수치, 파일 경로, `구현 승인 대기` 같은 원문 제약을 round-trip 후에도 동일하게 유지한다.
-- 경계: context compiler 결과만 읽고 필수 SSOT 원문 확인을 생략하려는 위임을 거부한다.
+## Ranking
 
-## 승인 게이트
-- 이 계획의 승인 전에는 `.ai/agents/context-compiler.md`, `.ai/agents/README.md`, `.ai/system_prompt.md`, `.ai/memory/checklist.md`를 이 작업 목적으로 수정하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 Context Compiler 역할 계획의 구현을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-15 `context-compiler` 역할 계약과 역할 레지스트리, 시스템 호출 프로토콜 연결 및 허용·거부·round-trip·원문 비대체 정적 검증을 완료했다.
-- **상태**: **구현 및 검증 완료**
+- DAILY=오늘 capped score, WEEKLY=최근 7일, TOTAL=`User.totalScore`.
+- rank=`higherCount+1`; percentile=`round(rank/totalUsers*100,2)`.
+- current calculation + leaderboard + snapshot. Redis/batch/WebSocket은 후속.
 
-# 지원 작업 계획: Context Compiler 하이브리드 Handoff 확장
+## Front Phase 1
 
-## 목표
-- `context-compiler`가 JSON만 반환하지 않고, 대상 에이전트가 바로 실행할 수 있는 영어 Markdown 프롬프트를 함께 제공한다.
-- 원문 문서 전체 또는 구조가 필요한 경우 대상 에이전트가 정확한 `.md` 파일을 직접 읽도록 handoff에 명시한다.
-- JSON은 권한, 범위, 검증, 완료 조건과 source map을 전달하는 control plane으로 유지한다.
+- Expo SDK 55 + Expo Router, Noto Sans KR, dark-first.
+- routes: login/tutorial/home/ranking/my; custom tabs.
+- local Task CRUD, optimistic rollback, loading/empty/error/offline, theme/logout.
+- Browser QA: 909×540 and 390×844.
+- root `/` vs `(tabs)/index` conflict 때문에 logout login-compatible route는 `/explore`.
+- production auth/API/FCM/WebSocket/DB 미연결.
 
-## 기본 출력: `Handoff Package v1`
-1. `English Task Prompt`
-   - 자연어 작업 지시를 영어로 번역한 Markdown 프롬프트
-   - 목표, 실행 순서, 금지 범위, 검증, 완료 조건과 중단 조건 포함
-   - 대상 에이전트의 결과 보고 언어는 `response_language`로 지정하며 기본값은 한국어(`ko`)
-2. `Required Markdown Reads`
-   - 대상 에이전트가 작업 전에 직접 읽어야 할 정확한 `.md` 경로
-   - 각 문서의 읽기 이유와 `full` 또는 정확한 section 범위 포함
-3. `AgentEnvelope v1.1`
-   - 기존 위임 필수 필드와 권한·출처·충돌 정보를 담는 JSON control block
-   - `delivery_mode`, `prompt_language`, `response_language`, `required_markdown_reads`, `translation_notes` 필드 추가
+# Notification 12A/12B 계약
 
-## 라우팅 원칙
-- 단순하고 완결된 작업은 영어 프롬프트만 전달할 수 있다.
-- 권한·수정 범위·검증 계약이 필요한 위임은 영어 프롬프트와 JSON control block을 함께 전달한다.
-- SSOT, 표, 코드 블록, 긴 규칙, 전체 문맥 의존성이 있는 문서는 번역 요약으로 대체하지 않고 `Required Markdown Reads`에 넣어 대상 에이전트가 원본 `.md`를 직접 읽게 한다.
-- `.ai/system_prompt.md`, 공유 memory, 공통 계약, 대상 역할 문서와 적용되는 `AGENTS.md`는 기존과 같이 필수 원문 직접 읽기를 유지한다.
+## Packages/environment
 
-## 영어 번역 보존 규칙
-- 실행 지시와 설명은 명확한 명령형 영어로 번역한다.
-- 파일 경로, 명령어, 코드 심볼, JSON 필드, 역할명, gate 이름, 수치와 인용된 원문은 번역하거나 정규화하지 않는다.
-- `하지 않는다`, 승인 상태, 금지 사항과 중단 조건은 원문을 `verbatim_constraints`에 보존하고 영어 프롬프트에도 동일 의미로 반영한다.
-- 번역이 둘 이상의 의미로 해석되면 임의 선택하지 않고 `translation_notes`, `unknowns` 또는 `conflicts`에 기록하고 실행용 handoff 생성을 중단한다.
-- Markdown 문서 전체를 무조건 영어로 재작성하지 않는다. 필요한 원문을 직접 읽게 하고, 영어 프롬프트에는 작업에 필요한 지시만 번역한다.
+- Node `>=22`
+- `firebase-admin@14.1.0`
+- `@nestjs/schedule@6.1.3`
+- ADC only; service-account JSON/env private key 금지
+- `FCM_PROJECT_ID` required
+- `FCM_DISPATCH_ENABLED=false` default/12C 전 유지
 
-## 수정 대상과 실행 순서
-1. 하이브리드 출력 계약과 역할 레지스트리 갱신
-   - `.ai/agents/context-compiler.md`
-   - `.ai/agents/README.md`
-2. 호출·라우팅 규칙과 기술 결정 갱신
-   - `.ai/system_prompt.md`
-   - `.ai/memory/context.md`
-3. 검증 후 승인·완료 상태 기록
-   - `.ai/memory/plan.md`
-   - `.ai/memory/checklist.md`
+## Token lifecycle
 
-각 수정 단계는 정확한 파일 1~2개로 제한하고 기존 미커밋 변경을 보존한다.
+- `PUT /notifications/fcm-tokens`: create/same-user refresh/reactivate.
+- `DELETE /notifications/fcm-tokens`: active owned token idempotent revoke.
+- response에 token/userId 미노출.
+- global unique token/FID foreign-owner registration은 mutation 전 409.
+- upsert update에서 `userId` 변경 금지.
+- account switch는 12C client가 old Installation/token 삭제 후 새 identity 발급·등록.
 
-## 검증 시나리오
-- 영어 번역: 한국어 작업 지시가 영어 명령형 프롬프트로 생성되는지 확인한다.
-- Markdown 직접 읽기: SSOT 문서가 `required_markdown_reads`의 정확한 경로와 읽기 범위로 전달되는지 확인한다.
-- 하이브리드 출력: 영어 프롬프트, Markdown read list와 JSON control block이 함께 존재하는지 확인한다.
-- 원문 보존: 경로, 명령어, 코드 심볼, 수치, 부정 표현과 승인 게이트가 번역 전후 동일한지 확인한다.
-- 거부: 번역 모호성, 필수 문서 누락 또는 상충하는 원문이 있으면 실행용 handoff를 만들지 않는지 확인한다.
+## Schedule/delivery
 
-## 승인 게이트
-- 이 확장 계획의 승인 전에는 `.ai/agents/context-compiler.md`, `.ai/agents/README.md`, `.ai/system_prompt.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`를 이 작업 목적으로 수정하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 Context Compiler 하이브리드 Handoff 확장을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-15 영어 Markdown 프롬프트, 필수 Markdown 직접 읽기 목록과 `AgentEnvelope v1.1` JSON control block으로 구성된 `Handoff Package v1` 계약, 시스템 라우팅 및 기술 결정 갱신을 완료했다. 영어 번역·원문 보존·Markdown 라우팅·JSON 일치·거부 시나리오 검증을 통과했다.
-- **상태**: **구현 및 검증 완료**
+- Task create/update/remove/complete transaction에서 future active PENDING Task schedule sync.
+- schedule/delivery 상태 상수 공유.
+- per-device `NotificationDelivery`로 partial result·retry 독립 관리.
+- retry due index `(status,nextAttemptAt)`, stale lease index `(status,processingStartedAt)`.
+- provider lock: `migration_lock.toml`, PostgreSQL.
 
-# 품질 작업 계획: 현재 프로그램 전체 읽기 전용 코드 리뷰
+## Dispatcher
 
-## 목표
-- 현재 checkout의 백엔드와 프런트엔드 전체 제품 코드를 읽고 실제 결함, 회귀 위험, 보안 문제, 데이터 일관성 문제와 중요한 검증 누락을 찾는다.
-- 각 finding에 심각도, 정확한 `path:line`, 발생 조건·영향과 구체적인 수정 방향을 제공한다.
-- 제품 소스, 테스트, 설정, 의존성, DB와 외부 시스템은 변경하지 않는다.
+- Cron 30초; schedule claim max 100, delivery max 500.
+- short Serializable claim; lease 5분, heartbeat 60초.
+- send 직전 Task/schedule/delivery/token owner 재검증.
+- `attemptCount`는 claim 수가 아닌 명시적 per-device failure response에서 1회 증가; max 3.
+- valid future `Retry-After` seconds/date/header는 cap 없이 보존. invalid/past만 bounded exponential fallback.
+- invalid token code는 delivery fail + token revoke.
+- chunk 결과는 delivery ID + claim ID fence로 즉시 persist.
+- all deliveries terminal 후 schedule aggregate.
 
-## 현재 기준선
-- `DSM_Back`: 70개 reviewable 파일, 이 중 소스·설정 형식 69개
-- `DSM_Front`: 50개 reviewable 파일, 이 중 소스·설정 형식 23개
-- `DSM_Back`, `DSM_Front` 안에는 현재 미커밋 변경이 없다.
-- 루트와 `.ai`, 계획 문서의 기존 미커밋 변경은 사용자 작업으로 간주하고 되돌리거나 정리하지 않는다.
+## F-004 at-most-once
 
-## 포함 범위
-1. 백엔드
-   - `DSM_Back/src/**/*.ts`
-   - `DSM_Back/prisma/schema.prisma`
-   - `DSM_Back/test/**/*`
-   - `DSM_Back/package.json`, lockfile, TypeScript·Nest·Jest·ESLint 설정
-2. 프런트엔드
-   - `DSM_Front/src/**/*`
-   - `DSM_Front/scripts/reset-project.js`
-   - `DSM_Front/app.json`, `package.json`, lockfile, TypeScript 설정
-   - `DSM_Front/AGENTS.md`와 런타임 구조 확인에 필요한 README
-3. 교차 계약
-   - API route·DTO·응답 형식과 프런트 소비 코드 일치
-   - 인증·인가·소유권, 환경 변수, 오류 처리와 비밀정보 노출
-   - UTC 날짜 경계, 점수·랭킹 재계산, soft delete와 DB 제약
-   - Expo Router 진입점, 플랫폼 분기, 테마·접근성과 런타임 설정
+- FCM 직전 all-or-none `sendStartedAt` durable marker.
+- pre-marker stale claim만 `PENDING` recovery.
+- post-marker stale lease, SDK throw, heartbeat unsafe, missing response, persistence gap은 terminal `UNKNOWN`.
+- 명시적 device transient response만 marker clear + retry.
+- post-marker 자동 재발송 금지. 누락 가능성을 중복/교차 계정 노출보다 우선.
 
-## 제외 범위
-- `node_modules/`, `dist/`, coverage, cache와 생성 파일의 내용
-- PNG·SVG 등 바이너리/시각 자산의 품질 평가. 코드 참조와 파일 존재 여부만 확인
-- `.ai/`, `docs/`, `Planing Document/` 자체의 내용 리뷰
-- 외부 서비스 호출, 실제 DB 연결, 배포, 인증 정보 접근
-- lint, formatter, build, coverage와 e2e처럼 파일 또는 외부 상태를 바꿀 수 있는 검증
+## F-007 accepted risk
 
-## 리뷰 순서
-1. 엔트리포인트, 모듈 그래프, Prisma schema, 환경 변수와 신뢰 경계를 파악한다.
-2. 백엔드의 Auth, Category, Task, Score, Ranking, 공통 filter와 Prisma 계층을 소스·테스트 쌍으로 검토한다.
-3. 프런트의 Expo Router, 화면, component, hook, theme와 플랫폼별 구현을 검토한다.
-4. 백엔드 API와 프런트 소비 코드, 시간·오류·상태 계약을 교차 검토한다.
-5. 발견 후보를 테스트와 호출 경로로 반증하고 중복·추측·취향성 finding을 제거한다.
-6. findings-first 코드 리뷰 보고서를 채팅으로 제출하고 검토하지 못한 영역과 잔여 위험을 명시한다.
+- FCM call 시작 뒤 DB cancellation으로 recall 불가.
+- mitigation: send 직전 revalidation, immediate TTL/expiration, collapse, account-neutral data-only signal, default dispatch disabled.
+- 12C client는 authenticated current state 조회 후 활성 Task만 표시.
+- send-start→cancel, display-decision→cancel 좁은 race는 사용자 `ACCEPTED_RISK`.
+- `MITIGATION_ONLY`; 해결·`RECHECKED`로 표시 금지.
 
-## 허용 검증
-- 읽기 전용 조회: `rg`, `rg --files`, `Get-Content`, `Get-ChildItem`, `git status`, `git diff`, `git log`, `git blame`
-- 백엔드 unit test: local Jest를 `--runInBand --no-cache`로 실행
-- 백엔드·프런트 TypeScript: local `tsc --noEmit --incremental false`
-- 검증 전후 `git status --short -- DSM_Back DSM_Front` 비교
-- Expo 동작에 대한 finding 후보가 있을 때만 `DSM_Front/AGENTS.md`가 지정한 Expo SDK 55 공식 문서를 읽기 전용으로 확인
-- `caveman-review` 규칙에 따라 lint는 실행하지 않는다.
+## F-010 identity/privacy
 
-검증 명령이 workspace, DB 또는 외부 시스템 상태를 바꿀 가능성이 있으면 실행하지 않고 생략 사유를 보고한다.
+- cross-user token/FID in-place transfer 제거·409.
+- outbound payload:
+  - data `type=REMINDER_SYNC`, `version=1`
+  - no notification/title/body/`taskId`/`scheduleId`/`userId`
+  - Android TTL 0 + collapse key
+  - APNs expiration 0 + background collapse
 
-## 결과 형식
-- findings를 `P0` → `P3` 순으로 먼저 제시한다.
-- 일반 finding은 `<path>:L<line>: <severity> <problem>. <fix>.` 한 줄 형식을 사용한다.
-- 보안 또는 아키텍처 finding은 조건·영향·근거와 수정 방향을 충분히 설명한다.
-- findings가 없으면 `발견 사항 없음`을 명시한다.
-- 마지막에 검토 범위, 실행한 검증, 실패·생략 항목과 잔여 위험을 요약한다.
+# 검증·감사 계약
 
-## 쓰기 경계와 완료 조건
-- 리뷰 중 `exact writable allowlist`: `none`
-- 제품 소스·테스트·설정과 리뷰 보고서 파일을 수정·생성하지 않는다.
-- 승인 및 종료 상태 기록은 메인 에이전트가 `.ai/memory/plan.md`, `.ai/memory/checklist.md`에만 반영한다.
-- 포함 범위의 텍스트 소스·설정을 모두 읽고, findings를 현재 줄 번호로 재검증하며, 제품 파일 변경이 없음을 확인하면 완료다.
+- 고위험 auth/permission/data integrity/transaction/concurrency/time/external integration은 `.ai/agents/verification-workflow.md`의 `change-gate`.
+- release 전 전체 감사는 `release-audit`.
+- finder=`investigator`; 반박 validation/fix-recheck=`reviewer`; implementer와 rechecker 분리.
+- P0/P1 2 independent validators; 보안·권한·transaction·동시성·data-integrity P2도 2.
+- status: `NEW → VALIDATING → CONFIRMED|REFUTED|UNKNOWN → FIXING → FIXED → RECHECKING → RECHECKED`; 사용자만 `ACCEPTED_RISK`.
+- confirmed fix는 별도 plan + user approval + exact allowlist 필수.
+- main만 `.ai/audits/` ledger 수정.
+- static review는 real DB/runtime/external service/deploy 검증 대체 불가.
 
-## 승인 게이트
-- 이 계획의 승인 전에는 전체 소스 리뷰, 테스트, 타입 검사를 시작하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 전체 읽기 전용 코드 리뷰 실행을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-15 포함 범위의 백엔드·프런트엔드 텍스트 소스와 설정을 모두 검토했다. 백엔드 Jest 16개 스위트·78개 테스트와 백엔드 TypeScript 검사는 통과했고, 프런트 TypeScript 검사는 CSS module 선언 누락 1건으로 실패했다. 보안·권한·원자성·랭킹·입력 계약·운영 준비 findings를 현재 줄 번호로 재검증했으며 제품 파일 변경은 없었다.
-- **상태**: **리뷰 및 검증 완료 — 후속 수정 미수행**
+# 오류 해결 playbook
 
-# 품질 수정 계획: 즉시 처리 5건
+- 오류 전 `error-resolution-playbook.md`를 signature/component/code/tag로 검색.
+- symptom + environment/version/root cause 일치 `VERIFIED`만 현재 승인 범위에서 적용.
+- 과거 PASS는 현재 검증 대체 불가.
+- `MITIGATION_ONLY`는 gate·residual risk 유지.
+- 새 검증 해결은 main이 중복 root cause·secret 부재 확인 후 index/body 갱신.
+- 현재 22 records: 과거 품질 5 + audit mapping 13 + Windows CP949 compression 복구 1 + Obsidian cache 복구 1 + Windows npm/Jest 검증 환경 복구 2. Audit F-007만 `MITIGATION_ONLY`.
 
-## 목표
-- 전체 코드 리뷰에서 확인된 항목 중 사용자가 지정한 아래 5건만 수정한다.
-  1. Google 로그인 audience 검증 강제
-  2. Refresh token 동시 재사용 차단
-  3. Task의 타 사용자 Category 연결 차단
-  4. Task 변경과 점수 재계산의 원자성 보장
-  5. 프런트 CSS module TypeScript 오류 해소
-- 기존 API route와 정상 응답 형식은 유지하고 Prisma schema 및 migration은 변경하지 않는다.
-- 각 수정은 회귀 테스트를 먼저 보강하거나 같은 단계에서 보강하고, 단계별 수정 파일을 1~2개로 제한한다.
+# Sub-agent 운영 계약
 
-## 현재 기준선
-- `DSM_Back`, `DSM_Front` 제품 디렉터리에는 미커밋 변경이 없다.
-- 백엔드 Jest는 16 suites, 78 tests가 통과하고 백엔드 TypeScript 검사도 통과한다.
-- 프런트 TypeScript 검사는 `src/components/animated-icon.web.tsx:5`의 CSS module import에서 `TS2307` 1건으로 실패한다.
-- 루트와 `.ai`, 계획 문서의 기존 미커밋 변경은 사용자 작업으로 간주하고 보존한다.
+- 공통 SSOT: `.ai/agents/README.md`.
+- roles: `investigator`, `context-compiler`, `planner`, `backend-developer`, `frontend-developer`, `reviewer`.
+- 제품 code/test/config 조사·구현·review는 적합 role sub-agent 사용.
+- main owns plan, approval, shared memory, file ownership, diff integration, audit ledger.
+- assignment required: role, objective, read scope, exact writable allowlist, forbidden scope, verification, done condition.
+- one stage 1~2 exact files; parallel ownership overlap 금지.
+- error task는 playbook match ID/none + applicability + current revalidation 보고.
+- Context Compiler는 multi-doc/handoff 의미 손실 위험 때만 사용; SSOT 원문 대체 금지.
 
-## 설계 결정
+# 주요 완료·승인 ledger
 
-### 1. Google audience 검증
-- 현재 API가 `GOOGLE` provider를 노출하므로 `GOOGLE_CLIENT_ID`를 선택 설정이 아닌 non-empty 필수 설정으로 변경한다.
-- `AuthService`는 `ConfigService.getOrThrow('GOOGLE_CLIENT_ID')`로 값을 한 번 읽어 Google client 생성과 `verifyIdToken`의 `audience`에 동일한 값을 사용한다.
-- `.env.example`의 빈 문자열은 실제 client ID를 요구하는 placeholder로 교체한다.
-- provider feature flag 도입이나 Google 로그인 제거는 이번 범위에 포함하지 않는다.
+| 날짜 | 사용자 승인/결정 | 완료 범위 | 계속 제외 |
+|---|---|---|---|
+| 2026-07-15 | 품질 보완 5건 | Google audience, refresh race, Category owner, Task-score atomicity, CSS module | 나머지 review findings |
+| 2026-07-16 | branch A + architecture 갱신 | packages, schema·initial SQL, 12B static implementation | actual DB/Firebase |
+| 2026-07-19 | `per-device delivery 확장 승인` | `NotificationDelivery` model·migration·worker scope | actual Firebase |
+| 2026-07-19 | Docker Desktop + persistent PostgreSQL 승인 | Docker/WSL install, local DB, migrations, runtime DB validation | remote/prod DB |
+| 2026-07-19 | frontend requirements 승인 | 15-screen requirements doc | product implementation |
+| 2026-07-19 | `design Phase 1 프런트 구현 승인` | prototype product files + Browser QA | production integrations |
+| 2026-07-20 | worker 진행 `ㄱ` | Firebase provider/dispatcher/Cron + safety fixes | actual FCM |
+| 2026-07-20 | F-014 진행 `ㄱ` | Auth/JWT module DI + root compile/e2e | production runtime |
+| 2026-07-20 | F policy `승인` | F-004/F-010 fix, F-007 narrow risk acceptance | 12C·sandbox |
+| 2026-07-20 | `오류 해결 플레이북 도입 승인` | 18 records + system integration | product code |
+| 2026-07-20 | `memory 압축 및 Anthropic 전송 승인` | memory compression + local backup + approved external transfer | Git write |
 
-### 2. Refresh token 단일 사용 보장
-- token hash 비교는 기존처럼 record 조회 후 수행하되, 검증 성공 후 `id`, `revokedAt: null`, `expiresAt > now`를 조건으로 `updateMany`를 실행한다.
-- 갱신 건수가 정확히 1인 요청만 승자로 인정하고, 0이면 재사용 또는 경합으로 간주해 `UnauthorizedException`을 반환한다.
-- 기존 token revoke와 새 refresh token record 생성을 하나의 Prisma interactive transaction에서 처리한다.
-- `issueTokens`가 transaction client를 받을 수 있게 하여 신규 token 생성 실패 시 기존 token revoke도 rollback되게 한다.
-- token 형식, Access/Refresh TTL, logout 동작과 Prisma schema는 변경하지 않는다.
+# `.ai/memory` 압축·복구 기록 — 2026-07-20
 
-### 3. Category 소유권 경계
-- Task 생성 또는 `categoryId` 변경 시 category가 `userId === actor`이거나 `isDefault === true`인지 mutation 전에 확인한다.
-- 존재하지 않거나 타 사용자 소유인 category는 동일하게 `NotFoundException`으로 처리해 소유 여부를 노출하지 않는다.
-- category 검증과 task mutation은 동일 transaction client를 사용한다.
-- `categoryId`가 없거나 update에서 변경되지 않으면 추가 조회하지 않는다.
+## 기준선
 
-### 4. Task·점수 원자성
-- transaction의 최상위 소유자는 `TasksService`로 정한다.
-- create, update, remove, complete 각각에서 task 조회·mutation, 영향받은 UTC day의 `DailyScore` upsert, `User.totalScore/tier` 갱신을 하나의 transaction callback 안에서 처리한다.
-- `ScoresService.recompute`와 내부 누적 합계 갱신은 선택적인 Prisma transaction client를 받아 모든 query를 동일 client로 실행한다. 독립 호출 시에는 기존 `PrismaService`를 사용한다.
-- update가 날짜를 옮기면 기존 날짜와 새 날짜를 중복 제거한 뒤 같은 transaction에서 모두 재계산한다.
-- 점수 계산 공식, 일일 상한, tier 기준과 API 응답은 변경하지 않는다.
+- `plan.md`: 121,943 bytes, SHA-256 `97e4fa12ec703221896ea4aa4fc3da33389366338180cd2c761c8a00357c7404`
+- `error-resolution-playbook.md`: 34,495 bytes, SHA-256 `631c80de3f7da6255c2dfefefdfc722cd08f72f177c06eb9f59e21f718ac77cd`
+- `context.md`: 12,141 bytes, SHA-256 `b5d9047f0ebf8760e87b34d1e4ea1e416646ce7dd90db277cd661b8d6a2f82f0`
+- `checklist.md`: 14,513 bytes, SHA-256 `ddd82735434dd98f4d5b61fd5376d74da41d8dda97f2669bbc4c3bfc39f06556`
+- secret/key/credential URL pattern 0.
 
-### 5. 프런트 TypeScript 오류
-- 구현 전에 `DSM_Front/AGENTS.md`가 지정한 Expo SDK 55 공식 문서를 확인한다.
-- `src/types/css-modules.d.ts`를 추가해 `*.module.css`의 default export를 `Record<string, string>`으로 선언한다.
-- 현재 `tsconfig.json`의 `**/*.ts` include가 declaration 파일을 포함하므로 설정 파일은 수정하지 않는다.
+## Anthropic skill 결과
 
-## 단계별 수정 순서
+- 사용자 외부 전송 승인 후 Claude CLI OAuth expired 401 발견; `claude auth login` 재인증 성공.
+- Windows subprocess executable·stdin UTF-8 호환을 runtime에서 보완.
+- default model: `plan.md` 15분 timeout, `context.md` 5분 timeout. primary write 전 종료; orphan Python/Claude exact PID cleanup.
+- Haiku/low/tools-disabled `context.md` 응답은 수신했으나 skill의 `Path.read_text/write_text`가 Windows locale CP949를 사용:
+  - UTF-8 source를 CP949+`errors=ignore`로 읽어 backup 손상
+  - compressed output의 U+8BAF를 CP949로 쓰다 실패
+  - primary 0 bytes
+- skill 안전 보장 위반으로 추가 Anthropic 실행 중단.
 
-### Phase 0. 기준선 재확인 — 수정 없음
-- 제품 디렉터리 Git 상태, 백엔드 78개 테스트, 양쪽 TypeScript 결과를 다시 확인한다.
-- 기준선이 위 기록과 다르면 구현을 시작하지 않고 차이를 보고한다.
+## Local fallback
 
-### Phase 1A. Google 환경 계약
-- 수정 파일:
-  - `DSM_Back/src/config/env.validation.ts`
-  - `DSM_Back/src/config/env.validation.spec.ts`
-- 검증:
-  - 유효한 `GOOGLE_CLIENT_ID`를 반환한다.
-  - 누락값과 빈 문자열을 모두 거부한다.
+- exact backups:
+  - `plan.original.md` = 기준 hash
+  - `checklist.original.md` = 기준 hash
+  - `error-resolution-playbook.original.md` = 기준 hash
+- `context.original.md`: byte-exact 복구 불가를 명시한 semantic reconstruction. Git HEAD + plan + checklist + architecture + validation evidence 사용.
+- corrupt CP949 artifact는 `context.original.failed-cp949.bin`으로 quarantine; active/Git 제외.
+- active `context.md`, `checklist.md`, `plan.md`는 current-state 중심으로 직접 압축.
+- playbook은 이미 structured conditional knowledge라 active 본문 유지; default memory read 대상 아님.
+- `.ai/memory/README.md`가 active/backup routing을 소유.
 
-### Phase 1B. 환경 예시 동기화
-- 수정 파일:
-  - `DSM_Back/.env.example`
-- 검증:
-  - 예시가 빈 client ID를 정상 설정처럼 제공하지 않는지 확인한다.
+## 최종 결과
 
-### Phase 2. Google service enforcement와 Refresh token rotation
-- 수정 파일:
-  - `DSM_Back/src/auth/auth.service.ts`
-  - `DSM_Back/src/auth/auth.service.spec.ts`
-- 검증:
-  - service 생성 시 필수 Google client ID를 읽고 동일 audience를 사용한다.
-  - 정상 refresh는 조건부 revoke 1건 후 같은 transaction에서 새 token을 생성한다.
-  - 조건부 revoke가 0건이면 401이며 새 token을 만들지 않는다.
-  - 신규 token 생성 오류 시 transaction 오류가 전파된다.
-  - malformed, missing, revoked, expired, wrong-secret 및 logout 기존 테스트를 유지한다.
+- active bytes:
+  - `plan.md` 14,419
+  - `context.md` 3,506
+  - `checklist.md` 3,564
+  - `error-resolution-playbook.md` 37,124
+  - `README.md` 2,114
+- default 3-file read는 148,597→21,489 bytes, 85.5% 감소.
+- strict UTF-8, Markdown fence, relative link, active secret pattern, playbook 19 index/body, exact backup 3 hash와 대상 `git diff --check` 통과.
+- `ER-20260720-014`에 CP949 원인·복구·재발 방지 절차를 추가해 playbook은 최종 19 index/body다.
+- `context.original.failed-cp949.bin`, `*.original.md`는 Git ignored. 제품 code, DB, Firebase message, deploy, Git stage·commit·push 미실행.
 
-### Phase 3. ScoresService transaction client 계약
-- 수정 파일:
-  - `DSM_Back/src/scores/scores.service.ts`
-  - `DSM_Back/src/scores/scores.service.spec.ts`
-- 검증:
-  - 명시적으로 전달한 client가 task 조회, DailyScore upsert·aggregate와 User update 모두에 사용된다.
-  - client를 전달하지 않은 기존 호출과 점수 계산 결과는 유지된다.
+# 계속 유지할 위험·보류
 
-### Phase 4. Task transaction과 Category 권한 검증
-- 수정 파일:
-  - `DSM_Back/src/tasks/tasks.service.ts`
-  - `DSM_Back/src/tasks/tasks.service.spec.ts`
-- 검증:
-  - create/update에서 사용자 소유 category와 default category는 허용한다.
-  - 타 사용자 category와 존재하지 않는 category는 task write 전에 404로 거부한다.
-  - create/update/remove/complete가 `$transaction` 안에서 task mutation과 `ScoresService.recompute(..., tx)`를 실행한다.
-  - update의 이전·이후 UTC day 재계산과 동일 날짜 중복 제거를 유지한다.
-  - 재계산 실패가 mutation API 실패로 전파되고 transaction 밖의 후속 write가 없는지 확인한다.
+- actual multi-instance PostgreSQL + Firebase delivery 미검증.
+- F-004 at-most-once는 duplicate 대신 missed reminder/`UNKNOWN` 가능.
+- F-007 recall/display cancellation race accepted only after documented mitigation; 12C 미구현.
+- F-010 actual concurrent registration + real device 미검증; direct DB write 제한.
+- remote/prod migration·planner behavior 미검증.
+- Apple Sign In actual verification 미구현.
+- refresh revoked-token reuse detection hook, UTC midnight score Cron 보류.
+- front production integration, WebSocket, Redis/batch 미구현.
 
-### Phase 5. 프런트 CSS module declaration
-- 수정 파일:
-  - `DSM_Front/src/types/css-modules.d.ts` (신규)
-- 검증:
-  - `animated-icon.web.tsx`의 기존 import를 변경하지 않고 프런트 TypeScript 검사가 통과한다.
+# 완료 기준
 
-### Phase 6. 통합 검증 — 수정 없음
-- 백엔드 대상 테스트:
-  - `env.validation.spec.ts`
-  - `auth.service.spec.ts`
-  - `scores.service.spec.ts`
-  - `tasks.service.spec.ts`
-- 백엔드 전체 Jest: local Jest `--runInBand --no-cache`
-- 백엔드 TypeScript: local `tsc --noEmit --incremental false`
-- 프런트 TypeScript: local `tsc --noEmit --incremental false`
-- `git diff --check`와 `git status --short -- DSM_Back DSM_Front`로 범위와 비의도 변경을 확인한다.
-- 실제 PostgreSQL, 외부 Google API, build, e2e와 `--fix`가 포함된 lint script는 실행하지 않는다. transaction 단일 승자와 rollback은 query 계약 단위 테스트로 검증하고 실제 DB 동시성 검증은 잔여 위험으로 보고한다.
+다음 작업 시작 전:
 
-### Phase 7. 공유 memory 종료 기록
-- 1차 수정 파일:
-  - `.ai/memory/plan.md`
-  - `.ai/memory/context.md`
-- 2차 수정 파일:
-  - `.ai/memory/checklist.md`
-- 승인, 실제 변경 파일, 테스트 결과, transaction ownership 결정과 잔여 위험을 기록한다.
+1. 이 파일·`context.md`·`checklist.md` 확인.
+2. 오류 작업이면 playbook 검색.
+3. actual source/test/Git diff로 memory와 일치 확인.
+4. plan + exact allowlist + user approval.
+5. 구현 후 proportional tests·independent review·memory 갱신.
 
-## 구현 단계 전체 exact writable allowlist
-- `DSM_Back/.env.example`
-- `DSM_Back/src/config/env.validation.ts`
-- `DSM_Back/src/config/env.validation.spec.ts`
-- `DSM_Back/src/auth/auth.service.ts`
-- `DSM_Back/src/auth/auth.service.spec.ts`
-- `DSM_Back/src/scores/scores.service.ts`
-- `DSM_Back/src/scores/scores.service.spec.ts`
-- `DSM_Back/src/tasks/tasks.service.ts`
-- `DSM_Back/src/tasks/tasks.service.spec.ts`
-- `DSM_Front/src/types/css-modules.d.ts`
-- `.ai/memory/plan.md`
-- `.ai/memory/context.md`
-- `.ai/memory/checklist.md`
+# Obsidian 개인 Vault junction 연결 계획
 
-## 명시적 제외 범위
-- 나머지 코드 리뷰 findings 전부: DB migration 부재, 소셜 계정 최초 생성 race, 랭킹, 날짜·상태 DTO, CORS, health/readiness, 예외 logging, reset script, 기타 입력 검증
-- Prisma schema와 migration, controller, route, DTO, package dependency와 lockfile 변경
-- API 기능 추가, 리팩터링 확장, formatting 일괄 변경
+## 목표와 발견 상태
 
-## 완료 조건
-- 지정한 5건의 회귀 테스트와 전체 기존 테스트가 통과한다.
-- 백엔드와 프런트 TypeScript 검사가 모두 통과한다.
-- category 권한 검사와 task·score mutation이 같은 transaction 경계에 있음을 diff와 테스트로 확인한다.
-- refresh rotation에서 조건부 revoke가 단일 승자를 보장하고 새 token 생성까지 같은 transaction에 있음을 확인한다.
-- exact writable allowlist 밖 제품 파일에 변경이 없고 나머지 findings는 손대지 않는다.
+- `C:\AiWiki`는 현재 존재하며 비어 있다. 이 경로를 개인 Obsidian Vault root로 사용한다.
+- 이전의 중첩 폴더 `C:\AiWiki\ai 위키`는 사용자가 제거했으며 현재 존재하지 않는다.
+- `C:\AiWiki\AiProject`는 여러 프로젝트를 담는 실제 directory로 생성한다.
+- 계획된 mapping: `C:\AiWiki\AiProject\DSM` → `C:\DEV`.
+- `C:\AiWiki\AiProject`와 `C:\AiWiki\AiProject\DSM`은 현재 존재하지 않아 기존 파일·폴더와 충돌하지 않는다.
+- `DSM_Back/node_modules`와 `DSM_Front/node_modules`에는 Markdown이 각각 925개·706개 있어 Obsidian 검색 오염 가능성이 있다.
+
+## 실행 단계
+
+1. 사전 조건 재검증
+   - `C:\AiWiki`가 실제 directory이며 `C:\AiWiki\AiProject`와 `C:\AiWiki\AiProject\DSM`이 존재하지 않는지 확인한다.
+   - `C:\DEV`가 현재 Git project root인지 확인한다.
+2. 프로젝트 컨테이너 생성
+   - 일반 directory `C:\AiWiki\AiProject`를 생성한다.
+   - 이후 다른 프로젝트는 이 directory 아래에 서로 다른 이름의 sibling junction으로 추가한다.
+3. DSM junction 생성
+   - 생성 경로: `C:\AiWiki\AiProject\DSM`
+   - target: `C:\DEV`
+   - 기존 `C:\DEV` 내용은 이동·복사·수정하지 않는다.
+4. junction 검증
+   - `C:\AiWiki\AiProject`가 junction이 아닌 일반 directory인지 확인
+   - reparse point `LinkType=Junction`, target `C:\DEV` 확인
+   - junction을 통한 `README.md`, `docs/`, `Planing Document/` 접근 확인
+   - junction 내부에 Vault를 되가리키는 순환 경로가 없는지 확인
+5. Vault 등록과 색인 제외
+   - Obsidian의 `Open folder as vault`에서 `C:\AiWiki`를 선택한다.
+   - Obsidian UI에서 최소 `AiProject/DSM/DSM_Back/node_modules`와 `AiProject/DSM/DSM_Front/node_modules`를 제외한다.
+   - `.obsidian` 내부 설정 파일은 Obsidian이 소유하도록 두고 직접 생성·편집하지 않는다.
+6. 공유 memory 종료 기록
+   - `C:\DEV\.ai\memory\plan.md`
+   - `C:\DEV\.ai\memory\context.md`
+   - `C:\DEV\.ai\memory\checklist.md`
+
+## exact writable allowlist
+
+- 일반 directory: `C:\AiWiki\AiProject`
+- junction reparse point: `C:\AiWiki\AiProject\DSM`
+- 완료 기록: `C:\DEV\.ai\memory\plan.md`
+- 완료 기록: `C:\DEV\.ai\memory\context.md`
+- 완료 기록: `C:\DEV\.ai\memory\checklist.md`
+
+## 범위와 안전 조건
+
+- 제품 코드, DB, Docker, Firebase, `.obsidian` 내부 파일, Git stage·commit·push는 직접 변경하지 않는다.
+- junction 생성 시 예상 밖 경로가 이미 존재하거나 target이 `C:\DEV`와 다르면 덮어쓰지 않고 중단한다.
+- junction 제거는 원본 `C:\DEV`를 삭제하지 않지만 이번 범위에는 제거 작업을 포함하지 않는다.
 
 ## 승인 게이트
-- 이 계획 작성 단계의 writable allowlist는 `.ai/memory/plan.md` 하나뿐이다.
-- 사용자 승인 전에는 위 제품 파일, 테스트, 환경 예시, context와 checklist를 수정하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 지정 5건의 구현 계획을 명시적으로 승인했다.
-- **실행 방식 기록**: 사용자의 추가 지시에 따라 제품 수정은 항상 역할 계약과 exact writable allowlist를 받은 서브 에이전트를 통해 수행하며, 메인 에이전트는 승인·공유 memory·diff 통합 검증을 담당한다.
-- **완료 기록**: 2026-07-15 `backend-developer` 2개 작업 흐름과 `frontend-developer`가 파일 소유권을 분리해 5건을 구현했다. `reviewer`가 기본 `Read Committed`의 stale score 가능성 P2를 발견해 `TasksService`에 `Serializable` isolation과 Prisma `P2034` 최대 2회 재시도를 추가했고, 재검토에서 기존 finding 해결 및 신규 finding 없음으로 확인했다.
-- **최종 검증**: 백엔드 Jest 16 suites, 99 tests 통과. 백엔드·프런트 `tsc --noEmit --incremental false` 통과. 계획된 제품 경로 10개 외 신규 제품 변경 없음.
-- **잔여 위험**: 실제 PostgreSQL 병렬 transaction, 외부 Google token, Expo runtime build는 실행하지 않았다. 고경합에서 3회 시도 모두 `P2034`이면 요청은 실패하지만 stale score는 commit하지 않는다.
-- **상태**: **구현·독립 재검토·검증 완료**
+
+- 현재는 경로 재검증과 이 계획 교체만 완료했다.
+- `AiProject` 일반 directory와 `DSM` junction 생성, Obsidian에서 `C:\AiWiki` Vault 등록·색인 제외와 공유 memory 완료 갱신은 사용자 승인 후 수행한다.
+- 이전의 `C:\AiWiki\AiProject` 직접 junction 승인은 경로 변경으로 효력이 없으며 새 구조에 대한 승인을 받는다.
+- 승인 문구 예시: `DSM junction 연결 승인`
+- **승인 기록**: 2026-07-20 사용자가 `DSM junction 연결 승인`으로 위 구조의 directory·junction 생성, Vault 등록과 색인 제외를 명시적으로 승인했다.
+
+## 구현 완료 기록 — 2026-07-20
+
+- 일반 directory `C:\AiWiki\AiProject`를 생성했다.
+- `C:\AiWiki\AiProject\DSM` junction을 생성했고 target이 정확히 `C:\DEV`임을 확인했다.
+- junction을 통해 `README.md`, `docs`, `Planing Document`에 접근할 수 있고 `C:\DEV` root에 역방향 reparse point가 없어 순환 경로가 없음을 확인했다.
+- Obsidian 1.12.7에서 `C:\AiWiki`를 Vault로 등록했다. Obsidian이 소유하는 `.obsidian` 설정은 UI를 통해서만 생성·변경했다.
+- 제외 경로 `AiProject/DSM/DSM_Back/node_modules/`, `AiProject/DSM/DSM_Front/node_modules/`를 저장하고 Obsidian UI와 `.obsidian/app.json` readback으로 일치 확인했다.
+- 제품 코드, DB, Docker, Firebase와 Git stage·commit·push는 변경하지 않았다.
+- **상태**: **연결·Vault 등록·색인 제외·검증 완료**
+
+# Obsidian DSM 문서 큐레이션 계획 — 2026-07-21
+
+## 감사 결론
+
+- `C:\DEV`의 문서형 파일은 `.git`·`node_modules` 제외 기준 41개이며 모두 Markdown이다.
+- Obsidian에서 보이는 비-dot 경로 문서는 16개지만, 현재 구현을 가장 정확히 설명하는 `.ai/docs` 4개는 dot directory 아래라 검색되지 않는다.
+- 보이는 문서 중 AI 진입 지침·starter README 7개는 Wiki 검색 노이즈다.
+- `docs/superpowers/plans` 4개는 완료된 agent 실행 이력이며 현재 상태로 오인될 수 있다.
+- `Planing Document`의 v1.3 문서 4개는 목표·기획 기준으로 유효하지만 WebSocket·Redis·offline sync·FCM token schema·일일 Task 20개 제한을 현재 구현처럼 읽을 위험이 있다.
+- 보이는 문서 사이에 Obsidian internal link나 MOC가 없다.
+
+## 목표
+
+- 기존 `C:\AiWiki\AiProject\DSM` → `C:\DEV` junction은 유지한다.
+- 최신 `.ai/docs` 4개를 보이는 별도 junction으로 노출한다.
+- AI 지침, starter README와 agent 실행 이력을 Obsidian 검색에서 제외한다.
+- DSM 전용 Overview를 추가해 현재 문서·기획 문서·소스의 역할을 연결한다.
+- v1.3 기획 문서 4개 상단에 “목표 문서이며 현재 구현 상태가 아님” 경고와 최신 architecture 링크를 추가한다.
+
+## 단계별 실행
+
+1. junction 단계
+   - `C:\AiWiki\AiProject\DSM-Current`가 없고 target `C:\DEV\.ai\docs`가 실제 directory인지 확인한다.
+   - `C:\AiWiki\AiProject\DSM-Current` → `C:\DEV\.ai\docs` junction을 생성한다.
+   - 기존 `C:\AiWiki\AiProject\DSM` junction과 `C:\DEV`는 변경하지 않는다.
+2. Obsidian 검색 정리 단계
+   - Obsidian UI의 제외 파일 목록에 아래 경로를 추가하고 기존 node_modules 제외를 보존한다.
+   - `AiProject/DSM/AGENTS.md`
+   - `AiProject/DSM/CLAUDE.md`
+   - `AiProject/DSM/GEMINI.md`
+   - `AiProject/DSM/DSM_Back/README.md`
+   - `AiProject/DSM/DSM_Front/AGENTS.md`
+   - `AiProject/DSM/DSM_Front/CLAUDE.md`
+   - `AiProject/DSM/DSM_Front/README.md`
+   - `AiProject/DSM/docs/superpowers/plans/`
+3. Overview 단계
+   - `C:\AiWiki\AiProject\DSM Overview.md`를 생성한다.
+   - 최신 문서 4개, v1.3 기획 문서 4개, source README를 역할별로 연결하고 현재/목표/역사를 구분한다.
+4. 기획 문서 경고 단계
+   - 아래 4개 파일을 두 파일씩 수정해 동일한 상태 경고와 최신 architecture 링크를 추가한다.
+   - `C:\DEV\Planing Document\DSM_Docu_v1.3.md`
+   - `C:\DEV\Planing Document\Information_Architecture_v1.3.md`
+   - `C:\DEV\Planing Document\Requirements_Analysis_v1.3.md`
+   - `C:\DEV\Planing Document\System_Architecture_v1.3.md`
+5. 검증과 종료 기록
+   - junction target, 순환 부재, 기존 DSM junction 보존을 확인한다.
+   - Obsidian Quick Switcher에서 최신 architecture와 Overview가 검색되고 제외 대상이 검색되지 않는지 확인한다.
+   - 네 개 기획 문서의 경고·링크와 Overview의 internal link 대상을 검사한다.
+   - Git diff가 위 기획 문서 4개와 공유 memory에만 한정되는지 확인한다.
+
+## exact writable allowlist
+
+- junction reparse point: `C:\AiWiki\AiProject\DSM-Current`
+- Obsidian UI 소유 설정: `C:\AiWiki\.obsidian\app.json`
+- Vault Overview: `C:\AiWiki\AiProject\DSM Overview.md`
+- 기획 문서: `C:\DEV\Planing Document\DSM_Docu_v1.3.md`
+- 기획 문서: `C:\DEV\Planing Document\Information_Architecture_v1.3.md`
+- 기획 문서: `C:\DEV\Planing Document\Requirements_Analysis_v1.3.md`
+- 기획 문서: `C:\DEV\Planing Document\System_Architecture_v1.3.md`
+- 완료 기록: `C:\DEV\.ai\memory\plan.md`
+- 완료 기록: `C:\DEV\.ai\memory\context.md`
+- 완료 기록: `C:\DEV\.ai\memory\checklist.md`
+
+## 안전 경계
+
+- 제품 코드, DB, Docker, Firebase, dependency, 기존 junction target과 Git stage·commit·push는 변경하지 않는다.
+- `.obsidian/app.json`은 직접 편집하지 않고 Obsidian UI를 통해서만 변경한다.
+- junction 경로가 이미 존재하거나 target이 예상과 다르면 덮어쓰지 않고 중단한다.
+- 과거 계획 문서는 삭제·이동하지 않고 Obsidian 색인에서만 제외한다.
+- 기획 문서의 본문 요구사항은 이번 작업에서 재작성하지 않고 상태 경고만 추가한다.
+
+## 승인 게이트
+
+- 2026-07-21 사용자의 `수정 진행해`는 감사 결과에 따른 문서 정리 의사로 기록한다.
+- 프로젝트 실행 규칙에 따라 이 exact 계획을 사용자에게 보고하고 별도 승인 후 구현한다.
+- 승인 문구 예시: `DSM 문서 정리 승인`
+- **승인 기록**: 2026-07-21 사용자가 `DSM 문서 정리 승인`으로 위 exact allowlist와 단계별 정리를 승인했다.
+- **상태**: 승인·구현 완료. 단, 기존 전체-source junction 아래의 dependency 파일 hard isolation은 Obsidian 1.12.7 제한으로 보류.
+
+## 구현·검증 기록 — 2026-07-21
+
+- `C:\AiWiki\AiProject\DSM-Current` junction을 생성했고 target이 정확히 `C:\DEV\.ai\docs`임을 확인했다. 최신 Markdown 4개가 노출된다.
+- `C:\AiWiki\AiProject\DSM Overview.md`를 생성해 Current 4개, Planning v1.3 4개, source README를 역할별로 연결했다.
+- v1.3 기획 문서 4개 상단에 현재 구현 문서가 아니라는 경고와 최신 architecture 링크를 추가했다.
+- AI 지침, starter README, 완료된 agent 실행 계획과 두 `node_modules` 경로를 Obsidian UI 제외 목록에 저장했다.
+- junction target 2개, Overview internal link 9개, 기획 문서 경고·링크 4개, Obsidian 설정 readback과 `git diff --check`를 검증했다.
+- Obsidian UI에서 Overview가 정상 렌더링되고 Current/Planning 역할 구분이 표시됨을 확인했다.
+- **잔여 제한**: Obsidian 1.12.7의 `Excluded files`는 Windows junction 아래 dependency 파일을 hard-ignore하지 않는다. 경로 필터와 `/.*\/node_modules\/.*/` 정규식을 저장하고 Vault cache를 재구축했지만 Quick Switcher에 `node_modules` README·asset이 남았다. 기존 `DSM` junction 보존이라는 승인 경계를 지키기 위해 junction 교체·제거는 수행하지 않았다.
+- 제품 코드, DB, Docker, Firebase와 Git stage·commit·push는 변경하지 않았다.
+
+# Obsidian DSM 일반 컨테이너 전환 계획 — 2026-07-21
+
+## 목표 구조
+
+```text
+C:\AiWiki\AiProject\DSM\              # 일반 directory
+├─ Overview.md                         # Vault 전용 문서 안내
+├─ Current\                            # junction → C:\DEV\.ai\docs
+└─ Planning\                           # junction → C:\DEV\Planing Document
+```
+
+- `C:\DEV` 전체는 더 이상 Vault 내부 junction으로 노출하지 않는다.
+- 제품 source는 원래 위치 `C:\DEV`에 그대로 유지하며 이동·복사·수정하지 않는다.
+- 최신 구현 문서와 v1.3 기획 문서만 DSM 컨테이너 아래에 노출한다.
+
+## 단계별 실행
+
+1. 안전 전환
+   - 기존 `C:\AiWiki\AiProject\DSM`이 `C:\DEV`를 가리키는 junction인지 재검증한다.
+   - 기존 `C:\AiWiki\AiProject\DSM-Current`가 `C:\DEV\.ai\docs`를 가리키는 junction인지 재검증한다.
+   - 두 junction reparse point만 제거한다. target의 파일은 삭제하지 않는다.
+   - `C:\AiWiki\AiProject\DSM`을 일반 directory로 생성한다.
+2. 문서 junction 재배치
+   - `C:\AiWiki\AiProject\DSM\Current` → `C:\DEV\.ai\docs`
+   - `C:\AiWiki\AiProject\DSM\Planning` → `C:\DEV\Planing Document`
+   - container 자체는 `LinkType`이 없어야 하고 두 child만 junction이어야 한다.
+3. Overview·기획 링크 갱신
+   - `C:\AiWiki\AiProject\DSM Overview.md`를 `C:\AiWiki\AiProject\DSM\Overview.md`로 이동한다.
+   - Current 링크를 `AiProject/DSM/Current/...`, Planning 링크를 `AiProject/DSM/Planning/...`로 갱신한다.
+   - source README internal link는 제거하고 원본 경로 `C:\DEV\README.md`를 명시한다.
+   - 기획 문서 4개의 최신 architecture 링크도 새 Current 경로로 갱신한다.
+4. Obsidian 정리
+   - 더 이상 존재하지 않는 full-source 경로용 제외 필터 11개를 Obsidian UI에서 제거한다.
+   - Vault cache를 재구축한다.
+5. 검증
+   - `DSM` 일반 directory, `Current`·`Planning` junction target, 원본 target 보존을 확인한다.
+   - Overview internal link 8개가 모두 존재하는지 확인한다.
+   - Quick Switcher에서 Overview와 최신 architecture는 검색되고 `node_modules`·AI 지침·과거 agent plan은 검색되지 않는지 확인한다.
+   - 기획 문서 4개의 경고·새 architecture 링크와 `git diff --check`를 확인한다.
+
+## exact writable allowlist
+
+- 제거·재생성: `C:\AiWiki\AiProject\DSM`
+- 제거: `C:\AiWiki\AiProject\DSM-Current`
+- junction 생성: `C:\AiWiki\AiProject\DSM\Current`
+- junction 생성: `C:\AiWiki\AiProject\DSM\Planning`
+- 이동 전 Vault 문서: `C:\AiWiki\AiProject\DSM Overview.md`
+- 이동 후 Vault 문서: `C:\AiWiki\AiProject\DSM\Overview.md`
+- Obsidian UI 소유 설정: `C:\AiWiki\.obsidian\app.json`
+- 기획 문서: `C:\DEV\Planing Document\DSM_Docu_v1.3.md`
+- 기획 문서: `C:\DEV\Planing Document\Information_Architecture_v1.3.md`
+- 기획 문서: `C:\DEV\Planing Document\Requirements_Analysis_v1.3.md`
+- 기획 문서: `C:\DEV\Planing Document\System_Architecture_v1.3.md`
+- 완료 기록: `C:\DEV\.ai\memory\plan.md`
+- 완료 기록: `C:\DEV\.ai\memory\context.md`
+- 완료 기록: `C:\DEV\.ai\memory\checklist.md`
+
+## 안전 경계
+
+- junction 제거 전 `LinkType`과 target이 예상과 다르면 중단한다.
+- junction target인 `C:\DEV`, `C:\DEV\.ai\docs`, `C:\DEV\Planing Document`는 삭제·이동·복사하지 않는다.
+- `Remove-Item`은 검증된 junction reparse point에만 사용하며 recursive delete는 사용하지 않는다.
+- 제품 코드, DB, Docker, Firebase, dependency와 Git stage·commit·push는 변경하지 않는다.
+- `.obsidian/app.json`은 직접 편집하지 않고 Obsidian UI로만 변경한다.
+
+## 승인 게이트
+
+- 2026-07-21 사용자의 `C:\AiWiki\AiProject\DSM을 일반 컨테이너로 전환` 요청을 구조 변경 의사로 기록했다.
+- 프로젝트 실행 규칙에 따라 위 exact 구조와 allowlist를 별도 승인받은 뒤 실행한다.
+- 승인 문구 예시: `DSM 일반 컨테이너 전환 승인`
+- **승인 기록**: 2026-07-21 사용자 `DSM 일반 컨테이너 전환 승인`
+- **상태**: 구조·문서 링크 전환, Obsidian cache 복구와 최종 검증 완료
+
+## Obsidian cache 정체 복구 보완 계획 — 2026-07-21
+
+### 확인된 현상
+
+- 일반 컨테이너와 `Current`·`Planning` junction, Overview 8개 링크는 정상이다.
+- Obsidian 1.12.7은 전환 전 IndexedDB cache를 읽으며 2분 이상 `캐시 불러오는 중...`에 머문다. 현재 Vault 파일은 Overview 1개, Current 4개, Planning 4개뿐이고 junction loop는 없다.
+- 플레이북에서 `obsidian|indexeddb|cache|quick switcher|node_modules` 일치 record는 찾지 못했다.
+- Computer Use helper는 일시적으로 active request에 걸렸으나 kernel reset 후 회복됐다. `Alt+F4`, UI 닫기 버튼, 추가 대기는 모두 앱 종료·복구로 이어지지 않았고 Obsidian process 4개가 계속 실행 중이다.
+
+### 복구 절차
+
+1. 정상 종료를 다시 확인한다. 로딩 화면에서 종료가 계속 무시되는 경우에만 실행 파일 경로가 기존 Obsidian 설치 경로와 일치하는 process 4개를 강제 종료하고 모두 종료됐는지 확인한다.
+2. 단일 등록 Vault가 `C:\AiWiki`인지 다시 확인한다.
+3. 기존 IndexedDB LevelDB directory를 삭제하지 않고 exact backup 경로로 이동한다.
+4. Obsidian을 다시 실행해 새 cache가 생성되고 Vault가 정상 로드되는지 확인한다.
+5. Settings UI가 접근 가능해지면 더 이상 필요하지 않은 제외 필터 11개를 UI에서 제거하고 `Rebuild vault cache`를 실행한다.
+6. Quick Switcher에서 Overview·현재 architecture는 검색되고 `node_modules`는 검색되지 않는지 확인한다.
+7. 실패하면 새 cache를 보존한 뒤 기존 backup을 원래 경로로 복원하고 중단한다.
+8. 검증된 해결을 `error-resolution-playbook.md`에 중복 없이 기록한다.
+
+### 추가 exact writable allowlist
+
+- 이동 전 cache: `C:\Users\jemie\AppData\Roaming\obsidian\IndexedDB\app_obsidian.md_0.indexeddb.leveldb`
+- 이동 후 backup: `C:\Users\jemie\AppData\Roaming\obsidian\IndexedDB\app_obsidian.md_0.indexeddb.leveldb.pre-dsm-20260721`
+- 새로 생성되는 cache: `C:\Users\jemie\AppData\Roaming\obsidian\IndexedDB\app_obsidian.md_0.indexeddb.leveldb`
+- 해결 기록: `C:\DEV\.ai\memory\error-resolution-playbook.md`
+
+### 안전 경계와 승인
+
+- cache directory는 삭제하지 않고 같은 parent 아래 exact backup 경로로만 이동한다.
+- 강제 종료는 현재 `캐시 불러오는 중...` 창의 Obsidian process에만 한정하며, editable workspace가 로드된 경우 수행하지 않는다.
+- `C:\AiWiki`의 문서와 junction target, 제품 source, Git, DB, Docker, Firebase는 변경하지 않는다.
+- 단일 Vault·cache 경로 또는 process 종료 상태가 예상과 다르면 즉시 중단한다.
+- 승인 문구: `Obsidian cache 복구 승인`
+- **승인 기록**: 2026-07-21 사용자 `진행`을 직전 요청한 `Obsidian cache 복구 승인`으로 해석
+- **상태**: 승인·실행·검증 완료
+
+### 실행·검증 결과 — 2026-07-22
+
+- 전환 전 IndexedDB cache를 삭제하지 않고 `app_obsidian.md_0.indexeddb.leveldb.pre-dsm-20260721`로 이동했으며, Obsidian 재실행 후 새 cache와 editable workspace가 정상 생성됐다. 기존 backup은 그대로 보존했다.
+- 사용자 action-time 승인에 따라 obsolete 제외 필터 11개를 Settings UI에서 제거하고 보관함 cache를 재구축했다. `C:\AiWiki\.obsidian\app.json` readback은 `userIgnoreFilters: null`이다.
+- Quick Switcher 양성 검색에서 `Overview`와 `current-project-architecture`가 현재 DSM 경로로 검색됐다. 음성 검색 `node_modules`, `AGENTS.md`, `superpowers`는 기존 파일 결과 없이 새 파일 생성 옵션만 표시됐다.
+- `DSM`은 `LinkType`이 없는 일반 directory이고, `Current`와 `Planning`은 각각 `C:\DEV\.ai\docs`, `C:\DEV\Planing Document`를 가리키는 junction이다. 과거 `DSM-Current`와 root의 `DSM Overview.md`는 존재하지 않는다.
+- Overview internal link 8개는 모두 존재하며 노출 Markdown은 Overview 1개, Current 4개, Planning 4개의 총 9개다. 기획 문서 4개도 새 Current architecture 링크를 사용한다.
+- 전체 working tree의 `git diff --check`가 exit 0으로 통과했다. 기존 LF→CRLF 안내 외 whitespace 오류는 없다.
+- 재사용 가능한 복구 절차를 `ER-20260722-001` `VERIFIED` record로 `error-resolution-playbook.md`에 추가했다.
+- 제품 코드, DB, Docker, Firebase와 Git stage·commit·push는 이 복구 작업에서 변경하지 않았다.
+
+# 누적 작업 Git checkpoint 계획 — 2026-07-25
+
+## 범위와 승인
+
+- 대상은 사용자에게 보고한 현재 working tree 전체다. `git status --porcelain=v1 -uall` 기준 tracked 수정 34개와 untracked 실제 파일 45개이며 staged 파일은 없었다.
+- 포함 범위는 agent·audit·memory·architecture 문서, notification 12B backend·migration·Docker 설정, Front Phase 1 prototype, design reference와 v1.3 기획 문서다.
+- ignore된 `DSM_Back/.env`, `node_modules`, memory recovery backup과 생성물은 포함하지 않는다.
+- Git write는 `codex/m12b-front-prototype-checkpoint` branch 생성, 전체 snapshot stage, commit, `origin` push로 한정한다. main 직접 push, PR, merge, force-push와 deploy는 수행하지 않는다.
+- **승인 기록**: 2026-07-25 사용자 `1번 진행해`를 직전 제시한 “현재 작업 트리 전체 검토 후 commit·push” 승인으로 해석한다.
+
+## publish 전 검증
+
+- 실제 credential pattern 검사에서 placeholder와 환경변수 참조 외 비밀값은 발견되지 않았다. `DSM_Back/.env`는 Git ignore 상태다.
+- backend unit 22 suites·198 tests와 e2e 1 suite·2 tests가 fresh exit 0으로 통과했다.
+- Nest build, Prisma validate, Front TypeScript `--noEmit --incremental false`, `git diff --check`가 통과했다.
+- Front `expo lint`는 ESLint config가 없어 자동 설치를 시도했고 sandbox network에서 중단됐다. 승인 범위를 확대해 lint config를 생성하지 않았으며 이번 checkpoint의 미실행 제한으로 남긴다.
+- Docker Engine은 현재 비가동이므로 실제 local DB·FCM runtime은 이번 publish에서 재검증하지 않았다. 기존 12C·sandbox gate를 유지한다.
+- Windows PowerShell `npm.ps1` 차단과 managed sandbox Jest Temp `EPERM` 해결은 `ER-20260725-001`, `ER-20260725-002`로 기록했다.
+- **상태**: 승인·범위 검토·publish 전 검증 완료, branch·commit·push 실행 중

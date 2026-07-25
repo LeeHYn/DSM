@@ -1,5 +1,6 @@
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -7,6 +8,7 @@ import {
   IsString,
   Min,
   MinLength,
+  ValidateIf,
   validateSync,
 } from 'class-validator';
 
@@ -41,29 +43,48 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   GOOGLE_CLIENT_ID!: string;
 
-  @IsOptional()
+  @IsBoolean()
+  FCM_DISPATCH_ENABLED = false;
+
+  @ValidateIf((config: EnvironmentVariables) => config.FCM_DISPATCH_ENABLED)
   @IsString()
+  @IsNotEmpty()
   FCM_PROJECT_ID?: string;
-
-  @IsOptional()
-  @IsString()
-  FCM_CLIENT_EMAIL?: string;
-
-  @IsOptional()
-  @IsString()
-  FCM_PRIVATE_KEY?: string;
 
   @IsOptional()
   @IsString()
   REDIS_URL?: string;
 }
 
+function parseFcmDispatchEnabled(value: unknown): boolean {
+  if (value === undefined || value === 'false') {
+    return false;
+  }
+
+  if (value === 'true') {
+    return true;
+  }
+
+  throw new Error(
+    'Environment validation failed: FCM_DISPATCH_ENABLED: must be exactly "true" or "false"',
+  );
+}
+
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
-  const validatedConfig = plainToInstance(EnvironmentVariables, config, {
-    enableImplicitConversion: true,
-  });
+  const validatedConfig = plainToInstance(
+    EnvironmentVariables,
+    {
+      ...config,
+      FCM_DISPATCH_ENABLED: parseFcmDispatchEnabled(
+        config.FCM_DISPATCH_ENABLED,
+      ),
+    },
+    {
+      enableImplicitConversion: true,
+    },
+  );
 
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,

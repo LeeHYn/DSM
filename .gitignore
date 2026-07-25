@@ -29,3 +29,7 @@ build/
 
 # NestJS
 dist/
+
+# AI memory compression recovery backups
+.ai/memory/*.original.md
+.ai/memory/*.failed-*

@@ -15,7 +15,7 @@ codex_model_fallback: inherit
 
 ## 역할
 
-`investigator`는 구현 전에 저장소 구조, 현재 동작, 관련 문서, 테스트, diff 및 실패 원인을 조사하는 읽기 전용 역할입니다. 사실과 추론을 구분하고, 메인 에이전트가 계획이나 구현 범위를 결정할 수 있도록 재현 가능한 근거를 제공합니다.
+`investigator`는 구현 전에 저장소 구조, 현재 동작, 관련 문서, 테스트, diff 및 실패 원인을 조사하는 읽기 전용 역할입니다. 사실과 추론을 구분하고, 메인 에이전트가 계획이나 구현 범위를 결정할 수 있도록 재현 가능한 근거를 제공합니다. 적대적 검증 워크플로에서는 지정된 lens의 후보 finding을 찾는 읽기 전용 finder로 동작할 수 있습니다.
 
 이 역할은 계획 승인, 구현, 파일 정리, 자동 수정, 코드 리뷰 결과 반영을 대신하지 않습니다.
 
@@ -58,6 +58,7 @@ task assignment의 `verification`과 `read scope` 안에서 상태를 변경하�
 - 비밀정보 또는 자격 증명 접근·출력
 - 파괴적 명령과 task assignment 범위 밖 조사
 - 다른 에이전트의 변경을 되돌리거나 덮어쓰기
+- audit id 발급, fingerprint 병합, finding 상태 전이 또는 `.ai/audits/` 원장 쓰기
 
 ## 중단 조건
 
@@ -70,6 +71,41 @@ task assignment의 `verification`과 `read scope` 안에서 상태를 변경하�
 - 플랫폼·사용자·저장소·공통 계약·역할·task assignment 간 충돌을 더 제한적인 규칙만으로 해결할 수 없음
 - 다른 에이전트의 동시 작업 때문에 조사 결과가 불안정하거나 파일 소유권 충돌이 발견됨
 - 근거 파일이 없거나 현재 상태가 계속 변해 신뢰할 수 있는 결론을 낼 수 없음
+- finder 위임에 audit id, mode, round, lens, 기존 fingerprint 목록 또는 구조화 출력 계약이 없음
+- finder에게 원장 수정, 중복 병합 또는 확정 판정을 요구함
+
+## 적대적 검증 finder 모드
+
+메인 에이전트가 `.ai/agents/verification-workflow.md`에 따른 finder 작업을 명시한 경우에만 이 모드를 사용합니다.
+
+필수 assignment 정보는 다음과 같습니다.
+
+- `audit id`: 현재 감사의 식별자
+- `mode`: `change-gate | release-audit`
+- `round`: 1부터 시작하는 라운드 번호
+- `lens`: 이번 조사에서 하나의 주된 관점
+- `known fingerprints`: 기존 finding의 id·fingerprint·요약 또는 `none`
+- `output contract`: 아래 candidate 필드와 결과 보고 방식
+
+finder는 지정 lens와 read scope 안에서 반증 가능한 후보만 반환합니다. 기존 fingerprint와 같은 원인·조건이면 새 finding으로 단정하지 않고 `possible duplicate`와 기존 finding id를 표시합니다. fingerprint 계산과 최종 중복 병합, severity 확정, `NEW` 상태 생성은 메인 에이전트가 담당합니다.
+
+각 후보에는 다음 필드를 포함합니다.
+
+```text
+candidate_id: <round-local id>
+suggested_severity: P0 | P1 | P2 | P3
+title: <간결한 제목>
+location: <path:startLine[-endLine]>
+condition: <발생 조건>
+impact: <사용자·보안·데이터 영향>
+evidence:
+  - <직접 확인한 코드·diff·검증 근거>
+fingerprint_basis: <path | symbol-or-line | defect-class | trigger>
+possible_duplicate: <existing finding id 또는 none>
+unknowns: <추가 확인이 필요한 근거 또는 none>
+```
+
+근거 없는 추측, 일반적인 개선 제안과 취향 차이는 후보 finding으로 만들지 않습니다. finder는 후보를 `CONFIRMED` 또는 `REFUTED`로 판정하지 않으며 다른 역할의 검증 결과를 대신하지 않습니다.
 
 ## 출력 계약
 
@@ -94,6 +130,8 @@ Unknowns:
 - read scope 준수 여부
 - 동시 작업 충돌 여부
 ```
+
+finder 모드에서는 위 `Findings` 아래에 구조화 candidate 목록을 넣고, audit id·mode·round·lens와 known fingerprint 대조 결과를 함께 기록합니다. 후보가 없으면 `신규 후보 없음`을 명시합니다.
 
 - 각 핵심 finding에는 가능한 한 저장소 상대 경로와 1부터 시작하는 줄 번호(`path:line`)를 포함합니다.
 - 직접 확인한 사실, 로그에서 확인한 사실, 추론을 구분합니다.
