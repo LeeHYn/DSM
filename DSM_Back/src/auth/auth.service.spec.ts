@@ -41,6 +41,7 @@ const makePrismaMock = () => {
     user: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      updateMany: jest.fn(),
     },
     refreshToken: {
       create: jest.fn(),
@@ -342,6 +343,49 @@ describe('AuthService', () => {
       await expect(
         service.logout(MOCK_USER.id, 'rt-1.not-found'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('current user onboarding', () => {
+    it('returns the canonical current-user projection', async () => {
+      const completedAt = new Date('2026-07-25T00:00:00.000Z');
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: MOCK_USER.id,
+        onboardingCompletedAt: completedAt,
+      });
+
+      await expect(service.getCurrentUser(MOCK_USER.id)).resolves.toEqual({
+        userId: MOCK_USER.id,
+        onboardingCompletedAt: completedAt,
+      });
+    });
+
+    it('sets onboarding only while the canonical value is null', async () => {
+      const completedAt = new Date('2026-07-25T00:00:00.000Z');
+      prismaMock.user.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: MOCK_USER.id,
+        onboardingCompletedAt: completedAt,
+      });
+
+      const result = await service.completeOnboarding(MOCK_USER.id, completedAt);
+
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: MOCK_USER.id,
+          onboardingCompletedAt: null,
+        },
+        data: { onboardingCompletedAt: completedAt },
+      });
+      expect(result.onboardingCompletedAt).toEqual(completedAt);
+    });
+
+    it('rejects a deleted user referenced by an old access token', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getCurrentUser(MOCK_USER.id)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 });

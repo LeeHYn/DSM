@@ -21,6 +21,11 @@ const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const BCRYPT_ROUNDS = 10;
 type RefreshTokenClient = Pick<Prisma.TransactionClient, 'refreshToken'>;
 
+export type CurrentUser = {
+  userId: string;
+  onboardingCompletedAt: Date | null;
+};
+
 @Injectable()
 export class AuthService {
   private readonly googleClientId: string;
@@ -103,6 +108,40 @@ export class AuthService {
       where: { id: record.id },
       data: { revokedAt: new Date() },
     });
+  }
+
+  async getCurrentUser(userId: string): Promise<CurrentUser> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        onboardingCompletedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Authenticated user no longer exists');
+    }
+
+    return {
+      userId: user.id,
+      onboardingCompletedAt: user.onboardingCompletedAt,
+    };
+  }
+
+  async completeOnboarding(
+    userId: string,
+    completedAt = new Date(),
+  ): Promise<CurrentUser> {
+    await this.prisma.user.updateMany({
+      where: {
+        id: userId,
+        onboardingCompletedAt: null,
+      },
+      data: { onboardingCompletedAt: completedAt },
+    });
+
+    return this.getCurrentUser(userId);
   }
 
   private parseRefreshToken(token: string): { id: string; secret: string } {
