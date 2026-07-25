@@ -30,3 +30,18 @@ it('rejects unlisted browser origins and credentials', async () => {
   await expect(resolveOrigin('https://evil.example')).resolves.toBe(false);
   expect(buildCorsOptions([]).credentials).toBe(false);
 });
+
+it('restricts CORS methods and allowed headers', () => {
+  const options = buildCorsOptions([]);
+
+  expect(options.methods).toEqual([
+    'GET',
+    'HEAD',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+  ]);
+  expect(options.allowedHeaders).toEqual(['Authorization', 'Content-Type']);
+});
