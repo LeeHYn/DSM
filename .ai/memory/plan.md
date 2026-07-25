@@ -21,7 +21,7 @@ DSM full-stack을 단계 구현한다. 기능 + test + 문서 + 승인·검증 �
 - backend Jest 22 suites·198 tests, e2e 1 suite·2 tests, direct AppModule compile, TypeScript, scoped ESLint·Prettier, Prisma validation, 2 migrations up-to-date·zero drift, `git diff --check` 통과.
 - audit 13 findings: F-007 `ACCEPTED_RISK`, 나머지 12 `RECHECKED`. 미해결 P0/P1 없음.
 - front design Phase 1 prototype 완료; 실제 OAuth/backend/FCM/WebSocket/DB 연결 미구현.
-- 2026-07-25 Front secure session·REST API client 설계 검토와 사용자 승인을 완료했으며, 설계 명세와 상세 TDD 구현 계획을 작성 중이다.
+- 2026-07-25 Front secure session·REST API client 설계·명세·상세 TDD 구현 계획을 완료했고, 사용자 승인에 따라 subagent-driven 방식으로 구현을 시작한다.
 
 # 다음 작업
 
@@ -53,7 +53,8 @@ DSM full-stack을 단계 구현한다. 기능 + test + 문서 + 승인·검증 �
 
 - 이번 설계는 iOS/Android secure session, Web QA용 비지속 세션, 경량 `fetch` REST client, `/auth/login` 교환 인터페이스, 계정 전역 최초 온보딩 상태와 CORS 축소를 포함한다.
 - Google/Kakao provider token 획득 SDK, Task/Category/Ranking 실제 API 연결, FCM 12C, WebSocket은 후속 범위다.
-- 사용자는 보완된 전체 설계를 2026-07-25 `진행해`로 승인했다. 현재 승인은 설계 명세·상세 구현 계획 작성까지이며 제품 코드 구현과 Git stage·commit·push는 별도 gate를 유지한다.
+- 사용자는 보완된 전체 설계를 2026-07-25 `진행해`로 승인했다.
+- 사용자는 2026-07-25 `1 ㄱ`으로 상세 TDD 계획 커밋, exact 1~2-file 단계의 제품 코드 구현과 subagent-driven 실행을 승인했다. 이 승인은 계획에 명시된 단계별 로컬 Git commit까지 포함하되 push·deploy·Firebase 실제 전송·원격/운영 DB 작업과 local DB migration 실제 적용은 포함하지 않는다.
 
 ### 확정 계약
 
