@@ -4,12 +4,13 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, type CurrentUser } from './auth.service';
 import { SocialLoginDto } from './dto/social-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
@@ -44,7 +45,15 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  me(@Req() req: Request & { user: JwtPayload }): { userId: string } {
-    return { userId: req.user.sub };
+  me(@Req() req: Request & { user: JwtPayload }): Promise<CurrentUser> {
+    return this.authService.getCurrentUser(req.user.sub);
+  }
+
+  @Patch('me/onboarding')
+  @UseGuards(JwtAuthGuard)
+  completeOnboarding(
+    @Req() req: Request & { user: JwtPayload },
+  ): Promise<CurrentUser> {
+    return this.authService.completeOnboarding(req.user.sub);
   }
 }
