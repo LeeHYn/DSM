@@ -3,8 +3,10 @@ import {
   INestApplication,
   ValidationPipe,
 } from '@nestjs/common';
+import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { ValidationError } from 'class-validator';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { parseCorsOrigins } from './config/env.validation';
 
 type ValidationFailure = {
   property: string;
@@ -32,6 +34,19 @@ function flattenValidationErrors(
   });
 }
 
+export function buildCorsOptions(origins: string[]): CorsOptions {
+  const allowlist = new Set(origins);
+
+  return {
+    origin(origin, callback) {
+      callback(null, origin === undefined || allowlist.has(origin));
+    },
+    credentials: false,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+  };
+}
+
 export function configureApp(app: INestApplication): void {
   app.useGlobalPipes(
     new ValidationPipe({
@@ -51,8 +66,5 @@ export function configureApp(app: INestApplication): void {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
+  app.enableCors(buildCorsOptions(parseCorsOrigins(process.env.CORS_ORIGINS)));
 }
