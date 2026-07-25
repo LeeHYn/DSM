@@ -50,6 +50,7 @@ model User {
   notificationEnabled   Boolean                @default(true)
   createdAt             DateTime               @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  onboardingCompletedAt DateTime?              @db.Timestamptz(6)
   socialAccounts        SocialAccount[]
   refreshTokens         RefreshToken[]
   fcmTokens             FcmToken[]
