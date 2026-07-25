@@ -110,3 +110,22 @@
 - [ ] 원격/운영 DB migration·reset·drop은 별도 승인 전 금지
 - [ ] deploy와 Git stage·commit·push는 명시 승인 전 금지
 - [ ] `ACCEPTED_RISK`를 `RECHECKED`/해결 완료로 표시하지 않음
+
+## Front secure session·REST client 체크포인트 — 2026-07-25
+
+- [x] Task 1~6 Backend onboarding contract와 strict CORS
+- [x] Task 7~9 Expo SDK 55 test/lint/SecureStore 설정 기반
+- [x] Task 10 strict API base URL policy
+- [x] Task 11 safe `ApiError`
+- [x] Task 12 runtime auth contract validators
+- [x] Task 13 one-attempt JSON HTTP transport
+- [x] Task 14 public auth API
+- [x] Front 전체 Jest 5 suites·44 tests
+- [x] Front `expo lint`
+- [x] Front TypeScript
+- [x] Tasks 7~14 로컬 커밋과 독립 검토
+- [ ] Task 15 token-store coordinator 직렬화·epoch race
+- [ ] Task 16 이후 native/web token store와 session state machine
+- [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
+- [ ] dependency audit 55건 별도 compatibility/security triage
+- [ ] 원격 push·PR·merge·배포 — 미승인/미실행

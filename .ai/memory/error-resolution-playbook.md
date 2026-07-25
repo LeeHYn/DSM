@@ -56,6 +56,9 @@
 | `ER-20260722-001` | `VERIFIED` | Obsidian, IndexedDB, Windows junction, cache | junction 축소 뒤 stale cache에서 Vault 로딩이 멈추고 제거된 파일이 검색됨 |
 | `ER-20260725-001` | `VERIFIED` | Windows PowerShell, npm, ExecutionPolicy | `npm.ps1`이 정책에 차단돼 npm script가 시작되지 않음 |
 | `ER-20260725-002` | `VERIFIED` | Jest, sandbox, Windows Temp, `EPERM` | test는 통과해도 Jest cache write가 차단돼 exit 1이 됨 |
+| `ER-20260725-003` | `VERIFIED` | npm, sandbox, cache, `EPERM` | dependency install이 사용자 npm cache write에서 중단됨 |
+| `ER-20260725-004` | `VERIFIED` | Prisma, worktree, generated client | fresh worktree에서 생성된 Prisma Client를 찾지 못함 |
+| `ER-20260725-005` | `VERIFIED` | Expo CLI, install, config plugin, devDependency | install이 app config를 바꾸고 dev package를 runtime dependency에 둠 |
 
 ## 해결 record
 
@@ -466,6 +469,89 @@
 - 재발 방지/금지: cache write `EPERM`을 assertion 실패로 보고 제품 코드를 수정하지 않는다. 최초 실행의 “tests passed” 문구만으로 성공을 주장하지 않고 exit code를 확인한다.
 - 적용 불가/잔여 위험: sandbox 밖에서도 실패하거나 stack trace가 application/test code를 가리키면 실제 test failure로 별도 진단한다. 외부 실행은 항상 현재 사용자 승인·권한 정책을 따른다.
 - 근거: [Git checkpoint 검증 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-25`
+
+### ER-20260725-003 — managed sandbox의 npm cache write `EPERM`
+
+- `resolutionId`: `ER-20260725-003`
+- `status`: `VERIFIED`
+- 증상/signature: `npm ci`, `npm install` 또는 Expo package install이 dependency
+  해석 전에 사용자 `AppData\Local\npm-cache` 아래 파일 open/rename에서
+  `EPERM: operation not permitted`로 중단된다.
+- 적용 조건: 프로젝트 workspace는 쓰기 가능하지만 npm의 기본 cache가 managed
+  sandbox 밖 사용자 경로이며 stack과 실패 경로가 npm cache를 가리키는 경우.
+- root cause: package metadata나 dependency conflict가 아니라 package manager가
+  sandbox 외부 cache에 쓰려고 해 filesystem 정책에 차단됐다.
+- 해결 절차:
+  1. 실패 경로가 npm cache인지, `ERESOLVE`·registry·package script 오류가 아닌지
+     먼저 구분한다.
+  2. package/config를 임의로 바꾸거나 cache를 삭제하지 않는다.
+  3. 현재 dependency 변경이 승인된 범위라면 동일한 정확한 명령을 승인된 외부
+     환경에서 재실행한다.
+  4. `npm ls`와 package/lock root metadata, exact changed-file scope를 확인한다.
+- 검증: Backend/Front `npm ci`, Expo SDK 55 dependency 설치와 lock 동기화가 exit
+  0으로 끝났고, `npm ls`가 invalid tree 없이 통과했다.
+- 재발 방지/금지: cache `EPERM`을 dependency 호환성 오류로 오인해 version을
+  임의 변경하거나 global cache를 삭제하지 않는다. 자동 audit fix를 함께 실행하지 않는다.
+- 적용 불가/잔여 위험: sandbox 밖에서도 `ERESOLVE`, integrity, registry 또는
+  lifecycle script 오류가 나면 별도 dependency 진단이 필요하다.
+- 근거: [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-25`
+
+### ER-20260725-004 — fresh worktree의 Prisma Client 생성 누락
+
+- `resolutionId`: `ER-20260725-004`
+- `status`: `VERIFIED`
+- 증상/signature: dependency 설치 후 Backend test/typecheck가
+  `Cannot find module '.prisma/client/default'` 또는 Prisma Client 미초기화 오류로
+  시작하지 못하지만 schema와 migration 파일은 존재한다.
+- 적용 조건: 새 worktree/node_modules에서 `@prisma/client` package는 설치됐지만
+  해당 checkout의 schema로 generated client가 아직 생성되지 않은 경우.
+- root cause: generated Prisma Client는 Git tracked source가 아니며 fresh dependency
+  tree에 현재 schema 기반 generate 단계가 아직 실행되지 않았다.
+- 해결 절차:
+  1. package version과 `DSM_Back/prisma/schema.prisma` 경로를 확인한다.
+  2. Backend에서 `npx prisma generate`를 실행한다. engine download가 필요한 첫
+     실행이면 현재 승인 정책에 따라 network 권한을 요청한다.
+  3. `prisma validate`, Backend focused/full test와 TypeScript를 다시 실행한다.
+  4. generated output을 Git에 stage하지 않고 status로 제품 파일 변화가 없는지 확인한다.
+- 검증: 격리 worktree에서 generate와 validate가 통과한 뒤 Backend baseline 22
+  suites·198 tests 및 이후 Task 1~6 회귀 검증이 통과했다.
+- 재발 방지/금지: Client 생성 오류를 해결하려고 migration을 apply/reset하거나
+  generated node_modules를 commit하지 않는다.
+- 적용 불가/잔여 위험: generate 자체가 schema validation 또는 engine checksum
+  오류로 실패하면 해당 오류를 별도 진단한다. 이 record는 DB migration 적용을 승인하지 않는다.
+- 근거: [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-25`
+
+### ER-20260725-005 — Expo install의 config plugin 및 devDependency 부작용
+
+- `resolutionId`: `ER-20260725-005`
+- `status`: `VERIFIED`
+- 증상/signature: `npx expo install expo-secure-store`가 package/lock 외에
+  `app.json` plugin을 자동 추가하고, npm 11에서 `-- --dev` 형태가 Expo의
+  devDependency 옵션이 아니라 npm include 의미로 해석돼 test/lint package가
+  `dependencies`에 놓인다.
+- 적용 조건: Expo SDK 55 CLI로 package를 설치하며 package 단계와 app-config
+  단계가 분리돼 있고, npm 11 계열 argument forwarding을 사용하는 경우.
+- root cause: Expo CLI의 알려진 config-plugin 자동 등록 side effect와
+  `--dev`를 package-manager 뒤로 전달한 잘못된 argument boundary가 함께 발생했다.
+- 해결 절차:
+  1. 설치 전 exact status와 app-config content hash를 기록한다.
+  2. 개발 package는 Expo CLI의 직접 옵션인 `npx expo install --dev ...`로 설치한다.
+  3. `package.json`의 runtime/dev section과 lockfile root metadata를 직접 확인한다.
+  4. 자동 app-config 변경이 후속 승인 단계 소유라면 다른 변경을 건드리지 말고 그
+     generated line만 제거한 뒤 filtered hash가 원본과 같은지 확인한다.
+  5. `npm install --package-lock-only --ignore-scripts`, `npm ls`, `git diff --check`,
+     changed-file allowlist를 검증한다.
+- 검증: SecureStore는 runtime dependency, Jest/RNTL/ESLint 도구는 devDependencies로
+  해석됐고 `npm ls`가 exit 0이었다. Task 7 commit은 package/lock 두 파일만 포함하고
+  `app.json` plugin은 승인된 Task 9에서 별도 추가됐다.
+- 재발 방지/금지: broad `git restore`로 동시 사용자 app-config 변경을 지우지 않는다.
+  `-- --dev`를 SDK 55/npm 11 조합의 dev install 방식으로 재사용하지 않는다.
+- 적용 불가/잔여 위험: 다른 Expo/npm version은 local `expo install --help`와
+  실제 diff로 option semantics를 다시 확인해야 한다.
+- 근거: [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-25`
 
 ## 새 record 템플릿
