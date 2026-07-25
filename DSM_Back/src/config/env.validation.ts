@@ -1,5 +1,6 @@
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -43,6 +44,10 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   GOOGLE_CLIENT_ID!: string;
 
+  @IsArray()
+  @IsString({ each: true })
+  CORS_ORIGINS: string[] = [];
+
   @IsBoolean()
   FCM_DISPATCH_ENABLED = false;
 
@@ -70,6 +75,51 @@ function parseFcmDispatchEnabled(value: unknown): boolean {
   );
 }
 
+export function parseCorsOrigins(value: unknown): string[] {
+  if (value === undefined || value === '') {
+    return [];
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(
+      'Environment validation failed: CORS_ORIGINS: must be a comma-separated string',
+    );
+  }
+
+  const origins = value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0)
+    .map((origin) => {
+      let url: URL;
+      try {
+        url = new URL(origin);
+      } catch {
+        throw new Error(
+          `Environment validation failed: CORS_ORIGINS: invalid origin ${origin}`,
+        );
+      }
+
+      if (
+        (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+        url.origin !== origin ||
+        url.pathname !== '/' ||
+        url.search !== '' ||
+        url.hash !== '' ||
+        url.username !== '' ||
+        url.password !== ''
+      ) {
+        throw new Error(
+          `Environment validation failed: CORS_ORIGINS: invalid origin ${origin}`,
+        );
+      }
+
+      return url.origin;
+    });
+
+  return [...new Set(origins)];
+}
+
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
@@ -80,6 +130,7 @@ export function validateEnv(
       FCM_DISPATCH_ENABLED: parseFcmDispatchEnabled(
         config.FCM_DISPATCH_ENABLED,
       ),
+      CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS),
     },
     {
       enableImplicitConversion: true,

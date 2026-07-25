@@ -23,6 +23,31 @@ describe('validateEnv', () => {
     expect(config.FCM_DISPATCH_ENABLED).toBe(false);
   });
 
+  it('normalizes exact CORS origins and removes duplicates', () => {
+    const config = validateEnv({
+      ...validConfig,
+      CORS_ORIGINS:
+        ' http://localhost:8081,https://qa.example.com,http://localhost:8081 ',
+    });
+
+    expect(config.CORS_ORIGINS).toEqual([
+      'http://localhost:8081',
+      'https://qa.example.com',
+    ]);
+  });
+
+  it.each([
+    '*',
+    'localhost:8081',
+    'https://example.com/path',
+    'https://example.com?query=1',
+    'https://user:password@example.com',
+  ])('rejects unsafe CORS origin %p', (CORS_ORIGINS) => {
+    expect(() => validateEnv({ ...validConfig, CORS_ORIGINS })).toThrow(
+      /CORS_ORIGINS/,
+    );
+  });
+
   it.each([
     ['true', true],
     ['false', false],
