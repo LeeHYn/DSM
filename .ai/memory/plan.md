@@ -571,4 +571,4 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - Front `expo lint`는 ESLint config가 없어 자동 설치를 시도했고 sandbox network에서 중단됐다. 승인 범위를 확대해 lint config를 생성하지 않았으며 이번 checkpoint의 미실행 제한으로 남긴다.
 - Docker Engine은 현재 비가동이므로 실제 local DB·FCM runtime은 이번 publish에서 재검증하지 않았다. 기존 12C·sandbox gate를 유지한다.
 - Windows PowerShell `npm.ps1` 차단과 managed sandbox Jest Temp `EPERM` 해결은 `ER-20260725-001`, `ER-20260725-002`로 기록했다.
-- **상태**: 승인·범위 검토·publish 전 검증 완료, branch·commit·push 실행 중
+- **상태**: 승인·범위 검토·검증 완료. `codex/m12b-front-prototype-checkpoint` branch에 checkpoint commit `743fb2b`를 생성해 `origin` push 완료. PR·merge는 요청 범위가 아니므로 미실행.
