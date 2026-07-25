@@ -33,10 +33,15 @@ function isRefreshToken(value: unknown): value is string {
   }
 
   const separator = value.indexOf('.');
-  return (
+  const hasSingleNonEdgeSeparator =
     separator > 0 &&
     separator === value.lastIndexOf('.') &&
-    separator < value.length - 1
+    separator < value.length - 1;
+
+  return (
+    hasSingleNonEdgeSeparator &&
+    value.slice(0, separator).trim().length > 0 &&
+    value.slice(separator + 1).trim().length > 0
   );
 }
 

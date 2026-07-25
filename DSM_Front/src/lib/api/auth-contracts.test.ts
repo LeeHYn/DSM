@@ -43,6 +43,8 @@ it.each([
   { accessToken: 'access', refreshToken: 'missing-separator' },
   { accessToken: 'access', refreshToken: '.secret' },
   { accessToken: 'access', refreshToken: 'record.' },
+  { accessToken: 'access', refreshToken: '   .secret' },
+  { accessToken: 'access', refreshToken: 'record.   ' },
   { accessToken: 'access', refreshToken: 'record.secret.extra' },
   { accessToken: 'a'.repeat(16 * 1024 + 1), refreshToken: 'record.secret' },
   { accessToken: 'access', refreshToken: `r.${'x'.repeat(1024)}` },
