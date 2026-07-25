@@ -51,6 +51,33 @@ it('classifies unauthorized and other HTTP failures', async () => {
   }
 });
 
+it('classifies HTTP failures without reading error bodies', async () => {
+  const cases = [
+    { status: 401, kind: 'unauthorized' },
+    { status: 500, kind: 'http' },
+  ] as const;
+
+  for (const testCase of cases) {
+    const text = jest
+      .fn()
+      .mockRejectedValue(new Error('sensitive body read failure'));
+    const client = createHttpClient({
+      baseUrl: 'https://api.example.com',
+      fetchImpl: jest.fn().mockResolvedValue({
+        ok: false,
+        status: testCase.status,
+        text,
+      } as unknown as Response),
+    });
+
+    await expect(client.request({ path: '/x' })).rejects.toMatchObject({
+      kind: testCase.kind,
+      status: testCase.status,
+    });
+    expect(text).not.toHaveBeenCalled();
+  }
+});
+
 it('classifies network failure without retrying', async () => {
   const fetchImpl = jest
     .fn()
@@ -65,6 +92,22 @@ it('classifies network failure without retrying', async () => {
   });
   expect(fetchImpl).toHaveBeenCalledTimes(1);
 });
+
+it.each([null, undefined])(
+  'classifies nullish fetch rejection as network',
+  async (value) => {
+    const fetchImpl = jest.fn().mockRejectedValue(value);
+    const client = createHttpClient({
+      baseUrl: 'https://api.example.com',
+      fetchImpl,
+    });
+
+    await expect(client.request({ path: '/x' })).rejects.toMatchObject({
+      kind: 'network',
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  },
+);
 
 it('classifies timeout and malformed JSON', async () => {
   jest.useFakeTimers();

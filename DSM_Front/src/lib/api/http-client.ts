@@ -34,6 +34,15 @@ type HttpClientOptions = {
   fetchImpl?: FetchImplementation;
 };
 
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  );
+}
+
 export function createHttpClient({
   baseUrl,
   fetchImpl = fetch,
@@ -66,7 +75,6 @@ export function createHttpClient({
             request.body === undefined ? undefined : JSON.stringify(request.body),
           signal: controller.signal,
         });
-        const responseText = await response.text();
 
         if (!response.ok) {
           throw new ApiError(
@@ -75,6 +83,8 @@ export function createHttpClient({
             { status: response.status },
           );
         }
+
+        const responseText = await response.text();
 
         if (request.responseMode === 'empty') {
           return undefined as T;
@@ -90,7 +100,7 @@ export function createHttpClient({
         if (error instanceof ApiError) {
           throw error;
         }
-        if (controller.signal.aborted || (error as { name?: string }).name === 'AbortError') {
+        if (controller.signal.aborted || isAbortError(error)) {
           throw new ApiError('timeout', 'Request timed out');
         }
         throw new ApiError('network', 'Network request failed');
