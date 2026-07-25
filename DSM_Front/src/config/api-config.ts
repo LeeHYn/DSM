@@ -1,5 +1,9 @@
 function isPrivateDevelopmentHost(hostname: string): boolean {
-  if (hostname === 'localhost' || hostname === '::1') {
+  if (
+    hostname === 'localhost' ||
+    hostname === '::1' ||
+    hostname === '[::1]'
+  ) {
     return true;
   }
 
@@ -33,6 +37,7 @@ export function getApiBaseUrl(
   } catch {
     throw new Error('EXPO_PUBLIC_API_BASE_URL is unsafe');
   }
+  const serializedUrl = url.toString();
 
   const developmentHttp =
     isDevelopment &&
@@ -44,10 +49,12 @@ export function getApiBaseUrl(
     url.username ||
     url.password ||
     url.search ||
-    url.hash
+    url.hash ||
+    serializedUrl.includes('?') ||
+    serializedUrl.includes('#')
   ) {
     throw new Error('EXPO_PUBLIC_API_BASE_URL is unsafe');
   }
 
-  return url.toString().replace(/\/+$/, '');
+  return serializedUrl.replace(/\/+$/, '');
 }
