@@ -613,3 +613,25 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - Docker Engine은 현재 비가동이므로 실제 local DB·FCM runtime은 이번 publish에서 재검증하지 않았다. 기존 12C·sandbox gate를 유지한다.
 - Windows PowerShell `npm.ps1` 차단과 managed sandbox Jest Temp `EPERM` 해결은 `ER-20260725-001`, `ER-20260725-002`로 기록했다.
 - **상태**: 승인·범위 검토·검증 완료. `codex/m12b-front-prototype-checkpoint` branch에 checkpoint commit `743fb2b`를 생성해 `origin` push 완료. PR·merge는 요청 범위가 아니므로 미실행.
+
+# Front secure session·REST client 실행 체크포인트 — 2026-07-25
+
+- 승인된 상세 계획: `docs/superpowers/plans/2026-07-25-front-secure-session-rest-client.md`
+- 격리 브랜치/worktree: `codex/front-secure-session-rest-client`,
+  `C:\DEV\.worktrees\front-secure-session-rest-client`
+- Task 1~14 구현·로컬 커밋·독립 검토 완료.
+  - Backend: onboarding timestamp schema/migration, current-user service/controller,
+    strict CORS parser/bootstrap/config.
+  - Front: Expo SecureStore/Jest/ESLint 기반, strict API URL, safe `ApiError`,
+    auth response validators, one-attempt JSON transport, public auth API.
+- 독립 검토 수정 라운드:
+  - Task 10: bracketed IPv6 loopback과 빈 query/fragment delimiter 보완.
+  - Task 12: whitespace-only refresh-token segment 보완.
+  - Task 13: non-2xx body-read 오류와 nullish rejection 분류 보완.
+- 전체 Front 검증: Jest 5 suites/44 tests, `expo lint`, TypeScript 통과.
+- Prisma migration 파일은 생성·검증만 했으며 실제 개발 DB에는 미적용.
+  migration 적용은 별도 action-time 승인 대상이다.
+- Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
+  dependency-security triage로 이관한다.
+- 다음 구현 시작점: Task 15 `TokenStoreCoordinator` 직렬화·epoch race 테스트.
+- 원격 push, PR, merge, 배포는 수행하지 않았다.

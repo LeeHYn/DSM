@@ -17,3 +17,28 @@
 - **memory backup**: `*.original.md`는 local 복구 snapshot, Git 제외·비활성. 2026-07-20 Anthropic compression script의 Windows CP949 bug로 기존 context pre-image가 손실돼 Git HEAD·plan·architecture·checklist에서 상세 snapshot을 재구성했다.
 - **Obsidian Vault 연결(2026-07-20)**: `C:\AiWiki`를 Obsidian 1.12.7의 단일 local Vault로 등록했다. `C:\AiWiki\AiProject`는 여러 프로젝트를 담는 일반 directory다.
 - **Obsidian DSM 문서 큐레이션·일반 컨테이너 전환(2026-07-22)**: `C:\AiWiki\AiProject\DSM`은 일반 directory이고, `Current` junction은 `C:\DEV\.ai\docs`, `Planning` junction은 `C:\DEV\Planing Document`를 가리킨다. `Overview.md`는 Current 4개와 Planning v1.3 4개를 연결하며 기획 문서 4개의 architecture 링크도 새 Current 경로를 사용한다. 원본 `C:\DEV`와 두 junction target은 보존됐다. 전환 전 IndexedDB cache는 삭제하지 않고 `.pre-dsm-20260721` exact backup으로 이동했으며 Obsidian workspace와 새 cache가 정상 생성됐다. 사용자 action-time 승인 후 stale 제외 필터 11개를 UI에서 제거하고 보관함 cache를 재구축했으며 `app.json` readback은 `userIgnoreFilters: null`이다. Quick Switcher에서 Overview·현재 architecture는 검색되고 `node_modules`·`AGENTS.md`·`superpowers`는 파일 결과가 없음을 확인했다. 복구 절차는 `ER-20260722-001`로 기록했다.
+
+# Front secure session·REST client 현재 맥락 — 2026-07-25
+
+- 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
+  `C:\DEV\.worktrees\front-secure-session-rest-client`.
+- 상세 계획 33개 중 Task 1~14 완료, 다음은 Task 15.
+- Backend contract:
+  - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
+  - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
+  - migration 파일은 생성·검증만 했고 persistent 개발 DB에는 미적용.
+- Front security boundary:
+  - Native SecureStore 예정, Web은 reload 시 로그아웃되는 memory-only 정책.
+  - production API URL은 HTTPS, development HTTP는 local/private host만 허용.
+  - token/current-user 응답은 runtime validator 통과 후에만 사용.
+  - transport는 요청당 fetch 1회, 자동 retry 없음, timeout/network/HTTP/protocol
+    오류를 안전한 고정 메시지로 분류.
+  - public login/refresh는 access token을 보내지 않고 logout만 캡처한 token pair 사용.
+- 최신 Front 검증: Jest 5 suites/44 tests, ESLint, TypeScript 모두 통과.
+- 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
+  `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.
+- 잔여 위험:
+  - dependency audit 55건(critical 1 포함) 별도 triage 필요.
+  - Task 4 parser의 hash/non-string 명시 테스트는 Minor deferred.
+  - SecureStore native config는 향후 native binary build에서 반영.
+- 외부 변경 없음: DB migration apply, push/PR/merge/deploy 미실행.
