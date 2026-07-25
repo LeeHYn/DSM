@@ -21,6 +21,7 @@ DSM full-stack을 단계 구현한다. 기능 + test + 문서 + 승인·검증 �
 - backend Jest 22 suites·198 tests, e2e 1 suite·2 tests, direct AppModule compile, TypeScript, scoped ESLint·Prettier, Prisma validation, 2 migrations up-to-date·zero drift, `git diff --check` 통과.
 - audit 13 findings: F-007 `ACCEPTED_RISK`, 나머지 12 `RECHECKED`. 미해결 P0/P1 없음.
 - front design Phase 1 prototype 완료; 실제 OAuth/backend/FCM/WebSocket/DB 연결 미구현.
+- 2026-07-25 Front secure session·REST API client 설계 검토와 사용자 승인을 완료했으며, 설계 명세와 상세 TDD 구현 계획을 작성 중이다.
 
 # 다음 작업
 
@@ -45,6 +46,45 @@ DSM full-stack을 단계 구현한다. 기능 + test + 문서 + 승인·검증 �
 - 원격/운영 DB 접근·migration 금지
 - deploy·Git write 금지
 - 다음 계획은 exact 1~2-file stage와 verification을 먼저 기록하고 사용자 승인 후 실행
+
+## Front secure session·REST API client 승인 설계 — 2026-07-25
+
+### 범위
+
+- 이번 설계는 iOS/Android secure session, Web QA용 비지속 세션, 경량 `fetch` REST client, `/auth/login` 교환 인터페이스, 계정 전역 최초 온보딩 상태와 CORS 축소를 포함한다.
+- Google/Kakao provider token 획득 SDK, Task/Category/Ranking 실제 API 연결, FCM 12C, WebSocket은 후속 범위다.
+- 사용자는 보완된 전체 설계를 2026-07-25 `진행해`로 승인했다. 현재 승인은 설계 명세·상세 구현 계획 작성까지이며 제품 코드 구현과 Git stage·commit·push는 별도 gate를 유지한다.
+
+### 확정 계약
+
+- architecture는 dependency를 추가하지 않는 경량 `fetch` client + 명시적 session state machine을 사용한다.
+- access token은 memory only다. refresh token은 iOS/Android `expo-secure-store`, Web memory only이며 Web 새로고침은 의도적으로 로그아웃된다.
+- SecureStore는 platform-specific module로 분리하고 config plugin을 사용한다. 자동 bootstrap을 방해하는 `requireAuthentication`은 사용하지 않는다.
+- token storage mutation은 직렬화하고 `sessionEpoch` 검사를 결합해 logout·login·refresh late-write resurrection을 차단한다.
+- refresh는 single-flight이며 인증 요청은 성공한 refresh 뒤 최대 1회만 replay한다. refresh network error는 자동 retry하지 않는다.
+- bootstrap network failure는 token을 보존한 offline-retry 상태다. refresh 401, protocol/storage failure는 fail-closed logout이다.
+- offline logout은 local token을 항상 제거하고 server revoke는 best-effort다. 서버 token이 30일 만료까지 남을 수 있는 위험은 사용자 승인 정책이다.
+- 계정 전역 최초 온보딩은 `User.onboardingCompletedAt`으로 관리한다. 완료 API는 멱등적으로 최초 시각을 보존하고 canonical timestamp를 200 응답으로 반환한다.
+- `/auth/me`는 `userId`와 `onboardingCompletedAt`을 반환한다.
+- `EXPO_PUBLIC_API_BASE_URL`에는 공개 URL만 저장하고 runtime validation을 수행한다. production은 HTTPS, local development는 loopback/private-network HTTP만 허용한다.
+- auth/token 응답은 TypeScript 타입 외 runtime shape validation을 통과해야 한다. token·Authorization header는 log/error에 기록하지 않는다.
+- CORS는 browser origin exact allowlist, `credentials: false`, Origin 없는 Native·CLI 요청 허용 정책이다.
+- Expo Router protected routes는 screen을 한 번만 선언하고 bootstrap/offline/unauthenticated/onboarding/authenticated 상태로 분기한다.
+- 회전 refresh 응답 유실 후 다음 복원에서 강제 로그아웃될 수 있는 기존 backend 한계는 이번 milestone의 known limitation이며 자동 retry로 은폐하지 않는다.
+
+### 문서·구현 단계
+
+1. 승인 설계를 `docs/superpowers/specs/2026-07-25-front-secure-session-rest-client-design.md`에 기록하고 자체 검토한다.
+2. 상세 TDD 계획을 `docs/superpowers/plans/2026-07-25-front-secure-session-rest-client.md`에 작성한다.
+3. 구현은 별도 사용자 승인 후 exact 1~2-file 단계로 수행한다.
+4. backend onboarding/CORS → front config/token store → REST client → session state/router → UI wiring → 통합 검증 순으로 진행한다.
+
+### 검증·감사 gate
+
+- backend: unit/e2e/build/Prisma validate·migration status·local persistent DB zero drift.
+- front: Jest `jest-expo` + React Native Testing Library, TypeScript, Expo SDK 55 Flat ESLint, Web QA, iOS/Android SecureStore 실제 기기 smoke.
+- 보안·동시성·DB migration 변경이므로 구현 완료 전 `change-gate`를 수행한다.
+- 실제 provider OAuth E2E는 provider SDK 후속 단계 전까지 완료로 주장하지 않는다.
 
 # 핵심 기술 계약
 

@@ -87,7 +87,15 @@
 
 ## 다음 실행 순서
 
-1. [ ] Front secure session·API client 연결 계획
+1. [/] Front secure session·API client 연결 계획
+   - [x] 범위·플랫폼 token 정책·온보딩·offline 정책 결정
+   - [x] 경량 `fetch` client + 명시적 session state machine 선택
+   - [x] 보안·동시성·Expo SDK 55 공식 문서 기준 전체 설계 재검토
+   - [x] 보완된 전체 설계 사용자 승인
+   - [x] 승인 설계 명세 작성·자체 검토
+   - [ ] 설계 명세 사용자 검토와 Git commit 승인
+   - [ ] 상세 TDD 구현 계획 작성
+   - [ ] 제품 코드 구현 전 exact 1~2-file 단계와 별도 승인
 2. [ ] M12C permission + logout/account-switch Installation rotation + authenticated current-state sync/display
 3. [ ] 별도 Firebase test project/device ADC·FCM sandbox
 4. [ ] 검증 후 `FCM_DISPATCH_ENABLED` 활성 판단
