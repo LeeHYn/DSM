@@ -1,14 +1,18 @@
-const mockDeleteItemAsync = jest.fn();
-const mockGetItemAsync = jest.fn();
-const mockSetItemAsync = jest.fn();
+import * as SecureStore from 'expo-secure-store';
 
-jest.mock('expo-secure-store', () => ({
-  deleteItemAsync: (...args: unknown[]) => mockDeleteItemAsync(...args),
-  getItemAsync: (...args: unknown[]) => mockGetItemAsync(...args),
-  setItemAsync: (...args: unknown[]) => mockSetItemAsync(...args),
-}));
+import { ApiError } from '@/lib/api/api-error';
 
 import { createRefreshTokenStore } from './token-store.native';
+
+jest.mock('expo-secure-store', () => ({
+  deleteItemAsync: jest.fn(),
+  getItemAsync: jest.fn(),
+  setItemAsync: jest.fn(),
+}));
+
+const mockDeleteItemAsync = jest.mocked(SecureStore.deleteItemAsync);
+const mockGetItemAsync = jest.mocked(SecureStore.getItemAsync);
+const mockSetItemAsync = jest.mocked(SecureStore.setItemAsync);
 
 const KEY = 'dsm.auth.refresh-token.v1';
 const TOMBSTONE = '__dsm_logged_out_v1__';
@@ -105,6 +109,18 @@ it('throws a storage error when tombstone readback is not the exact marker', asy
   mockGetItemAsync
     .mockResolvedValueOnce('safe-residual-value')
     .mockResolvedValueOnce('safe-wrong-readback');
+  const store = createRefreshTokenStore();
+
+  await expect(store.clear()).rejects.toMatchObject({
+    kind: 'storage',
+    message: 'Secure token storage failed',
+  });
+});
+
+it('wraps a native ApiError during tombstone readback as the fixed storage error', async () => {
+  mockGetItemAsync
+    .mockResolvedValueOnce('safe-residual-value')
+    .mockRejectedValueOnce(new ApiError('network', 'native error message'));
   const store = createRefreshTokenStore();
 
   await expect(store.clear()).rejects.toMatchObject({

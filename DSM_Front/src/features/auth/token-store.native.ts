@@ -47,15 +47,15 @@ export function createRefreshTokenStore(): RefreshTokenStore {
         throw storageError(cause);
       }
 
+      let readback: string | null;
       try {
-        if ((await SecureStore.getItemAsync(KEY)) !== TOMBSTONE) {
-          throw storageError();
-        }
+        readback = await SecureStore.getItemAsync(KEY);
       } catch (cause) {
-        if (cause instanceof ApiError) {
-          throw cause;
-        }
         throw storageError(cause);
+      }
+
+      if (readback !== TOMBSTONE) {
+        throw storageError();
       }
     },
   };
