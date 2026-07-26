@@ -48,7 +48,7 @@
   - dependency audit 55건(critical 1 포함) 별도 triage 필요.
   - Task 4 parser의 hash/non-string 명시 테스트는 Minor deferred.
   - SecureStore native config는 향후 native binary build에서 반영.
-- 외부 변경 없음: DB migration apply, push/PR/merge/deploy 미실행.
+- 외부 변경: 2026-07-26 `origin/codex/front-secure-session-rest-client`에 제품·메모리 snapshot `d1b2718`까지 push 완료. DB migration apply, PR, merge, deploy는 미실행.
 - Task 15 로컬 commit `3a2b9cd` 독립 검토 clean. 비동기 queue race test의
   microtask 선행 조건 해결은 `ER-20260726-001`에 기록.
 - Task 16 로컬 commits `f25125e`, `ce5b28c`; fix round 1 re-review clean.
