@@ -125,7 +125,7 @@
 - [x] Front TypeScript
 - [x] Tasks 7~15 로컬 커밋과 독립 검토
 - [x] Task 15 token-store coordinator 직렬화·epoch race
-- [ ] Task 16 Native SecureStore adapter
+- [/] Task 16 Native SecureStore adapter
 - [ ] Task 17 이후 Web memory token store와 session state machine
 - [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
 - [ ] dependency audit 55건 별도 compatibility/security triage
