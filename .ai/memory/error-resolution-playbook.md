@@ -66,6 +66,11 @@
 | `ER-20260726-005` | `VERIFIED` | Auth client, delayed `401`, single-flight, token generation | 첫 refresh 완료 뒤 늦은 같은-generation `401`이 refresh를 다시 시작함 |
 | `ER-20260726-006` | `VERIFIED` | Promise, synchronous throw, assignment race, cleanup | callback 동기 throw 뒤 rejected promise가 cache에 남음 |
 | `ER-20260726-007` | `VERIFIED` | Auth client, logout, account switch, stale replay | completed refresh cache가 이전 세션 요청을 replay함 |
+| `ER-20260726-008` | `VERIFIED` | Session controller, SecureStore, verified clear, read failure | token read 실패를 곧바로 blocking error로 처리해 정리 가능한 credential이 남음 |
+| `ER-20260726-009` | `VERIFIED` | Session controller, refresh, network, action state | 직접 refresh 실패 뒤 `refreshing` action이 영구 유지됨 |
+| `ER-20260726-010` | `VERIFIED` | Session controller, replay `401`, epoch, account switch | delegated cleanup 뒤 재진입한 cleanup이 새 세션 token을 지울 수 있음 |
+| `ER-20260726-011` | `VERIFIED` | Session controller, onboarding, state precondition | onboarding 외 상태에서도 완료 PATCH를 호출함 |
+| `ER-20260726-012` | `VERIFIED` | Session controller, protocol error, revoke, profile | malformed profile 뒤 발급된 server refresh token을 revoke하지 않음 |
 
 ## 해결 record
 
@@ -776,6 +781,147 @@
   보장되지 않는 다른 session interface에서는 명시적 epoch/owner ID가 필요하다.
 - 근거: [Authenticated client](../../DSM_Front/src/lib/api/authenticated-client.ts),
   [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-008 — Token read 실패 뒤 verified local cleanup
+
+- `resolutionId`: `ER-20260726-008`
+- `status`: `VERIFIED`
+- 증상/signature: session bootstrap 또는 refresh에서 token store `read()`가
+  storage error를 반환하면 credential 정리를 시도하지 않고 곧바로
+  `storage-error/read`에 머문다.
+- 적용 조건: refresh-token mutation을 serialized coordinator로 관리하고
+  `readAndClear()`가 verified clear/tombstone 경계를 제공하는 session controller.
+- root cause: token을 읽지 못한 상태와 token을 안전하게 지우지 못한 상태를 같은
+  terminal storage failure로 취급해, 정리 가능한 credential에도 fail-closed clear를
+  실행하지 않았다.
+- 해결 절차:
+  1. current epoch의 storage read failure만 cleanup 대상으로 받는다.
+  2. 같은 serialized store 경계의 `readAndClear()`를 실행한다.
+  3. verified cleanup 성공 후에만 `unauthenticated`를 publish한다.
+  4. cleanup도 실패하면 `storage-error/clear`로 차단한다.
+  5. 성공·실패 두 경로를 독립 회귀 테스트한다.
+- 검증: 수정 전 두 회귀가 RED였고, 수정 후 focused 27 tests와 전체 Front
+  10 suites·101 tests, lint, TypeScript가 통과했다. scoped re-review는 finding을
+  `ADDRESSED`로 판정했다.
+- 재발 방지/금지: storage read failure를 token 부재로 간주하거나, clear 검증 없이
+  로그아웃 성공을 publish하지 않는다.
+- 적용 불가/잔여 위험: `readAndClear()` 자체가 read-before-clear라 영구 hardware
+  failure에서는 blocking `storage-error/clear`가 정상 결과다. 실제 SecureStore
+  device 동작은 별도 smoke evidence가 필요하다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Session controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-009 — 직접 refresh 실패의 stable action 복원
+
+- `resolutionId`: `ER-20260726-009`
+- `status`: `VERIFIED`
+- 증상/signature: authenticated request가 직접 `refreshAccessToken()`을 호출한 뒤
+  rotation network/timeout failure가 발생하면 stable state는 남아도 action이
+  `refreshing`으로 고착된다.
+- 적용 조건: bootstrap과 일반 authenticated request가 같은 refresh method를
+  공유하고 transient action을 별도로 publish하는 state machine.
+- root cause: network/timeout finalization을 bootstrap caller에만 두어 일반 refresh
+  진입점의 rejected exit가 action을 안정 상태로 되돌리지 않았다.
+- 해결 절차:
+  1. refresh 시작 epoch를 캡처한다.
+  2. current epoch의 network/timeout failure에서 stored token을 지우지 않는다.
+  3. state를 retryable `offline/bootstrap`, action을 `idle`로 publish한다.
+  4. 원래 sanitized error는 요청자에게 그대로 reject해 자동 retry를 만들지 않는다.
+  5. network와 timeout을 각각 회귀 테스트한다.
+- 검증: 수정 전 두 회귀가 `refreshing` 고착으로 RED였고 수정 후 focused 27,
+  전체 101 tests, lint, TypeScript가 통과했다. scoped re-review `ADDRESSED`.
+- 재발 방지/금지: bootstrap catch만으로 모든 refresh 호출 경로가 안정화된다고
+  가정하거나, network failure에서 refresh token을 clear·자동 재시도하지 않는다.
+- 적용 불가/잔여 위험: 별도의 connection state store를 사용하는 앱은 해당 store의
+  retry contract에 맞춰 state를 매핑해야 한다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Session controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-010 — Delegated replay-401 cleanup 재진입의 epoch fence
+
+- `resolutionId`: `ER-20260726-010`
+- `status`: `VERIFIED`
+- 증상/signature: authenticated client가 replay `401`에서 session cleanup callback을
+  await한 뒤 error를 rethrow하고, 상위 profile handler가 같은 error로 cleanup을 다시
+  시작하면 그 사이 sign-in한 새 session token까지 clear될 수 있다.
+- 적용 조건: transport layer가 unauthorized cleanup을 소유하고 controller가 profile
+  error도 처리하며, subscriber가 unauthenticated publish 직후 새 sign-in을 시작할 수
+  있는 구조.
+- root cause: cleanup 책임이 두 계층에 걸쳐 있었고 profile operation이 시작한 epoch를
+  보존하지 않아 delegated cleanup 뒤 돌아온 error가 이미 stale인지 판별하지 못했다.
+- 해결 절차:
+  1. profile request 시작 epoch를 handler에 전달한다.
+  2. error 처리 시 captured epoch와 current epoch가 다르면 이미 처리됐거나 stale한
+     결과로 보고 추가 clear·state publish를 하지 않는다.
+  3. cleanup 자체도 전용 cleanup epoch를 캡처하고, await 뒤 epoch가 바뀌면 이전
+     상태를 publish하지 않는다.
+  4. cleanup 완료 → subscriber sign-in → rethrown unauthorized 순서를 deterministic
+     test로 만들고 clear 1회와 새 access/session 보존을 검증한다.
+- 검증: 수정 전 새 session이 두 번째 clear 위험에 노출되는 RED였고 수정 후 focused
+  27, 전체 101 tests, lint, TypeScript가 통과했다. scoped re-review `ADDRESSED`.
+- 재발 방지/금지: in-flight promise dedupe만으로 순차 재진입을 idempotent하다고
+  가정하지 않는다. 이전 operation error를 current session cleanup에 전달하지 않는다.
+- 적용 불가/잔여 위험: authenticated client가 cleanup callback을 보장하지 않는 다른
+  interface는 error에 명시적 handled marker 또는 owner generation이 필요하다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Authenticated client](../../DSM_Front/src/lib/api/authenticated-client.ts),
+  [Session controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-011 — Onboarding mutation의 stable-state precondition
+
+- `resolutionId`: `ER-20260726-011`
+- `status`: `VERIFIED`
+- 증상/signature: access token 존재 여부만 검사해 authenticated 또는
+  `offline/profile` 상태에서도 onboarding completion PATCH가 실행된다.
+- 적용 조건: onboarding 여부가 account-global server timestamp로 표현되고
+  controller stable state가 mutation 가능 여부를 소유하는 구조.
+- root cause: authentication capability와 onboarding workflow eligibility를 같은
+  access-token guard로 취급했다.
+- 해결 절차:
+  1. access token과 함께 `state.status === 'onboarding'`을 요구한다.
+  2. 다른 stable state에서는 API 호출과 action 변경 없이 안전하게 종료한다.
+  3. authenticated와 offline/profile 상태를 각각 회귀 테스트한다.
+- 검증: 수정 전 두 상태에서 PATCH가 실행되는 RED였고 수정 후 focused 27,
+  전체 101 tests, lint, TypeScript가 통과했다. scoped re-review `ADDRESSED`.
+- 재발 방지/금지: API 호출 가능 여부만으로 workflow mutation 권한을 결정하지 않는다.
+- 적용 불가/잔여 위험: onboarding을 여러 단계로 확장하면 단일 status 대신 명시적
+  step transition contract가 필요하다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Session controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-012 — Malformed profile 뒤 issued pair revoke
+
+- `resolutionId`: `ER-20260726-012`
+- `status`: `VERIFIED`
+- 증상/signature: login/refresh pair를 저장한 뒤 `/auth/me` runtime validation이
+  protocol error를 반환하면 local token만 clear되고 server refresh token은 만료까지
+  유효하게 남는다.
+- 적용 조건: pair 발급·local commit 후 별도 profile request로 session state를
+  확정하고 logout API가 captured access/refresh pair를 받는 구조.
+- root cause: profile protocol failure cleanup이 local state만 소유하고, 방금 발급된
+  server credential pair의 revocation 책임을 전달받지 않았다.
+- 해결 절차:
+  1. cleanup 시작 전에 current access token과 cleanup epoch를 캡처한다.
+  2. serialized verified `readAndClear()`가 반환한 refresh token과 captured access를
+     사용해 protocol failure에만 server revoke를 한 번 best-effort 호출한다.
+  3. revoke failure는 verified local cleanup을 되돌리지 않는다.
+  4. await 중 새 epoch가 시작되면 이전 cleanup state를 publish하지 않는다.
+  5. bootstrap·sign-in malformed profile과 revoke network failure를 회귀 테스트한다.
+- 검증: 수정 전 세 회귀가 revoke 누락으로 RED였고 수정 후 focused 27,
+  전체 101 tests, lint, TypeScript가 통과했다. scoped re-review `ADDRESSED`.
+- 재발 방지/금지: malformed response를 단순 UI error로 남기거나, local clear만으로
+  server credential이 폐기됐다고 주장하지 않는다. token 값은 로그·error에 남기지 않는다.
+- 적용 불가/잔여 위험: revoke가 offline이면 server refresh token은 최대 30일 만료까지
+  남을 수 있다. local logout 성공 정책과 동일한 accepted operational consequence다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Session controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-26`
 
