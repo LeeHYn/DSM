@@ -127,7 +127,7 @@
 - [x] Task 15 token-store coordinator 직렬화·epoch race
 - [x] Task 16 Native SecureStore adapter
 - [x] Task 17 Web module-memory token store — reload 시 빈 상태, 독립 검토 clean
-- [ ] Task 18 authenticated client
+- [/] Task 18 authenticated client — single-flight refresh·최대 1회 replay TDD
 - [ ] Task 19 이후 session state machine
 - [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
 - [ ] dependency audit 55건 별도 compatibility/security triage
