@@ -22,7 +22,7 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~16 완료. 다음은 Task 17 Web memory token store.
+- 상세 계획 33개 중 Task 1~16 완료. Task 17 Web memory token store 진행 중.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
