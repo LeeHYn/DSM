@@ -637,6 +637,7 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   migration 적용은 별도 action-time 승인 대상이다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
-- 다음 구현 시작점: Task 16 Native SecureStore adapter의 versioned key,
-  verified clear, tombstone fallback.
+- 현재 구현 단계: Task 16 Native SecureStore adapter의 versioned key,
+  verified clear, tombstone fallback을 TDD로 진행 중.
+- Task 16 완료 후 다음 구현 시작점: Task 17 Web memory token store.
 - 원격 push, PR, merge, 배포는 수행하지 않았다.
