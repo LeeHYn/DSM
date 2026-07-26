@@ -619,19 +619,24 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - 승인된 상세 계획: `docs/superpowers/plans/2026-07-25-front-secure-session-rest-client.md`
 - 격리 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`
-- Task 1~14 구현·로컬 커밋·독립 검토 완료.
+- Task 1~15 구현·로컬 커밋·독립 검토 완료.
   - Backend: onboarding timestamp schema/migration, current-user service/controller,
     strict CORS parser/bootstrap/config.
   - Front: Expo SecureStore/Jest/ESLint 기반, strict API URL, safe `ApiError`,
-    auth response validators, one-attempt JSON transport, public auth API.
+    auth response validators, one-attempt JSON transport, public auth API,
+    rejection-safe token-store coordinator.
 - 독립 검토 수정 라운드:
   - Task 10: bracketed IPv6 loopback과 빈 query/fragment delimiter 보완.
   - Task 12: whitespace-only refresh-token segment 보완.
   - Task 13: non-2xx body-read 오류와 nullish rejection 분류 보완.
-- 전체 Front 검증: Jest 5 suites/44 tests, `expo lint`, TypeScript 통과.
+- Task 15에서 refresh-token storage 작업을 단일 queue로 직렬화하고,
+  write 전후 epoch 검증·stale write 정리·logout read-and-clear 순서를 고정했다.
+  비동기 race test는 physical write 시작 signal 후 epoch를 바꾸도록 동기화했다.
+- 전체 Front 검증: Jest 6 suites/48 tests, `expo lint`, TypeScript 통과.
 - Prisma migration 파일은 생성·검증만 했으며 실제 개발 DB에는 미적용.
   migration 적용은 별도 action-time 승인 대상이다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
-- 다음 구현 시작점: Task 15 `TokenStoreCoordinator` 직렬화·epoch race 테스트.
+- 다음 구현 시작점: Task 16 Native SecureStore adapter의 versioned key,
+  verified clear, tombstone fallback.
 - 원격 push, PR, merge, 배포는 수행하지 않았다.
