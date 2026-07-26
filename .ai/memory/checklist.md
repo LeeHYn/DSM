@@ -131,4 +131,5 @@
 - [ ] Task 19 이후 session state machine
 - [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
 - [ ] dependency audit 55건 별도 compatibility/security triage
-- [ ] 원격 push·PR·merge·배포 — 미승인/미실행
+- [x] 원격 branch push — `origin/codex/front-secure-session-rest-client`
+- [ ] PR·merge·배포 — 미승인/미실행
