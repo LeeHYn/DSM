@@ -61,6 +61,7 @@
 | `ER-20260725-005` | `VERIFIED` | Expo CLI, install, config plugin, devDependency | install이 app config를 바꾸고 dev package를 runtime dependency에 둠 |
 | `ER-20260726-001` | `VERIFIED` | Jest, Promise queue, microtask, race test | queue 작업 시작 전 상태를 바꿔 in-flight race 기대가 틀리게 실패함 |
 | `ER-20260726-002` | `VERIFIED` | ApiError, SecureStore, normalization, error boundary | dependency가 ApiError를 reject하면 고정 공개 오류 대신 원 오류가 노출됨 |
+| `ER-20260726-003` | `VERIFIED` | Jest, CommonJS, dynamic import, module reload | runtime `import()` 오류가 대상 모듈 부재 RED를 가림 |
 
 ## 해결 record
 
@@ -621,6 +622,39 @@
   SecureStore의 실기기 삭제·readback 동작은 이후 device 검증이 필요하다.
 - 근거: [Native token-store tests](../../DSM_Front/src/features/auth/token-store.native.test.ts),
   [Native token-store adapter](../../DSM_Front/src/features/auth/token-store.native.ts),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-003 — Jest CommonJS module reload test의 runtime import 오류
+
+- `resolutionId`: `ER-20260726-003`
+- `status`: `VERIFIED`
+- 증상/signature: `jest.resetModules()` 뒤 대상 모듈을 runtime `import()`로 다시
+  불러오는 테스트가 assertion이나 module resolution 전에
+  `A dynamic import callback was invoked without --experimental-vm-modules`로 실패한다.
+- 적용 조건: `jest-expo`와 CommonJS test 실행 환경에서 module-scope 상태의 reload
+  동작을 검증하고, test 안에서 runtime `import()`를 호출한 경우.
+- root cause: 대상 제품 모듈의 동작이나 부재가 아니라 현재 Jest CommonJS runtime이
+  동적 ESM import callback을 지원하지 않아 테스트 인프라에서 먼저 중단됐다.
+- 해결 절차:
+  1. stack trace가 assertion이 아니라 runtime import callback에서 끝나는지 확인한다.
+  2. 별도 Jest 설정이나 Node 실험 플래그를 추가하지 않고 typed
+     `jest.requireActual<typeof import('./module')>('./module')` helper로 교체한다.
+  3. reload 경계에서는 먼저 `jest.resetModules()`를 호출한 뒤 helper로 다시 로드한다.
+  4. 구현 전에는 대상 모듈을 찾지 못하는 올바른 RED를 확인하고, 구현 후 같은 테스트가
+     GREEN이 되는지 확인한다.
+- 검증: Task 17 최초 3개 테스트는 runtime import callback 오류로 실패했다. helper
+  교체 후 구현 전에는 3/3 모두 `Cannot find module './token-store.web'`로 올바르게
+  실패했고, 구현 후 focused Jest 3/3과 Front 전체 Jest 8 suites·62 tests,
+  `expo lint`, TypeScript가 통과했다.
+- 재발 방지/금지: 제품 코드 실패를 보기 위해 Jest 설정에
+  `--experimental-vm-modules`를 즉흥 추가하지 않는다. 잘못된 infrastructure RED를
+  제품 요구사항 RED로 간주하지 않고, 실패 지점과 이유를 먼저 확인한다.
+- 적용 불가/잔여 위험: 프로젝트가 ESM Jest runtime으로 전환되거나 실제 dynamic
+  import 자체가 검증 대상이면 해당 runtime의 공식 ESM 설정을 별도로 검토해야 한다.
+  `jest.requireActual`은 CommonJS reload 테스트에서만 적용한다.
+- 근거: [Web token-store tests](../../DSM_Front/src/features/auth/token-store.web.test.ts),
+  [Web token-store](../../DSM_Front/src/features/auth/token-store.web.ts),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-26`
 
