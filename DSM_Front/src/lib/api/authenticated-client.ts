@@ -39,11 +39,19 @@ export function createAuthenticatedClient(
 
   const refreshAccessToken = (
     previousAccessToken: string | null,
+    initialUnauthorizedError: ApiError,
   ): Promise<string> => {
     if (
       completedRefresh?.previousAccessToken === previousAccessToken
     ) {
-      return Promise.resolve(completedRefresh.refreshedAccessToken);
+      if (
+        session.getAccessToken() === completedRefresh.refreshedAccessToken
+      ) {
+        return Promise.resolve(completedRefresh.refreshedAccessToken);
+      }
+
+      completedRefresh = null;
+      throw initialUnauthorizedError;
     }
 
     if (refreshPromise !== null) {
@@ -72,6 +80,31 @@ export function createAuthenticatedClient(
     return operation;
   };
 
+  const replayAfterRefresh = async <T>(
+    request: HttpRequest<T>,
+    initialAccessToken: string | null,
+    initialUnauthorizedError: ApiError,
+  ): Promise<T> => {
+    const refreshedAccessToken = await refreshAccessToken(
+      initialAccessToken,
+      initialUnauthorizedError,
+    );
+
+    try {
+      return await http.request(withAccessToken(request, refreshedAccessToken));
+    } catch (error) {
+      if (isUnauthorized(error)) {
+        try {
+          await session.onUnauthorized();
+        } finally {
+          throw error;
+        }
+      }
+
+      throw error;
+    }
+  };
+
   return {
     async request<T>(request: HttpRequest<T>): Promise<T> {
       const initialAccessToken = session.getAccessToken();
@@ -82,22 +115,8 @@ export function createAuthenticatedClient(
         if (!isUnauthorized(error)) {
           throw error;
         }
-      }
 
-      const refreshedAccessToken = await refreshAccessToken(initialAccessToken);
-
-      try {
-        return await http.request(withAccessToken(request, refreshedAccessToken));
-      } catch (error) {
-        if (isUnauthorized(error)) {
-          try {
-            await session.onUnauthorized();
-          } finally {
-            throw error;
-          }
-        }
-
-        throw error;
+        return replayAfterRefresh(request, initialAccessToken, error);
       }
     },
   };
