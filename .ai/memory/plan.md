@@ -651,6 +651,11 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   migration 적용은 별도 action-time 승인 대상이다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
-- 현재 구현 단계: Task 18 완료.
-- 다음 구현 시작점: Task 19 session state machine.
+- 현재 구현 단계: Task 19 session state machine 진행 중.
+- Task 19 승인 범위: `DSM_Front/src/features/auth/session-controller.test.ts`,
+  `DSM_Front/src/features/auth/session-controller.ts` 두 파일을 TDD로 구현하고
+  독립 task review 및 인증 상태 변경 `change-gate`를 수행한다.
+- 2026-07-26 시작 baseline: Front Jest 9 suites/74 tests, `expo lint`,
+  TypeScript 통과. sandbox Jest cache `EPERM`은 `ER-20260725-002`와
+  signature·환경·root cause가 일치해 동일 명령을 승인 환경에서 재검증했다.
 - 2026-07-26 `origin/codex/front-secure-session-rest-client` 원격 branch를 생성하고 제품·메모리 snapshot `d1b2718`까지 push했다. PR, merge, 배포는 수행하지 않았다.

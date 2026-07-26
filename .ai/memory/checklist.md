@@ -128,7 +128,7 @@
 - [x] Task 16 Native SecureStore adapter
 - [x] Task 17 Web module-memory token store — reload 시 빈 상태, 독립 검토 clean
 - [x] Task 18 authenticated client — single-flight·generation reuse·session ownership fence
-- [ ] Task 19 이후 session state machine
+- [/] Task 19 session state machine — TDD·독립 review·change-gate 진행 중
 - [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
 - [ ] dependency audit 55건 별도 compatibility/security triage
 - [x] 원격 branch push — `origin/codex/front-secure-session-rest-client`
