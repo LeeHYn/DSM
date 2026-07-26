@@ -22,7 +22,7 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~17 완료. Task 18 fix round 2 진행 중.
+- 상세 계획 33개 중 Task 1~18 완료. 다음은 Task 19 session state machine.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
@@ -41,7 +41,7 @@
   - authenticated client는 현재 access token을 주입하고 최초 `401`만 refresh
     single-flight에 참여시킨 뒤 원 JSON 요청을 최대 한 번 replay한다. replay `401`은
     session 종료 callback으로 전달하고 network/timeout은 refresh하지 않는다.
-- 최신 Front 검증: Jest 9 suites/72 tests, ESLint, TypeScript 모두 통과.
+- 최신 Front 검증: Jest 9 suites/74 tests, ESLint, TypeScript 모두 통과.
 - 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
   `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.
 - 잔여 위험:
@@ -55,6 +55,7 @@
   native `ApiError` passthrough 해결은 `ER-20260726-002`에 기록.
 - Task 17 로컬 commit `6be9eaa`; 독립 검토 clean. Jest CommonJS에서 runtime
   dynamic import가 올바른 RED를 가린 문제와 해결은 `ER-20260726-003`에 기록.
-- Task 18 로컬 commits `562d37b`, `60aeafb`; fix round 1의 기존 P1/P2는
-  `ADDRESSED`. supplemental review에서 logout/account-switch 뒤 completed refresh
-  cache의 old-session replay 가능성이 새 `Important`로 확인돼 fix round 2 진행 중.
+- Task 18 로컬 commits `562d37b`, `60aeafb`, `617c890`; fix round 2 scoped
+  re-review clean. generic Jest mock `TS2322`, 지연 `401` 중복 refresh, 동기 throw
+  promise 오염, old-session completed-refresh replay 해결은
+  `ER-20260726-004`~`007`에 기록.

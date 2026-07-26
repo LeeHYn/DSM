@@ -619,7 +619,7 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - 승인된 상세 계획: `docs/superpowers/plans/2026-07-25-front-secure-session-rest-client.md`
 - 격리 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`
-- Task 1~17 구현·로컬 커밋·독립 검토 완료. Task 18 fix round 2 진행 중.
+- Task 1~18 구현·로컬 커밋·독립 검토 완료.
   - Backend: onboarding timestamp schema/migration, current-user service/controller,
     strict CORS parser/bootstrap/config.
   - Front: Expo SecureStore/Jest/ESLint 기반, strict API URL, safe `ApiError`,
@@ -642,14 +642,15 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - Task 18은 current access token 주입, 최초 `401` refresh single-flight, 원 요청당
   최대 1회 replay와 replay `401` session 종료 callback을 구현했다. 늦게 도착한
   동일 token generation의 `401`은 마지막 성공 refresh 결과를 재사용하며, 동기
-  refresh throw도 tracked promise를 오염시키지 않는다. 독립 검토 P1/P2는 수정
-  라운드 1에서 `ADDRESSED`됐지만 supplemental review가 logout/account-switch 뒤
-  old-session token replay 가능성을 새 `Important`로 확인해 라운드 2를 진행한다.
-- 전체 Front 검증: Jest 9 suites/72 tests, `expo lint`, TypeScript 통과.
+  refresh throw도 tracked promise를 오염시키지 않는다. cache 재사용은 current
+  session이 refreshed token을 계속 소유할 때만 허용해 logout/account-switch 뒤
+  old-session replay를 차단한다. 독립 검토 findings는 수정 라운드 2에서 모두
+  `ADDRESSED`됐다.
+- 전체 Front 검증: Jest 9 suites/74 tests, `expo lint`, TypeScript 통과.
 - Prisma migration 파일은 생성·검증만 했으며 실제 개발 DB에는 미적용.
   migration 적용은 별도 action-time 승인 대상이다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
-- 현재 구현 단계: Task 18 fix round 2.
-- Task 18 검토가 닫힌 뒤 다음 구현 시작점: Task 19 session state machine.
+- 현재 구현 단계: Task 18 완료.
+- 다음 구현 시작점: Task 19 session state machine.
 - 원격 push, PR, merge, 배포는 수행하지 않았다.
