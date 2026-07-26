@@ -60,6 +60,7 @@
 | `ER-20260725-004` | `VERIFIED` | Prisma, worktree, generated client | fresh worktree에서 생성된 Prisma Client를 찾지 못함 |
 | `ER-20260725-005` | `VERIFIED` | Expo CLI, install, config plugin, devDependency | install이 app config를 바꾸고 dev package를 runtime dependency에 둠 |
 | `ER-20260726-001` | `VERIFIED` | Jest, Promise queue, microtask, race test | queue 작업 시작 전 상태를 바꿔 in-flight race 기대가 틀리게 실패함 |
+| `ER-20260726-002` | `VERIFIED` | ApiError, SecureStore, normalization, error boundary | dependency가 ApiError를 reject하면 고정 공개 오류 대신 원 오류가 노출됨 |
 
 ## 해결 record
 
@@ -585,6 +586,41 @@
   자체가 synchronous start를 보장한다면 이 record의 microtask 전제부터 재확인한다.
 - 근거: [Token-store coordinator tests](../../DSM_Front/src/features/auth/token-store-coordinator.test.ts),
   [Token-store coordinator](../../DSM_Front/src/features/auth/token-store-coordinator.ts),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-002 — Dependency ApiError의 고정 오류 계약 우회
+
+- `resolutionId`: `ER-20260726-002`
+- `status`: `VERIFIED`
+- 증상/signature: dependency 호출을 감싼 catch에서 `cause instanceof ApiError`를
+  그대로 rethrow하면, dependency가 다른 kind/message의 `ApiError`를 reject할 때
+  adapter가 약속한 고정 public error 대신 원 오류가 노출된다.
+- 적용 조건: 외부/native dependency의 unknown rejection을 하나의 고정 domain error로
+  정규화해야 하며, 같은 try block 안에서 adapter 자체의 domain error도 만들고 있는 경우.
+- root cause: `ApiError`라는 타입을 오류의 출처와 신뢰도 증거로 잘못 사용했다. 넓은
+  try/catch가 dependency rejection과 adapter 내부 mismatch를 함께 잡아, 내부 오류의
+  이중 wrapping을 피하려는 분기가 dependency 오류까지 신뢰했다.
+- 해결 절차:
+  1. dependency mock이 고정 계약과 다른 kind/message의 `ApiError`를 reject하는 회귀
+     테스트를 먼저 추가하고 public kind/message가 새는 RED를 확인한다.
+  2. dependency await만 별도 try/catch로 분리하고 catch된 모든 값은 고정 domain
+     error에 `cause`로 넣어 래핑한다.
+  3. adapter 자체의 검증 실패나 mismatch 비교는 catch 밖에서 고정 domain error를
+     생성해 throw한다.
+  4. fixed message/kind, 민감값 비노출, 원래 cause 보존과 기존 success/fallback
+     경로를 focused/full test, lint, typecheck로 재검증한다.
+- 검증: Task 16 회귀 테스트는 수정 전 `network` kind를 받아 10 pass·1 fail RED였고,
+  수정 후 focused Jest 11/11, Front 전체 Jest 7 suites·59 tests, `expo lint`,
+  TypeScript가 통과했다. scoped re-review는 P2를 `RECHECKED`로 판정했다.
+- 재발 방지/금지: 고정 공개 오류 boundary에서 `instanceof ApiError`만으로 dependency
+  오류를 그대로 rethrow하지 않는다. 이중 wrapping 회피를 위해 dependency 호출과
+  내부 검증을 같은 try/catch에 넣지 않는다.
+- 적용 불가/잔여 위험: 상위 계층이 특정 domain error를 의도적으로 보존해야 하는
+  계약이라면 kind/message allowlist와 provenance를 별도 설계해야 한다. 실제 native
+  SecureStore의 실기기 삭제·readback 동작은 이후 device 검증이 필요하다.
+- 근거: [Native token-store tests](../../DSM_Front/src/features/auth/token-store.native.test.ts),
+  [Native token-store adapter](../../DSM_Front/src/features/auth/token-store.native.ts),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-26`
 
