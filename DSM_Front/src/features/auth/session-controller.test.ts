@@ -285,3 +285,161 @@ it('retries a profile recovery without rotating the already committed token', as
     onboardingCompletedAt: null,
   });
 });
+
+it('clears an unreadable refresh record before reporting bootstrap recovery', async () => {
+  tokenStore.read.mockRejectedValue(
+    new ApiError('storage', 'Secure token storage failed'),
+  );
+  tokenStore.readAndClear.mockResolvedValue('record.secret');
+
+  await controller.bootstrap();
+
+  expect(tokenStore.readAndClear).toHaveBeenCalledTimes(1);
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'unauthenticated',
+  });
+});
+
+it('blocks in clear storage-error when an unreadable refresh record cannot be cleared', async () => {
+  tokenStore.read.mockRejectedValue(
+    new ApiError('storage', 'Secure token storage failed'),
+  );
+  tokenStore.readAndClear.mockRejectedValue(
+    new ApiError('storage', 'Secure token storage failed'),
+  );
+
+  await controller.bootstrap();
+
+  expect(tokenStore.readAndClear).toHaveBeenCalledTimes(1);
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'storage-error',
+    operation: 'clear',
+  });
+});
+
+it.each([
+  ['network', new ApiError('network', 'Network unavailable')],
+  ['timeout', new ApiError('timeout', 'Request timed out')],
+] as const)(
+  'settles a direct %s refresh as retryable without clearing its stored token',
+  async (_kind, error) => {
+    tokenStore.read.mockResolvedValue('record.secret');
+    authApi.rotateRefreshToken.mockRejectedValue(error);
+
+    await expect(controller.refreshAccessToken()).rejects.toMatchObject({
+      kind: error.kind,
+    });
+
+    expect(controller.getSnapshot().state).toEqual({
+      status: 'offline',
+      retry: 'bootstrap',
+    });
+    expect(controller.getSnapshot().action).toBe('idle');
+    expect(tokenStore.readAndClear).not.toHaveBeenCalled();
+  },
+);
+
+it('does not clear a newer sign-in after replay 401 cleanup already finished', async () => {
+  const NEW_TOKEN_PAIR = {
+    accessToken: 'new.header.payload.signature',
+    refreshToken: 'new.record.secret',
+  };
+  tokenStore.read.mockResolvedValue('old.record.secret');
+  tokenStore.readAndClear.mockResolvedValue('old.record.secret');
+  authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+  authApi.exchangeProviderToken.mockResolvedValue(NEW_TOKEN_PAIR);
+  authenticatedClient.request
+    .mockImplementationOnce(async () => {
+      await controller.endUnauthorizedSession();
+      await controller.signIn('GOOGLE', 'provider-token');
+      throw new ApiError('unauthorized', 'Access token revoked', {
+        status: 401,
+      });
+    })
+    .mockResolvedValueOnce({
+      userId: 'user-2',
+      onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+    });
+
+  await controller.bootstrap();
+
+  expect(tokenStore.readAndClear).toHaveBeenCalledTimes(1);
+  expect(controller.getAccessToken()).toBe(NEW_TOKEN_PAIR.accessToken);
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'authenticated',
+    userId: 'user-2',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+});
+
+it.each([
+  ['authenticated', '2026-07-25T00:00:00.000Z'],
+  ['offline profile', undefined],
+] as const)(
+  'does not PATCH onboarding outside the %s state',
+  async (_label, onboardingCompletedAt) => {
+    tokenStore.read.mockResolvedValue('record.secret');
+    authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+    if (onboardingCompletedAt === undefined) {
+      authenticatedClient.request.mockRejectedValue(
+        new ApiError('network', 'Network unavailable'),
+      );
+    } else {
+      authenticatedClient.request.mockResolvedValue({
+        userId: 'user-1',
+        onboardingCompletedAt,
+      });
+    }
+
+    await controller.bootstrap();
+    await controller.completeOnboarding();
+
+    expect(authenticatedClient.request).toHaveBeenCalledTimes(1);
+    expect(controller.getSnapshot().action).toBe('idle');
+  },
+);
+
+it.each(['bootstrap', 'sign-in'] as const)(
+  'best-effort revokes the issued pair after a malformed %s profile',
+  async (flow) => {
+    tokenStore.read.mockResolvedValue('old.record.secret');
+    tokenStore.readAndClear.mockResolvedValue(TOKEN_PAIR.refreshToken);
+    authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+    authApi.exchangeProviderToken.mockResolvedValue(TOKEN_PAIR);
+    authenticatedClient.request.mockRejectedValue(
+      new ApiError('protocol', 'Invalid current user response'),
+    );
+
+    if (flow === 'bootstrap') {
+      await controller.bootstrap();
+    } else {
+      await controller.signIn('GOOGLE', 'provider-token');
+    }
+
+    expect(authApi.revokeSession).toHaveBeenCalledWith(
+      TOKEN_PAIR.accessToken,
+      TOKEN_PAIR.refreshToken,
+    );
+    expect(controller.getSnapshot().state.status).toBe('unauthenticated');
+  },
+);
+
+it('keeps local malformed-profile cleanup successful when server revoke is offline', async () => {
+  tokenStore.read.mockResolvedValue('old.record.secret');
+  tokenStore.readAndClear.mockResolvedValue(TOKEN_PAIR.refreshToken);
+  authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+  authenticatedClient.request.mockRejectedValue(
+    new ApiError('protocol', 'Invalid current user response'),
+  );
+  authApi.revokeSession.mockRejectedValue(
+    new ApiError('network', 'Network unavailable'),
+  );
+
+  await controller.bootstrap();
+
+  expect(authApi.revokeSession).toHaveBeenCalledWith(
+    TOKEN_PAIR.accessToken,
+    TOKEN_PAIR.refreshToken,
+  );
+  expect(controller.getSnapshot().state.status).toBe('unauthenticated');
+});

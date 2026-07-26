@@ -160,7 +160,7 @@ export class SessionController implements SessionControllerPort {
     }
 
     this.accessToken = pair.accessToken;
-    await this.loadProfile();
+    await this.loadProfile(epoch);
   }
 
   refreshAccessToken(): Promise<string> {
@@ -182,15 +182,19 @@ export class SessionController implements SessionControllerPort {
   }
 
   async completeOnboarding(): Promise<void> {
-    if (!this.accessToken) {
+    if (
+      !this.accessToken ||
+      this.snapshot.state.status !== 'onboarding'
+    ) {
       return;
     }
 
     this.setAction('completing-onboarding');
+    const epoch = this.epoch;
     try {
       this.publishUser(await this.patchOnboarding());
     } catch (error) {
-      await this.handleProfileError(error);
+      await this.handleProfileError(error, epoch);
     }
   }
 
@@ -212,11 +216,15 @@ export class SessionController implements SessionControllerPort {
   }
 
   endUnauthorizedSession(): Promise<void> {
+    return this.startUnauthorizedCleanup(false);
+  }
+
+  private startUnauthorizedCleanup(revokeSession: boolean): Promise<void> {
     if (this.unauthorizedCleanupPromise) {
       return this.unauthorizedCleanupPromise;
     }
 
-    const operation = this.clearUnauthorizedSession();
+    const operation = this.clearUnauthorizedSession(revokeSession);
     this.unauthorizedCleanupPromise = operation;
     const clear = () => {
       if (this.unauthorizedCleanupPromise === operation) {
@@ -236,7 +244,7 @@ export class SessionController implements SessionControllerPort {
       }
 
       this.setAction('recovering');
-      await this.loadProfile();
+      await this.loadProfile(this.epoch);
       return;
     }
 
@@ -268,26 +276,33 @@ export class SessionController implements SessionControllerPort {
           error: sanitized,
         });
       } else if (sanitized.kind === 'storage') {
-        if (this.snapshot.state.status !== 'storage-error') {
-          this.publishStorageError('read', sanitized);
-        }
+        // rotateAndCommit already attempts verified local cleanup.
       } else if (sanitized.kind !== 'unauthorized') {
         await this.endUnauthorizedSession();
       }
       return;
     }
 
-    await this.loadProfile();
+    await this.loadProfile(this.epoch);
   }
 
-  private async clearUnauthorizedSession(): Promise<void> {
-    this.epoch += 1;
+  private async clearUnauthorizedSession(revokeSession: boolean): Promise<void> {
+    const cleanupEpoch = this.epoch + 1;
+    const accessToken = this.accessToken;
+    this.epoch = cleanupEpoch;
     this.accessToken = null;
     try {
-      await this.dependencies.tokenStore.readAndClear();
-      this.publishUnauthenticated();
+      const refreshToken = await this.dependencies.tokenStore.readAndClear();
+      if (revokeSession && accessToken && refreshToken) {
+        await this.revokeCapturedBestEffort(accessToken, refreshToken);
+      }
+      if (this.epoch === cleanupEpoch) {
+        this.publishUnauthenticated();
+      }
     } catch (error) {
-      this.publishStorageError('clear', error);
+      if (this.epoch === cleanupEpoch) {
+        this.publishStorageError('clear', error);
+      }
     }
   }
 
@@ -297,8 +312,8 @@ export class SessionController implements SessionControllerPort {
       currentRefreshToken = await this.dependencies.tokenStore.read();
     } catch (error) {
       const sanitized = this.sanitizeError(error);
-      if (epoch === this.epoch) {
-        this.publishStorageError('read', sanitized);
+      if (sanitized.kind === 'storage' && epoch === this.epoch) {
+        await this.endUnauthorizedSession();
       }
       throw sanitized;
     }
@@ -316,6 +331,15 @@ export class SessionController implements SessionControllerPort {
       const sanitized = this.sanitizeError(error);
       if (sanitized.kind === 'unauthorized') {
         await this.endUnauthorizedSession();
+      } else if (
+        epoch === this.epoch &&
+        (sanitized.kind === 'network' || sanitized.kind === 'timeout')
+      ) {
+        this.publish({
+          state: { status: 'offline', retry: 'bootstrap' },
+          action: 'idle',
+          error: sanitized,
+        });
       }
       throw sanitized;
     }
@@ -350,16 +374,23 @@ export class SessionController implements SessionControllerPort {
     }
   }
 
-  private async loadProfile(): Promise<void> {
+  private async loadProfile(epoch: number): Promise<void> {
     try {
       this.publishUser(await this.getCurrentUser());
     } catch (error) {
-      await this.handleProfileError(error);
+      await this.handleProfileError(error, epoch);
     }
   }
 
-  private async handleProfileError(error: unknown): Promise<void> {
+  private async handleProfileError(
+    error: unknown,
+    operationEpoch: number,
+  ): Promise<void> {
     const sanitized = this.sanitizeError(error);
+    if (operationEpoch !== this.epoch) {
+      return;
+    }
+
     if (sanitized.kind === 'network' || sanitized.kind === 'timeout') {
       this.publish({
         state: { status: 'offline', retry: 'profile' },
@@ -369,7 +400,7 @@ export class SessionController implements SessionControllerPort {
       return;
     }
 
-    await this.endUnauthorizedSession();
+    await this.startUnauthorizedCleanup(sanitized.kind === 'protocol');
   }
 
   private getCurrentUser(): Promise<CurrentUser> {
