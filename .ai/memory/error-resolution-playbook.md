@@ -62,6 +62,10 @@
 | `ER-20260726-001` | `VERIFIED` | Jest, Promise queue, microtask, race test | queue 작업 시작 전 상태를 바꿔 in-flight race 기대가 틀리게 실패함 |
 | `ER-20260726-002` | `VERIFIED` | ApiError, SecureStore, normalization, error boundary | dependency가 ApiError를 reject하면 고정 공개 오류 대신 원 오류가 노출됨 |
 | `ER-20260726-003` | `VERIFIED` | Jest, CommonJS, dynamic import, module reload | runtime `import()` 오류가 대상 모듈 부재 RED를 가림 |
+| `ER-20260726-004` | `VERIFIED` | Jest, TypeScript, generic mock, `TS2322` | 고정 반환 mock이 generic method 계약에 할당되지 않음 |
+| `ER-20260726-005` | `VERIFIED` | Auth client, delayed `401`, single-flight, token generation | 첫 refresh 완료 뒤 늦은 같은-generation `401`이 refresh를 다시 시작함 |
+| `ER-20260726-006` | `VERIFIED` | Promise, synchronous throw, assignment race, cleanup | callback 동기 throw 뒤 rejected promise가 cache에 남음 |
+| `ER-20260726-007` | `VERIFIED` | Auth client, logout, account switch, stale replay | completed refresh cache가 이전 세션 요청을 replay함 |
 
 ## 해결 record
 
@@ -655,6 +659,123 @@
   `jest.requireActual`은 CommonJS reload 테스트에서만 적용한다.
 - 근거: [Web token-store tests](../../DSM_Front/src/features/auth/token-store.web.test.ts),
   [Web token-store](../../DSM_Front/src/features/auth/token-store.web.ts),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-004 — Generic method용 Jest mock의 고정 반환형 `TS2322`
+
+- `resolutionId`: `ER-20260726-004`
+- `status`: `VERIFIED`
+- 증상/signature: `jest.fn((request: HttpRequest<unknown>) =>
+  Promise.resolve(value))`를 `<T>(request: HttpRequest<T>) => Promise<T>`에
+  할당하면 `Promise<Concrete>`는 임의의 `Promise<T>`가 아니라는 `TS2322`가 난다.
+- 적용 조건: generic method를 가진 dependency의 테스트 double이 특정 fixture만
+  반환하며, `jest.fn(implementation)`이 그 고정 signature를 그대로 추론한 경우.
+- root cause: 특정 테스트 scenario용 callback을 모든 `T`에 유효한 generic
+  implementation으로 잘못 모델링했다.
+- 해결 절차:
+  1. 오류가 제품 generic 사용이 아니라 test double 할당 위치를 가리키는지 확인한다.
+  2. broad `jest.fn()`을 먼저 만들고 동일한 `.mockImplementation(...)`을 연결한다.
+  3. request argument와 반환 fixture의 runtime assertion은 유지하고 type assertion
+     또는 `unknown as`로 오류를 숨기지 않는다.
+  4. focused test와 전체 TypeScript를 함께 재실행한다.
+- 검증: Task 18 TypeScript는 수정 전 `authenticated-client.test.ts:68`에서
+  `TS2322`였고, mock construction만 바꾼 뒤 통과했다. runtime focused Jest 8/8,
+  이후 전체 Task 18 완료 기준 9 suites·74 tests도 통과했다.
+- 재발 방지/금지: 테스트를 통과시키기 위해 `HttpClient` 제품 계약을 약화하거나
+  double 전체를 다중 cast하지 않는다. 호출 인자·횟수·결과 assertion도 삭제하지 않는다.
+- 적용 불가/잔여 위험: 실제 generic fake 구현이 여러 `T`를 지원해야 한다면 broad
+  Jest mock 대신 type-safe generic adapter를 구현해야 한다.
+- 근거: [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts),
+  [HTTP client contract](../../DSM_Front/src/lib/api/http-client.ts)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-005 — 완료된 refresh 뒤 지연 `401`의 중복 rotation
+
+- `resolutionId`: `ER-20260726-005`
+- `status`: `VERIFIED`
+- 증상/signature: 같은 만료 access token으로 동시에 시작한 A/B 중 A의 `401`이
+  refresh를 완료한 뒤 B의 초기 `401`이 늦게 도착하면 refresh callback이 두 번 호출된다.
+- 적용 조건: client가 in-flight promise만 single-flight 상태로 보유하고 완료 즉시
+  제거하며, refresh token rotation을 자동 재시도할 수 없는 경우.
+- root cause: promise 수명 동안의 중복만 합쳤고, 완료 뒤 도착한 이전 token
+  generation 응답을 식별할 결과/세대 정보가 없었다.
+- 해결 절차:
+  1. 각 요청에 실제 주입한 initial access token을 캡처한다.
+  2. 성공 refresh의 `previous token → refreshed token` 한 세대 mapping을 memory에
+     보존한다.
+  3. 지연 `401`의 previous token이 같고 현재 session이 cached refreshed token을
+     계속 소유할 때만 새 refresh 없이 한 번 replay한다.
+  4. session ownership이 달라졌다면 `ER-20260726-007` 경계대로 cache를 사용하지 않는다.
+  5. 두 개의 독립 deferred 초기 응답으로 A 완료 후 B `401`을 발생시켜 refresh 1회를 검증한다.
+- 검증: 회귀 테스트는 수정 전 refresh 1회 기대에 2회를 받는 RED였고, 수정 후
+  focused 12/12, 전체 Front 9 suites·74 tests, lint, TypeScript가 통과했다.
+- 재발 방지/금지: 단순 sleep이나 refresh promise를 영구 보존하지 않는다. 완료 결과
+  cache를 session ownership 확인 없이 사용하지 않는다.
+- 적용 불가/잔여 위험: token 문자열만으로 generation을 구분할 수 없는 프로토콜은
+  명시적 session epoch/generation ID를 interface에 추가하는 별도 설계가 필요하다.
+- 근거: [Authenticated client](../../DSM_Front/src/lib/api/authenticated-client.ts),
+  [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-006 — Promise callback 동기 throw의 assignment/cleanup race
+
+- `resolutionId`: `ER-20260726-006`
+- `status`: `VERIFIED`
+- 증상/signature: cached operation을 `cache = asyncIife()` 형태로 만들 때 내부
+  callback이 Promise 반환 전에 동기 throw하면, cleanup이 먼저 `cache = null`을
+  실행한 뒤 바깥 assignment가 rejected promise를 다시 저장한다. 이후 호출도 같은
+  rejection만 받는다.
+- 적용 조건: callback은 Promise 반환 type이지만 test double이나 구현이 동기 throw할
+  수 있고, operation promise를 cache해 single-flight로 공유하는 경우.
+- root cause: right-hand async function 실행과 cleanup side effect가 left-hand cache
+  assignment보다 먼저 일어날 수 있는 JavaScript 평가 순서를 고려하지 않았다.
+- 해결 절차:
+  1. `Promise.resolve().then(() => callback())`으로 callback 실행을 다음 microtask로 미룬다.
+  2. 만들어진 operation을 cache에 먼저 할당한다.
+  3. `operation.then(successCleanup, failureCleanup)` 양쪽에서 동일 operation identity일
+     때만 cache를 비운다.
+  4. 동기 throw의 exact error 전파 뒤 다음 호출이 새 operation으로 성공하는지 검증한다.
+- 검증: 수정 전 두 번째 요청도 첫 `Refresh unavailable` 오류를 받는 RED였고, 수정 후
+  focused 12/12, 전체 Front 9 suites·74 tests, lint, TypeScript가 통과했다.
+- 재발 방지/금지: cleanup이 있는 async IIFE를 cache assignment의 RHS에서 즉시
+  실행하지 않는다. rejected child를 방치할 수 있는 `.finally()` cleanup도 피한다.
+- 적용 불가/잔여 위험: callback을 반드시 동기 실행해야 하는 API는 cache state
+  transition을 먼저 확정하는 별도 state machine이 필요하다.
+- 근거: [Authenticated client](../../DSM_Front/src/lib/api/authenticated-client.ts),
+  [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts)
+- `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260726-007 — Completed refresh cache의 세션 경계 replay
+
+- `resolutionId`: `ER-20260726-007`
+- `status`: `VERIFIED`
+- 증상/signature: A/B가 이전 세션 token E로 시작하고 A가 `E → F` refresh를 완료한
+  뒤 logout 또는 account switch가 발생해도, B의 늦은 `401`이 cached F로 replay된다.
+- 적용 조건: authenticated client가 완료 refresh mapping을 보존하지만 session epoch를
+  직접 받지 않고 `getAccessToken()`만 current-session 관찰점으로 사용하는 경우.
+- root cause: previous token E 일치만 cache provenance로 사용하고, 현재 session이
+  refreshed token F를 여전히 소유하는지 확인하지 않았다.
+- 해결 절차:
+  1. 초기 unauthorized 객체와 initial token을 요청별로 보존한다.
+  2. completed mapping 재사용 전 `getAccessToken() === cached refreshed token`을
+     확인한다.
+  3. current token이 `null` 또는 unrelated token이면 mapping을 무효화하고 원래
+     initial unauthorized를 그대로 반환한다.
+  4. 이 mismatch 경로에서는 refresh, replay와 `onUnauthorized`를 호출하지 않아 새
+     세션을 회전·종료하거나 이전 요청을 새 계정으로 실행하지 않는다.
+  5. logout/null과 account-switch token을 각각 deterministic delayed-response
+     회귀로 검증한다.
+- 검증: 수정 전 두 case 모두 이전 session F로 replay돼 `{ id: 2 }`로 성공하는
+  RED였다. 수정 후 focused 12/12, 전체 Front 9 suites·74 tests, lint, TypeScript가
+  통과했고 scoped re-review가 `ADDRESSED`, 신규 중요 회귀 없음으로 판정했다.
+- 재발 방지/금지: 이전 token 일치만으로 cache를 신뢰하거나, mismatch된 이전 요청을
+  현재 새 세션 refresh에 전달하지 않는다. 로그나 persistent storage에 token mapping을
+  남기지 않는다.
+- 적용 불가/잔여 위험: access token publish와 refresh callback resolve 순서가
+  보장되지 않는 다른 session interface에서는 명시적 epoch/owner ID가 필요하다.
+- 근거: [Authenticated client](../../DSM_Front/src/lib/api/authenticated-client.ts),
+  [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-26`
 

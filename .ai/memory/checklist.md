@@ -120,14 +120,14 @@
 - [x] Task 12 runtime auth contract validators
 - [x] Task 13 one-attempt JSON HTTP transport
 - [x] Task 14 public auth API
-- [x] Front 전체 Jest 8 suites·62 tests
+- [x] Front 전체 Jest 9 suites·74 tests
 - [x] Front `expo lint`
 - [x] Front TypeScript
-- [x] Tasks 7~16 로컬 커밋과 독립 검토
+- [x] Tasks 7~18 로컬 커밋과 독립 검토
 - [x] Task 15 token-store coordinator 직렬화·epoch race
 - [x] Task 16 Native SecureStore adapter
 - [x] Task 17 Web module-memory token store — reload 시 빈 상태, 독립 검토 clean
-- [/] Task 18 authenticated client — single-flight refresh·최대 1회 replay TDD
+- [x] Task 18 authenticated client — single-flight·generation reuse·session ownership fence
 - [ ] Task 19 이후 session state machine
 - [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
 - [ ] dependency audit 55건 별도 compatibility/security triage
