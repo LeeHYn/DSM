@@ -22,7 +22,7 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~16 완료. Task 17 Web memory token store 진행 중.
+- 상세 계획 33개 중 Task 1~17 완료. 다음은 Task 18 authenticated client.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
@@ -31,13 +31,14 @@
   - refresh-token storage는 rejection-safe queue와 epoch guard로 직렬화 완료.
   - Native SecureStore adapter는 versioned key, verified delete, tombstone fallback,
     fixed storage error 정규화까지 완료.
-  - Web은 reload 시 로그아웃되는 memory-only 정책.
+  - Web token store는 module memory만 사용한다. 같은 module 인스턴스는 상태를
+    공유하고 browser reload/module reload 뒤에는 빈 상태여서 다시 로그인한다.
   - production API URL은 HTTPS, development HTTP는 local/private host만 허용.
   - token/current-user 응답은 runtime validator 통과 후에만 사용.
   - transport는 요청당 fetch 1회, 자동 retry 없음, timeout/network/HTTP/protocol
     오류를 안전한 고정 메시지로 분류.
   - public login/refresh는 access token을 보내지 않고 logout만 캡처한 token pair 사용.
-- 최신 Front 검증: Jest 7 suites/59 tests, ESLint, TypeScript 모두 통과.
+- 최신 Front 검증: Jest 8 suites/62 tests, ESLint, TypeScript 모두 통과.
 - 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
   `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.
 - 잔여 위험:
@@ -49,3 +50,5 @@
   microtask 선행 조건 해결은 `ER-20260726-001`에 기록.
 - Task 16 로컬 commits `f25125e`, `ce5b28c`; fix round 1 re-review clean.
   native `ApiError` passthrough 해결은 `ER-20260726-002`에 기록.
+- Task 17 로컬 commit `6be9eaa`; 독립 검토 clean. Jest CommonJS에서 runtime
+  dynamic import가 올바른 RED를 가린 문제와 해결은 `ER-20260726-003`에 기록.
