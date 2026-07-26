@@ -35,7 +35,7 @@
 - [x] frontend 15-screen requirements 문서
 - [x] design Phase 1 Expo prototype + Browser responsive QA
 - [x] Docker Desktop 4.82.0 + WSL 2.7.10 + persistent local DB
-- [x] 오류 해결 playbook 22 records; audit 12 `VERIFIED` + F-007 `MITIGATION_ONLY`, 과거 5 + compression 복구 1 + Obsidian cache 복구 1 + Windows npm/Jest 검증 환경 복구 2
+- [x] 오류 해결 playbook 37 records; F-007만 `MITIGATION_ONLY`
 - [x] `.ai/memory` 압축·정리
   - [x] 사용자 Anthropic 전송 승인·비밀값 scan
   - [x] exact local backup: `plan`, `checklist`, `error-resolution-playbook`
@@ -120,15 +120,17 @@
 - [x] Task 12 runtime auth contract validators
 - [x] Task 13 one-attempt JSON HTTP transport
 - [x] Task 14 public auth API
-- [x] Front 전체 Jest 9 suites·74 tests
+- [x] Front 전체 Jest 10 suites·101 tests
 - [x] Front `expo lint`
 - [x] Front TypeScript
-- [x] Tasks 7~18 로컬 커밋과 독립 검토
+- [x] Tasks 7~19 로컬 커밋과 독립 검토
 - [x] Task 15 token-store coordinator 직렬화·epoch race
 - [x] Task 16 Native SecureStore adapter
 - [x] Task 17 Web module-memory token store — reload 시 빈 상태, 독립 검토 clean
 - [x] Task 18 authenticated client — single-flight·generation reuse·session ownership fence
-- [/] Task 19 session state machine — TDD·독립 review·change-gate 진행 중
+- [x] Task 19 session state machine — TDD, fix round 1, scoped re-review clean
+- [ ] Task 20 React session context
+- [ ] Task 31 전체 authentication change-gate
 - [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
 - [ ] dependency audit 55건 별도 compatibility/security triage
 - [x] 원격 branch push — `origin/codex/front-secure-session-rest-client`
