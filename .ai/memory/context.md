@@ -22,7 +22,7 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~18 완료. 다음은 Task 19 session state machine.
+- 상세 계획 33개 중 Task 1~17 완료. Task 18 fix round 2 진행 중.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
@@ -55,6 +55,6 @@
   native `ApiError` passthrough 해결은 `ER-20260726-002`에 기록.
 - Task 17 로컬 commit `6be9eaa`; 독립 검토 clean. Jest CommonJS에서 runtime
   dynamic import가 올바른 RED를 가린 문제와 해결은 `ER-20260726-003`에 기록.
-- Task 18 로컬 commits `562d37b`, `60aeafb`; fix round 1 scoped re-review clean.
-  generic Jest mock `TS2322`, 지연 `401` 중복 refresh, 동기 throw promise 오염
-  해결은 각각 `ER-20260726-004`~`006`에 기록.
+- Task 18 로컬 commits `562d37b`, `60aeafb`; fix round 1의 기존 P1/P2는
+  `ADDRESSED`. supplemental review에서 logout/account-switch 뒤 completed refresh
+  cache의 old-session replay 가능성이 새 `Important`로 확인돼 fix round 2 진행 중.
