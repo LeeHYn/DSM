@@ -22,7 +22,7 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~17 완료. 다음은 Task 18 authenticated client.
+- 상세 계획 33개 중 Task 1~17 완료. Task 18 authenticated client 진행 중.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
@@ -38,6 +38,9 @@
   - transport는 요청당 fetch 1회, 자동 retry 없음, timeout/network/HTTP/protocol
     오류를 안전한 고정 메시지로 분류.
   - public login/refresh는 access token을 보내지 않고 logout만 캡처한 token pair 사용.
+  - authenticated client는 현재 access token을 주입하고 최초 `401`만 refresh
+    single-flight에 참여시킨 뒤 원 JSON 요청을 최대 한 번 replay한다. replay `401`은
+    session 종료 callback으로 전달하고 network/timeout은 refresh하지 않는다.
 - 최신 Front 검증: Jest 8 suites/62 tests, ESLint, TypeScript 모두 통과.
 - 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
   `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.

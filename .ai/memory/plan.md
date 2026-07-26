@@ -644,6 +644,11 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   migration 적용은 별도 action-time 승인 대상이다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
-- 현재 구현 단계: Task 17 완료.
-- 다음 구현 시작점: Task 18 authenticated client.
+- 현재 구현 단계: Task 18 authenticated client 진행 중.
+  - exact files: `DSM_Front/src/lib/api/authenticated-client.test.ts`,
+    `DSM_Front/src/lib/api/authenticated-client.ts`.
+  - TDD로 동시 `401`의 refresh single-flight, 원 요청당 최대 1회 replay,
+    replay `401`의 session 종료 callback, network/timeout 비재시도를 검증한다.
+  - Task 18 시작 기준선: Front Jest 8 suites/62 tests 통과.
+- Task 18 완료 후 다음 구현 시작점: Task 19 session state machine.
 - 원격 push, PR, merge, 배포는 수행하지 않았다.
