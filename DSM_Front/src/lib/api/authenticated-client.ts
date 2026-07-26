@@ -11,6 +11,11 @@ export interface AuthenticatedClient {
   request<T>(request: HttpRequest<T>): Promise<T>;
 }
 
+type CompletedRefresh = {
+  previousAccessToken: string | null;
+  refreshedAccessToken: string;
+};
+
 function isUnauthorized(error: unknown): error is ApiError {
   return error instanceof ApiError && error.kind === 'unauthorized';
 }
@@ -30,34 +35,56 @@ export function createAuthenticatedClient(
   session: SessionCallbacks,
 ): AuthenticatedClient {
   let refreshPromise: Promise<string> | null = null;
+  let completedRefresh: CompletedRefresh | null = null;
 
-  const refreshAccessToken = (): Promise<string> => {
-    if (refreshPromise === null) {
-      refreshPromise = (async () => {
-        try {
-          return await session.refreshAccessToken();
-        } finally {
-          refreshPromise = null;
-        }
-      })();
+  const refreshAccessToken = (
+    previousAccessToken: string | null,
+  ): Promise<string> => {
+    if (
+      completedRefresh?.previousAccessToken === previousAccessToken
+    ) {
+      return Promise.resolve(completedRefresh.refreshedAccessToken);
     }
 
-    return refreshPromise;
+    if (refreshPromise !== null) {
+      return refreshPromise;
+    }
+
+    completedRefresh = null;
+    const operation = Promise.resolve().then(() =>
+      session.refreshAccessToken(),
+    );
+    refreshPromise = operation;
+    void operation.then(
+      (refreshedAccessToken) => {
+        completedRefresh = { previousAccessToken, refreshedAccessToken };
+        if (refreshPromise === operation) {
+          refreshPromise = null;
+        }
+      },
+      () => {
+        if (refreshPromise === operation) {
+          refreshPromise = null;
+        }
+      },
+    );
+
+    return operation;
   };
 
   return {
     async request<T>(request: HttpRequest<T>): Promise<T> {
+      const initialAccessToken = session.getAccessToken();
+
       try {
-        return await http.request(
-          withAccessToken(request, session.getAccessToken()),
-        );
+        return await http.request(withAccessToken(request, initialAccessToken));
       } catch (error) {
         if (!isUnauthorized(error)) {
           throw error;
         }
       }
 
-      const refreshedAccessToken = await refreshAccessToken();
+      const refreshedAccessToken = await refreshAccessToken(initialAccessToken);
 
       try {
         return await http.request(withAccessToken(request, refreshedAccessToken));

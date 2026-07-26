@@ -246,3 +246,94 @@ it('propagates a refresh callback failure unchanged', async () => {
   expect(refreshAccessToken).toHaveBeenCalledTimes(1);
   expect(onUnauthorized).not.toHaveBeenCalled();
 });
+
+it('reuses a completed refresh for a delayed initial 401 from the same token generation', async () => {
+  const firstInitialFailure = createDeferred<never>();
+  const secondInitialFailure = createDeferred<never>();
+  const refresh = createDeferred<string>();
+  const refreshStarted = createDeferred<void>();
+  const request = jest.fn();
+  request.mockImplementation((httpRequest: HttpRequest<unknown>) => {
+    if (httpRequest.accessToken === 'expired-token') {
+      return httpRequest.path === '/first'
+        ? firstInitialFailure.promise
+        : secondInitialFailure.promise;
+    }
+    return Promise.resolve(
+      httpRequest.path === '/first' ? { id: 1 } : { id: 2 },
+    );
+  });
+  const http: HttpClient = { request };
+  const refreshAccessToken = jest.fn(() => {
+    refreshStarted.resolve();
+    return refresh.promise;
+  });
+  const onUnauthorized = jest.fn();
+  const client = createAuthenticatedClient(http, {
+    getAccessToken: () => 'expired-token',
+    refreshAccessToken,
+    onUnauthorized,
+  });
+
+  const first = client.request({ path: '/first' });
+  const second = client.request({ path: '/second' });
+
+  firstInitialFailure.reject(
+    new ApiError('unauthorized', 'Access token expired', { status: 401 }),
+  );
+  await refreshStarted.promise;
+  refresh.resolve('refreshed-token');
+
+  await expect(first).resolves.toEqual({ id: 1 });
+
+  secondInitialFailure.reject(
+    new ApiError('unauthorized', 'Access token expired', { status: 401 }),
+  );
+
+  await expect(second).resolves.toEqual({ id: 2 });
+  expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+  expect(request).toHaveBeenCalledTimes(4);
+  expect(request).toHaveBeenLastCalledWith({
+    path: '/second',
+    accessToken: 'refreshed-token',
+  });
+  expect(onUnauthorized).not.toHaveBeenCalled();
+});
+
+it('clears a synchronously thrown refresh failure before a later 401 recovery', async () => {
+  const initialError = new ApiError('unauthorized', 'Access token expired', {
+    status: 401,
+  });
+  const refreshError = new Error('Refresh unavailable');
+  const request = jest.fn();
+  request.mockImplementation((httpRequest: HttpRequest<unknown>) => {
+    if (httpRequest.accessToken === 'expired-token') {
+      return Promise.reject(initialError);
+    }
+    return Promise.resolve({ id: 2 });
+  });
+  const http: HttpClient = { request };
+  const refreshAccessToken = jest
+    .fn()
+    .mockImplementationOnce(() => {
+      throw refreshError;
+    })
+    .mockResolvedValueOnce('refreshed-token');
+  const onUnauthorized = jest.fn();
+  const client = createAuthenticatedClient(http, {
+    getAccessToken: () => 'expired-token',
+    refreshAccessToken,
+    onUnauthorized,
+  });
+
+  await expect(client.request({ path: '/first' })).rejects.toBe(refreshError);
+  await expect(client.request({ path: '/second' })).resolves.toEqual({ id: 2 });
+
+  expect(refreshAccessToken).toHaveBeenCalledTimes(2);
+  expect(request).toHaveBeenCalledTimes(3);
+  expect(request).toHaveBeenLastCalledWith({
+    path: '/second',
+    accessToken: 'refreshed-token',
+  });
+  expect(onUnauthorized).not.toHaveBeenCalled();
+});
