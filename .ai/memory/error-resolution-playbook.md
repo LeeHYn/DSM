@@ -59,6 +59,7 @@
 | `ER-20260725-003` | `VERIFIED` | npm, sandbox, cache, `EPERM` | dependency install이 사용자 npm cache write에서 중단됨 |
 | `ER-20260725-004` | `VERIFIED` | Prisma, worktree, generated client | fresh worktree에서 생성된 Prisma Client를 찾지 못함 |
 | `ER-20260725-005` | `VERIFIED` | Expo CLI, install, config plugin, devDependency | install이 app config를 바꾸고 dev package를 runtime dependency에 둠 |
+| `ER-20260726-001` | `VERIFIED` | Jest, Promise queue, microtask, race test | queue 작업 시작 전 상태를 바꿔 in-flight race 기대가 틀리게 실패함 |
 
 ## 해결 record
 
@@ -553,6 +554,39 @@
   실제 diff로 option semantics를 다시 확인해야 한다.
 - 근거: [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-25`
+
+### ER-20260726-001 — Promise queue race test의 시작 시점 동기화
+
+- `resolutionId`: `ER-20260726-001`
+- `status`: `VERIFIED`
+- 증상/signature: `resolvedPromise.then(operation)`으로 직렬화한 queue의 race test가
+  operation 호출 직후 동기적으로 epoch나 상태를 바꾸면, storage write가 진행 중일
+  것으로 기대한 테스트가 write 전 stale guard에서 종료된다. 호출 순서에는 write가
+  없고 이후 read가 기존 값을 반환한다.
+- 적용 조건: Promise tail에 operation을 연결하는 비동기 queue에서 “작업 도중 상태
+  변경”과 후속 queue 순서를 검증하며, 대상 operation 내부에 제어 가능한 gate가 있는 경우.
+- root cause: queue 등록은 즉시지만 `then` callback 실행은 다음 microtask다. 테스트가
+  operation의 실제 진입을 관찰하지 않고 상태를 먼저 변경해 검증하려는 race 자체를 만들지 못했다.
+- 해결 절차:
+  1. 실패 호출 trace로 pre-write guard, physical write, post-write guard 중 어디에서
+     종료됐는지 구분한다.
+  2. deferred fake에 `started: Promise<void>`를 만들고 physical write의 첫 동기
+     단계에서 resolve한 뒤 기존 gate를 await한다.
+  3. 테스트는 queue 작업을 등록한 후 `await store.started`로 physical write 진입을
+     확인하고, 그 다음 epoch 변경과 gate release를 수행한다.
+  4. 결과값뿐 아니라 `write → stale clear → queued read → queued clear` exact order와
+     queue rejection 이후 후속 operation 성공을 함께 검증한다.
+- 검증: Task 15 focused Jest 1 suite·4 tests와 Front 전체 Jest 6 suites·48 tests,
+  `expo lint`, TypeScript가 통과했고 독립 검토에서 concurrency finding이 없었다.
+- 재발 방지/금지: 단순 sleep, fake timer tick, 임의 microtask flush 횟수로 시작 시점을
+  추측하지 않는다. 구현을 통과시키기 위해 call-order 또는 null-result 기대를 약화하지 않는다.
+- 적용 불가/잔여 위험: physical operation에 진입 signal을 넣을 수 없는 integration
+  test는 observable callback 또는 instrumented adapter 경계를 사용해야 한다. queue 구현
+  자체가 synchronous start를 보장한다면 이 record의 microtask 전제부터 재확인한다.
+- 근거: [Token-store coordinator tests](../../DSM_Front/src/features/auth/token-store-coordinator.test.ts),
+  [Token-store coordinator](../../DSM_Front/src/features/auth/token-store-coordinator.ts),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-07-26`
 
 ## 새 record 템플릿
 
