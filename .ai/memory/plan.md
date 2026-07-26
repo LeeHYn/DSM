@@ -218,7 +218,9 @@ DSM full-stack을 단계 구현한다. 기능 + test + 문서 + 승인·검증 �
 - 과거 PASS는 현재 검증 대체 불가.
 - `MITIGATION_ONLY`는 gate·residual risk 유지.
 - 새 검증 해결은 main이 중복 root cause·secret 부재 확인 후 index/body 갱신.
-- 현재 22 records: 과거 품질 5 + audit mapping 13 + Windows CP949 compression 복구 1 + Obsidian cache 복구 1 + Windows npm/Jest 검증 환경 복구 2. Audit F-007만 `MITIGATION_ONLY`.
+- 현재 37 records: 기존 품질 5 + notification/DB audit·복구 14 +
+  Obsidian cache 복구 1 + Windows/Expo 검증 환경 5 + Front auth/session 12.
+  Audit F-007만 `MITIGATION_ONLY`.
 
 # Sub-agent 운영 계약
 
@@ -646,16 +648,22 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   session이 refreshed token을 계속 소유할 때만 허용해 logout/account-switch 뒤
   old-session replay를 차단한다. 독립 검토 findings는 수정 라운드 2에서 모두
   `ADDRESSED`됐다.
-- 전체 Front 검증: Jest 9 suites/74 tests, `expo lint`, TypeScript 통과.
+- 전체 Front 검증: Jest 10 suites/101 tests, `expo lint`, TypeScript 통과.
 - Prisma migration 파일은 생성·검증만 했으며 실제 개발 DB에는 미적용.
   migration 적용은 별도 action-time 승인 대상이다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
-- 현재 구현 단계: Task 19 session state machine 진행 중.
-- Task 19 승인 범위: `DSM_Front/src/features/auth/session-controller.test.ts`,
-  `DSM_Front/src/features/auth/session-controller.ts` 두 파일을 TDD로 구현하고
-  독립 task review 및 인증 상태 변경 `change-gate`를 수행한다.
-- 2026-07-26 시작 baseline: Front Jest 9 suites/74 tests, `expo lint`,
-  TypeScript 통과. sandbox Jest cache `EPERM`은 `ER-20260725-002`와
-  signature·환경·root cause가 일치해 동일 명령을 승인 환경에서 재검증했다.
+- 현재 구현 단계: Task 19 session state machine 완료.
+- Task 19 로컬 commits: `6c31ec9`, `09702d0`. stable session states,
+  bootstrap/sign-in/refresh/onboarding/logout/recovery, epoch fence,
+  verified local cleanup과 best-effort revoke를 구현했다.
+- 독립 review findings 5개는 fix round 1에서 모두 `ADDRESSED`; scoped
+  re-review에서 신규 Critical/Important 없음. 해결 절차는
+  `ER-20260726-008`~`012`에 기록했다.
+- 최종 검증: Front Jest 10 suites/101 tests, `expo lint`, TypeScript,
+  `git diff --check` 통과. sandbox Jest cache `EPERM`은
+  `ER-20260725-002`와 signature·환경·root cause가 일치해 승인 환경에서
+  동일 명령으로 검증했다.
+- 다음 구현 시작점: Task 20 React session context. 전체 authentication
+  `change-gate`는 계획의 Task 31이며 아직 미실행이다.
 - 2026-07-26 `origin/codex/front-secure-session-rest-client` 원격 branch를 생성하고 제품·메모리 snapshot `d1b2718`까지 push했다. PR, merge, 배포는 수행하지 않았다.

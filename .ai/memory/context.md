@@ -22,7 +22,7 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~18 완료. 다음은 Task 19 session state machine.
+- 상세 계획 33개 중 Task 1~19 완료. 다음은 Task 20 React session context.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
@@ -41,14 +41,25 @@
   - authenticated client는 현재 access token을 주입하고 최초 `401`만 refresh
     single-flight에 참여시킨 뒤 원 JSON 요청을 최대 한 번 replay한다. replay `401`은
     session 종료 callback으로 전달하고 network/timeout은 refresh하지 않는다.
-- 최신 Front 검증: Jest 9 suites/74 tests, ESLint, TypeScript 모두 통과.
+  - session controller는 bootstrap/sign-in/refresh/profile/onboarding/logout을
+    stable state와 transient action으로 분리하고, epoch fence·single-flight·verified
+    local cleanup·stale/malformed pair best-effort revoke를 적용한다.
+  - storage read failure는 verified clear 성공 후에만 unauthenticated, 실패 시
+    blocking `storage-error/clear`; direct refresh network/timeout은 token을 보존한
+    `offline/bootstrap`으로 안정화한다.
+  - profile operation epoch fence로 delegated replay `401`의 재진입 cleanup이
+    새 sign-in을 지우지 않으며 onboarding PATCH는 onboarding state에서만 허용한다.
+- 최신 Front 검증: Jest 10 suites/101 tests, ESLint, TypeScript 모두 통과.
 - 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
   `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.
 - 잔여 위험:
   - dependency audit 55건(critical 1 포함) 별도 triage 필요.
   - Task 4 parser의 hash/non-string 명시 테스트는 Minor deferred.
   - SecureStore native config는 향후 native binary build에서 반영.
-- 외부 변경: 2026-07-26 `origin/codex/front-secure-session-rest-client`에 제품·메모리 snapshot `d1b2718`까지 push 완료. DB migration apply, PR, merge, deploy는 미실행.
+  - 전체 authentication `change-gate`는 Task 31에서 수행하며 아직 미실행.
+  - Native SecureStore 실제 device smoke evidence는 후속 gate다.
+- 외부 변경: 원격 branch의 직전 HEAD는 `dc224cc`; Task 19와 후속 memory
+  commits는 local-only이며 미push. DB migration apply, PR, merge, deploy는 미실행.
 - Task 15 로컬 commit `3a2b9cd` 독립 검토 clean. 비동기 queue race test의
   microtask 선행 조건 해결은 `ER-20260726-001`에 기록.
 - Task 16 로컬 commits `f25125e`, `ce5b28c`; fix round 1 re-review clean.
@@ -59,3 +70,7 @@
   re-review clean. generic Jest mock `TS2322`, 지연 `401` 중복 refresh, 동기 throw
   promise 오염, old-session completed-refresh replay 해결은
   `ER-20260726-004`~`007`에 기록.
+- Task 19 로컬 commits `6c31ec9`, `09702d0`; fix round 1 scoped re-review
+  clean. storage read verified-clear, direct refresh action finalization,
+  replay-401 operation epoch fence, onboarding state precondition, malformed
+  profile revoke 해결은 `ER-20260726-008`~`012`에 기록.
