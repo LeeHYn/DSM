@@ -666,4 +666,7 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   동일 명령으로 검증했다.
 - 다음 구현 시작점: Task 20 React session context. 전체 authentication
   `change-gate`는 계획의 Task 31이며 아직 미실행이다.
-- 2026-07-26 `origin/codex/front-secure-session-rest-client` 원격 branch를 생성하고 제품·메모리 snapshot `d1b2718`까지 push했다. PR, merge, 배포는 수행하지 않았다.
+- 2026-08-02 사용자 승인 후 `origin/codex/m12b-front-prototype-checkpoint`를
+  `960f02b`까지, `origin/codex/front-secure-session-rest-client`를 Task 19
+  제품·memory snapshot `82d03bf`까지 push했다. root checkout의 미커밋
+  architecture 문서는 제외했으며 PR, merge, 배포는 수행하지 않았다.

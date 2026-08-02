@@ -58,8 +58,11 @@
   - SecureStore native config는 향후 native binary build에서 반영.
   - 전체 authentication `change-gate`는 Task 31에서 수행하며 아직 미실행.
   - Native SecureStore 실제 device smoke evidence는 후속 gate다.
-- 외부 변경: 원격 branch의 직전 HEAD는 `dc224cc`; Task 19와 후속 memory
-  commits는 local-only이며 미push. DB migration apply, PR, merge, deploy는 미실행.
+- 외부 변경: 2026-08-02 사용자 승인 후
+  `origin/codex/front-secure-session-rest-client`에 Task 19 제품·memory snapshot
+  `82d03bf`까지, `origin/codex/m12b-front-prototype-checkpoint`에 `960f02b`까지
+  push했다. root checkout의 미커밋 architecture 문서는 제외했다. DB migration
+  apply, PR, merge, deploy는 미실행.
 - Task 15 로컬 commit `3a2b9cd` 독립 검토 clean. 비동기 queue race test의
   microtask 선행 조건 해결은 `ER-20260726-001`에 기록.
 - Task 16 로컬 commits `f25125e`, `ce5b28c`; fix round 1 re-review clean.
