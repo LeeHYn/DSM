@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { Prisma, TaskDifficulty, TaskStatus } from '@prisma/client';
+import { Prisma, type Task, TaskDifficulty, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoresService } from '../scores/scores.service';
+import type { UpdateTaskDto } from './dto/update-task.dto';
 
-const MOCK_TASK = {
+const MOCK_TASK: Task = {
   id: 'task-uuid-1',
   title: 'Morning run',
   description: null,
@@ -33,6 +34,7 @@ const makeClientMock = () => ({
 });
 
 type ClientMock = ReturnType<typeof makeClientMock>;
+type TaskMutationCall = [{ data: { notificationSchedules?: unknown } }];
 
 const makeTransactionConflict = () =>
   new Prisma.PrismaClientKnownRequestError('Transaction conflict', {
@@ -42,9 +44,8 @@ const makeTransactionConflict = () =>
 
 const makePrismaMock = (transactionMock: ClientMock) => ({
   ...makeClientMock(),
-  $transaction: jest.fn(
-    (callback: (client: ClientMock) => Promise<unknown>) =>
-      callback(transactionMock),
+  $transaction: jest.fn((callback: (client: ClientMock) => Promise<unknown>) =>
+    callback(transactionMock),
   ),
 });
 
@@ -68,6 +69,10 @@ describe('TasksService', () => {
     }).compile();
 
     service = module.get<TasksService>(TasksService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('create', () => {
@@ -101,6 +106,67 @@ describe('TasksService', () => {
       expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.task.create).not.toHaveBeenCalled();
     });
+
+    it('nests one PENDING schedule for an enabled future task', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-03T05:00:00Z'));
+      transactionMock.task.create.mockResolvedValue(MOCK_TASK);
+
+      await service.create('user-uuid-1', {
+        title: 'Morning run',
+        startAt: '2026-06-03T06:00:00Z',
+        endAt: '2026-06-03T07:00:00Z',
+        difficulty: TaskDifficulty.MEDIUM,
+      });
+
+      expect(transactionMock.task.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'user-uuid-1',
+          title: 'Morning run',
+          description: undefined,
+          startAt: new Date('2026-06-03T06:00:00Z'),
+          endAt: new Date('2026-06-03T07:00:00Z'),
+          difficulty: TaskDifficulty.MEDIUM,
+          categoryId: undefined,
+          notificationEnabled: true,
+          notificationSchedules: {
+            create: {
+              userId: 'user-uuid-1',
+              scheduledAt: new Date('2026-06-03T06:00:00Z'),
+              status: 'PENDING',
+            },
+          },
+        },
+      });
+    });
+
+    it.each([
+      ['past', '2026-06-03T04:59:59Z', true],
+      ['equal-now', '2026-06-03T05:00:00Z', true],
+      ['disabled', '2026-06-03T06:00:00Z', false],
+    ])(
+      'omits schedules for a %s task',
+      async (_label, startAt, notificationEnabled) => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-06-03T05:00:00Z'));
+        transactionMock.task.create.mockResolvedValue({
+          ...MOCK_TASK,
+          startAt: new Date(startAt),
+          notificationEnabled,
+        });
+
+        await service.create('user-uuid-1', {
+          title: 'Morning run',
+          startAt,
+          endAt: '2026-06-03T07:00:00Z',
+          difficulty: TaskDifficulty.MEDIUM,
+          notificationEnabled,
+        });
+
+        const createArgs = (
+          transactionMock.task.create.mock.calls as TaskMutationCall[]
+        )[0][0];
+        expect(createArgs.data.notificationSchedules).toBeUndefined();
+      },
+    );
 
     it.each([
       [
@@ -320,6 +386,176 @@ describe('TasksService', () => {
       );
     });
 
+    it.each<[string, typeof MOCK_TASK, UpdateTaskDto, Date]>([
+      [
+        'startAt',
+        MOCK_TASK,
+        { startAt: '2026-06-03T08:00:00Z' },
+        new Date('2026-06-03T08:00:00Z'),
+      ],
+      [
+        'notificationEnabled',
+        { ...MOCK_TASK, notificationEnabled: false },
+        { notificationEnabled: true },
+        MOCK_TASK.startAt,
+      ],
+      [
+        'status',
+        { ...MOCK_TASK, status: TaskStatus.COMPLETED },
+        { status: TaskStatus.PENDING },
+        MOCK_TASK.startAt,
+      ],
+    ])(
+      'cancels PENDING schedules and creates one when %s makes the task eligible',
+      async (_field, existing, dto, nextStartAt) => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-06-03T05:00:00Z'));
+        transactionMock.task.findFirst.mockResolvedValue(existing);
+        transactionMock.task.update.mockResolvedValue({
+          ...existing,
+          ...dto,
+          startAt: nextStartAt,
+        });
+
+        await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+        const updateArgs = (
+          transactionMock.task.update.mock.calls as TaskMutationCall[]
+        )[0][0];
+        expect(updateArgs.data.notificationSchedules).toEqual({
+          updateMany: {
+            where: { status: 'PENDING' },
+            data: { status: 'CANCELLED' },
+          },
+          create: {
+            userId: 'user-uuid-1',
+            scheduledAt: nextStartAt,
+            status: 'PENDING',
+          },
+        });
+      },
+    );
+
+    it.each<[string, UpdateTaskDto]>([
+      ['startAt', { startAt: '2026-06-03T05:00:00Z' }],
+      ['notificationEnabled', { notificationEnabled: false }],
+      ['status', { status: TaskStatus.COMPLETED }],
+    ])(
+      'only cancels PENDING schedules when %s makes the task ineligible',
+      async (_field, dto) => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-06-03T05:00:00Z'));
+        transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+        transactionMock.task.update.mockResolvedValue({
+          ...MOCK_TASK,
+          ...dto,
+          startAt:
+            dto.startAt !== undefined
+              ? new Date(dto.startAt)
+              : MOCK_TASK.startAt,
+        });
+
+        await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+        const updateArgs = (
+          transactionMock.task.update.mock.calls as TaskMutationCall[]
+        )[0][0];
+        expect(updateArgs.data.notificationSchedules).toEqual({
+          updateMany: {
+            where: { status: 'PENDING' },
+            data: { status: 'CANCELLED' },
+          },
+        });
+      },
+    );
+
+    it('uses the disabled post-update state when startAt also moves to the future', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-03T05:00:00Z'));
+      const nextStartAt = new Date('2026-06-03T08:00:00Z');
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockResolvedValue({
+        ...MOCK_TASK,
+        startAt: nextStartAt,
+        notificationEnabled: false,
+      });
+
+      await service.update('user-uuid-1', 'task-uuid-1', {
+        startAt: nextStartAt.toISOString(),
+        notificationEnabled: false,
+      });
+
+      const updateArgs = (
+        transactionMock.task.update.mock.calls as TaskMutationCall[]
+      )[0][0];
+      expect(updateArgs.data.notificationSchedules).toEqual({
+        updateMany: {
+          where: { status: 'PENDING' },
+          data: { status: 'CANCELLED' },
+        },
+      });
+    });
+
+    it('uses all schedule fields to create one eligible replacement at the new startAt', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-03T05:00:00Z'));
+      const existing = {
+        ...MOCK_TASK,
+        startAt: new Date('2026-06-03T04:00:00Z'),
+        notificationEnabled: false,
+        status: TaskStatus.COMPLETED,
+      };
+      const nextStartAt = new Date('2026-06-03T08:00:00Z');
+      transactionMock.task.findFirst.mockResolvedValue(existing);
+      transactionMock.task.update.mockResolvedValue({
+        ...existing,
+        startAt: nextStartAt,
+        notificationEnabled: true,
+        status: TaskStatus.PENDING,
+      });
+
+      await service.update('user-uuid-1', 'task-uuid-1', {
+        startAt: nextStartAt.toISOString(),
+        notificationEnabled: true,
+        status: TaskStatus.PENDING,
+      });
+
+      const updateArgs = (
+        transactionMock.task.update.mock.calls as TaskMutationCall[]
+      )[0][0];
+      expect(updateArgs.data.notificationSchedules).toEqual({
+        updateMany: {
+          where: { status: 'PENDING' },
+          data: { status: 'CANCELLED' },
+        },
+        create: {
+          userId: 'user-uuid-1',
+          scheduledAt: nextStartAt,
+          status: 'PENDING',
+        },
+      });
+    });
+
+    it.each<[string, UpdateTaskDto, typeof MOCK_TASK]>([
+      ['title', { title: 'Evening run' }, MOCK_TASK],
+      ['description', { description: 'Easy pace' }, MOCK_TASK],
+      ['difficulty', { difficulty: TaskDifficulty.HIGH }, MOCK_TASK],
+      [
+        'category',
+        { categoryId: 'category-1' },
+        { ...MOCK_TASK, categoryId: 'category-1' },
+      ],
+    ])(
+      'omits notificationSchedules for a %s-only update',
+      async (_field, dto, existing) => {
+        transactionMock.task.findFirst.mockResolvedValue(existing);
+        transactionMock.task.update.mockResolvedValue({ ...existing, ...dto });
+
+        await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+        const updateArgs = (
+          transactionMock.task.update.mock.calls as TaskMutationCall[]
+        )[0][0];
+        expect(updateArgs.data).not.toHaveProperty('notificationSchedules');
+      },
+    );
+
     it('does not reload an unchanged category', async () => {
       const categorizedTask = { ...MOCK_TASK, categoryId: 'category-1' };
       transactionMock.task.findFirst.mockResolvedValue(categorizedTask);
@@ -423,9 +659,19 @@ describe('TasksService', () => {
       expect(transactionMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+          data: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            deletedAt: expect.any(Date),
+            notificationSchedules: {
+              updateMany: {
+                where: { status: 'PENDING' },
+                data: { status: 'CANCELLED' },
+              },
+            },
+          }),
         }),
       );
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(1);
       expect(scoresMock.recompute).toHaveBeenCalledWith(
         'user-uuid-1',
         MOCK_TASK.startAt,
@@ -459,14 +705,47 @@ describe('TasksService', () => {
             status: TaskStatus.COMPLETED,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             completedAt: expect.any(Date),
+            notificationSchedules: {
+              updateMany: {
+                where: { status: 'PENDING' },
+                data: { status: 'CANCELLED' },
+              },
+            },
           }),
         }),
       );
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(1);
       expect(scoresMock.recompute).toHaveBeenCalledWith(
         'user-uuid-1',
         completedTask.startAt,
         transactionMock,
       );
+    });
+
+    it('does not recompute when the nested completion mutation is rejected', async () => {
+      const mutationError = new Error('nested task mutation failed');
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockRejectedValue(mutationError);
+
+      await expect(service.complete('user-uuid-1', 'task-uuid-1')).rejects.toBe(
+        mutationError,
+      );
+
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        data: {
+          status: TaskStatus.COMPLETED,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          completedAt: expect.any(Date),
+          notificationSchedules: {
+            updateMany: {
+              where: { status: 'PENDING' },
+              data: { status: 'CANCELLED' },
+            },
+          },
+        },
+      });
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
     });
   });
 });

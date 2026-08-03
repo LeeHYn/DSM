@@ -7,6 +7,10 @@ import type { UpdateTaskDto } from './dto/update-task.dto';
 import type { TaskQueryDto } from './dto/task-query.dto';
 
 const MAX_SERIALIZABLE_TRANSACTION_RETRIES = 2;
+const NOTIFICATION_SCHEDULE_STATUS = {
+  PENDING: 'PENDING',
+  CANCELLED: 'CANCELLED',
+} as const;
 
 @Injectable()
 export class TasksService {
@@ -21,16 +25,36 @@ export class TasksService {
         await this.assertCategoryAssignable(userId, dto.categoryId, client);
       }
 
+      const now = new Date();
+      const startAt = new Date(dto.startAt);
+      const notificationEnabled = dto.notificationEnabled ?? true;
       const task = await client.task.create({
         data: {
           userId,
           title: dto.title,
           description: dto.description,
-          startAt: new Date(dto.startAt),
+          startAt,
           endAt: new Date(dto.endAt),
           difficulty: dto.difficulty,
           categoryId: dto.categoryId,
-          notificationEnabled: dto.notificationEnabled ?? true,
+          notificationEnabled,
+          ...(this.isNotificationScheduleEligible(
+            {
+              notificationEnabled,
+              status: TaskStatus.PENDING,
+              deletedAt: null,
+              startAt,
+            },
+            now,
+          ) && {
+            notificationSchedules: {
+              create: {
+                userId,
+                scheduledAt: startAt,
+                status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+              },
+            },
+          }),
         },
       });
       await this.scores.recompute(userId, task.startAt, client);
@@ -68,6 +92,16 @@ export class TasksService {
         await this.assertCategoryAssignable(userId, dto.categoryId, client);
       }
 
+      const scheduleAffectingUpdate =
+        dto.startAt !== undefined ||
+        dto.notificationEnabled !== undefined ||
+        dto.status !== undefined;
+      const nextStartAt =
+        dto.startAt !== undefined ? new Date(dto.startAt) : existing.startAt;
+      const nextNotificationEnabled =
+        dto.notificationEnabled ?? existing.notificationEnabled;
+      const nextStatus = dto.status ?? existing.status;
+      const now = new Date();
       const task = await client.task.update({
         where: { id },
         data: {
@@ -82,6 +116,29 @@ export class TasksService {
           ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
           ...(dto.notificationEnabled !== undefined && {
             notificationEnabled: dto.notificationEnabled,
+          }),
+          ...(scheduleAffectingUpdate && {
+            notificationSchedules: {
+              updateMany: {
+                where: { status: NOTIFICATION_SCHEDULE_STATUS.PENDING },
+                data: { status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED },
+              },
+              ...(this.isNotificationScheduleEligible(
+                {
+                  notificationEnabled: nextNotificationEnabled,
+                  status: nextStatus,
+                  deletedAt: existing.deletedAt,
+                  startAt: nextStartAt,
+                },
+                now,
+              ) && {
+                create: {
+                  userId,
+                  scheduledAt: nextStartAt,
+                  status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+                },
+              }),
+            },
           }),
         },
       });
@@ -99,7 +156,15 @@ export class TasksService {
       const task = await this.findOneWithClient(userId, id, client);
       await client.task.update({
         where: { id },
-        data: { deletedAt: new Date() },
+        data: {
+          deletedAt: new Date(),
+          notificationSchedules: {
+            updateMany: {
+              where: { status: NOTIFICATION_SCHEDULE_STATUS.PENDING },
+              data: { status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED },
+            },
+          },
+        },
       });
       await this.scores.recompute(userId, task.startAt, client);
     });
@@ -110,7 +175,16 @@ export class TasksService {
       await this.findOneWithClient(userId, id, client);
       const task = await client.task.update({
         where: { id },
-        data: { status: TaskStatus.COMPLETED, completedAt: new Date() },
+        data: {
+          status: TaskStatus.COMPLETED,
+          completedAt: new Date(),
+          notificationSchedules: {
+            updateMany: {
+              where: { status: NOTIFICATION_SCHEDULE_STATUS.PENDING },
+              data: { status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED },
+            },
+          },
+        },
       });
       await this.scores.recompute(userId, task.startAt, client);
       return task;
@@ -144,6 +218,21 @@ export class TasksService {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2034'
+    );
+  }
+
+  private isNotificationScheduleEligible(
+    task: Pick<
+      Task,
+      'notificationEnabled' | 'status' | 'deletedAt' | 'startAt'
+    >,
+    now: Date,
+  ): boolean {
+    return (
+      task.notificationEnabled === true &&
+      task.status === TaskStatus.PENDING &&
+      task.deletedAt === null &&
+      task.startAt > now
     );
   }
 

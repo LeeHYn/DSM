@@ -49,6 +49,16 @@
   - [x] 유닛 테스트 (정책 6 + 서비스 6 + 컨트롤러 4)
   - [x] 스키마/마이그레이션 변경 없음
   - [ ] (보류) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷
+- [x] 마일스톤 12A: 알림 기반 구현
+  - [x] FCM 토큰 DTO 검증 계약
+  - [x] FCM 토큰 등록·갱신·재활성화·폐기 서비스
+  - [x] JWT 보호 Notifications 컨트롤러와 모듈 연결
+  - [x] Task-NotificationSchedule 원자적 동기화
+  - [x] focused·전체 Jest, TypeScript, 변경 파일 non-fix lint 회귀 검증
+  - [x] package/lockfile, Prisma schema/migration, `DSM_Front` 무변경 확인
+  - [x] 독립 reviewer 최종 검토: 제품 결함 없음, merge 가능
+  - [ ] (기존 부채) 전체 lint: 변경하지 않은 Auth 파일 Prettier 오류 5건
+  - [ ] (배포 전 gate) 실제 PostgreSQL schema 적용 상태와 동시성 통합 검증
 - [x] 지원 작업: 서브 에이전트 운영 체계 구축
   - [x] `.ai/agents/README.md` 공통 운영 계약 및 역할 레지스트리 작성
   - [x] `investigator`, `planner`, `backend-developer`, `frontend-developer`, `reviewer` 역할 문서 작성

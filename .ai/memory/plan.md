@@ -14,15 +14,16 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 9. 리프레시 토큰 조회 구조 개선 — 토큰에 레코드 ID 임베드(`<recordId>.<secret>`)로 O(1) 조회 (계획: docs/superpowers/plans/2026-06-06-dsm-refresh-token-lookup.md)
 10. 점수(DailyScore) 집계 로직 구현 — FR-03 점수 공식 + 누적 totalScore/티어, 일과 변경 시 재계산 + 조회 API (계획: docs/superpowers/plans/2026-06-07-dsm-daily-score.md)
 11. 랭킹/백분위(FR-04) 구현 — 일간/주간/누적 내 순위·상위%, TOP100 리더보드, RankingSnapshot 영속화. 조회 시 실시간 계산, 전체 유저 기준 (계획: docs/superpowers/plans/2026-06-07-dsm-rankings.md)
+12. **12A 알림 기반** — 인증된 FCM 토큰 수명주기 API와 Task-`NotificationSchedule` 원자적 동기화 구현
+   - focused Jest 3 suites/58 tests, 전체 Jest 18 suites/135 tests, TypeScript, 변경 파일 non-fix ESLint 통과
+   - package/lockfile, Prisma schema/migration, `DSM_Front` 무변경 확인
+   - 실제 PostgreSQL schema 적용 상태와 동시성 동작은 배포 전 통합 검증 필요
 
 # 다음 마일스톤
-12. **12A 알림 기반** — FCM 토큰 수명주기 API + Task-`NotificationSchedule` 동기화
-   - 상세 계획: `.ai/docs/2026-07-10-milestone-12a-notification-foundation.md`
-   - 범위: 토큰 등록·갱신·재활성화·폐기, Task mutation과 `PENDING/CANCELLED` 예약 상태 동기화, 단위 테스트
-   - 제외: 실제 Firebase 발송·Cron(12B), 프런트 알림(12C), WebSocket(13), Redis/랭킹 배치(14)
-   - 판정: 기존 Prisma 모델과 Nest 의존성으로 구현 가능. 12A에는 새 패키지·Firebase 자격증명·schema migration이 필요하지 않음(실제 DB의 현 schema 적용 여부는 구현 전 별도 확인)
-   - **계획 작성 승인 기록**: 2026-07-10 사용자가 알림 방향으로 작업 진행을 승인함
-   - **상태**: 상세 계획 작성 완료 — **구현 승인 대기**
+12B. **실제 알림 발송** — Firebase Admin + Cron 기반 due schedule 선점·발송·재시도·상태 기록
+   - 선행 gate: 실제 PostgreSQL schema 적용 상태와 동시 transaction 통합 검증
+   - 별도 승인 필요: package/lockfile, 환경변수, Firebase 자격증명, 외부 FCM 호출
+   - 후속 분리: 프런트 알림 연동(12C), WebSocket(13), Redis/랭킹 배치(14)
 
 # 지원 작업 계획: 서브 에이전트 운영 체계
 
