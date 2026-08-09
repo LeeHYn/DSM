@@ -44,9 +44,13 @@ export default function TutorialScreen() {
     }
 
     completionRequestedRef.current = true;
-    void completeOnboarding().finally(() => {
+    const clearCompletionRequest = () => {
       completionRequestedRef.current = false;
-    });
+    };
+    void completeOnboarding().then(
+      clearCompletionRequest,
+      clearCompletionRequest,
+    );
   };
 
   const next = () => {

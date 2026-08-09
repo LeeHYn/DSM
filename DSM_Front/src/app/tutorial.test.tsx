@@ -64,6 +64,31 @@ describe('TutorialScreen', () => {
     },
   );
 
+  it('consumes a rejected completion request and permits a later retry', async () => {
+    const completeOnboarding = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('completion-rejection-sentinel'))
+      .mockResolvedValueOnce(undefined);
+    mockUseSession.mockReturnValue(
+      makeOnboardingSession(completeOnboarding),
+    );
+    await render(
+      <PrototypeProvider>
+        <TutorialScreen />
+      </PrototypeProvider>,
+    );
+
+    await fireEvent.press(screen.getByRole('button', { name: '건너뛰기' }));
+    await waitFor(() =>
+      expect(completeOnboarding).toHaveBeenCalledTimes(1),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: '건너뛰기' }));
+
+    await waitFor(() =>
+      expect(completeOnboarding).toHaveBeenCalledTimes(2),
+    );
+  });
+
   it.each(['network', 'timeout'] as const)(
     'shows safe retry copy for a %s completion failure',
     async (kind) => {
