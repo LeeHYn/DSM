@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Pressable,
@@ -21,6 +20,7 @@ import {
   dailyupRadius,
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
+import { useSession } from '@/features/auth/session-context';
 import { usePrototype } from '@/features/prototype/prototype-context';
 
 type MenuItem = {
@@ -74,8 +74,8 @@ function SettingsRow({
 }
 
 export default function MyPageScreen() {
-  const router = useRouter();
   const palette = useDailyupPalette();
+  const { action, logout } = useSession();
   const {
     resetPrototype,
     setTheme,
@@ -83,9 +83,9 @@ export default function MyPageScreen() {
     theme,
   } = usePrototype();
 
-  const logout = () => {
+  const logoutSession = () => {
     resetPrototype();
-    router.replace('/explore');
+    void logout();
   };
 
   return (
@@ -141,8 +141,10 @@ export default function MyPageScreen() {
 
           <Divider />
           <Pressable
+            accessibilityLabel="로그아웃"
             accessibilityRole="button"
-            onPress={logout}
+            disabled={action === 'logging-out'}
+            onPress={logoutSession}
             style={({ pressed }) => [styles.row, pressed && { backgroundColor: palette.surface }]}>
             <AppText color={palette.danger} style={styles.rowLabel} variant="label">
               로그아웃
