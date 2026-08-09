@@ -12,7 +12,6 @@ import {
   ThemeProvider,
   type Theme,
 } from '@react-navigation/native';
-import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo } from 'react';
@@ -25,6 +24,8 @@ import {
   PrototypeProvider,
   usePrototype,
 } from '@/features/prototype/prototype-context';
+import { SessionProvider, useSession } from '@/features/auth/session-context';
+import { SessionStack } from '@/features/auth/session-routing';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {
   // The splash screen may already be hidden during fast refresh.
@@ -32,6 +33,7 @@ void SplashScreen.preventAutoHideAsync().catch(() => {
 
 function DailyupNavigator() {
   const { theme } = usePrototype();
+  const { state } = useSession();
   const palette = dailyupColors[theme];
   const navigationTheme = useMemo<Theme>(() => {
     const base = theme === 'dark' ? DarkTheme : DefaultTheme;
@@ -50,22 +52,25 @@ function DailyupNavigator() {
     };
   }, [palette, theme]);
 
+  useEffect(() => {
+    if (state.status !== 'bootstrapping') {
+      void SplashScreen.hideAsync();
+    }
+  }, [state.status]);
+
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar
         backgroundColor={palette.statusBar}
         style={theme === 'dark' ? 'light' : 'dark'}
       />
-      <Stack
+      <SessionStack
         screenOptions={{
           animation: 'fade',
           contentStyle: { backgroundColor: palette.background },
           headerShown: false,
-        }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="tutorial" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+        }}
+      />
     </ThemeProvider>
   );
 }
@@ -79,12 +84,6 @@ export default function RootLayout() {
     NotoSansKR_800ExtraBold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      void SplashScreen.hideAsync();
-    }
-  }, [fontError, fontsLoaded]);
-
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -92,7 +91,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PrototypeProvider>
-        <DailyupNavigator />
+        <SessionProvider>
+          <DailyupNavigator />
+        </SessionProvider>
       </PrototypeProvider>
     </GestureHandlerRootView>
   );
