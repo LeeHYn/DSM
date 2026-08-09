@@ -82,10 +82,10 @@ describe('SessionRecoveryScreen', () => {
     await fireEvent.press(screen.getByRole('button', { name: '다시 시도' }));
 
     expect(retryRecovery).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(diagnosticMessage)).toBeNull();
-    expect(screen.queryByText(httpResponseBody)).toBeNull();
-    expect(screen.queryByText(accessToken)).toBeNull();
-    expect(screen.queryByText(refreshToken)).toBeNull();
+    expect(screen.queryByText(new RegExp(diagnosticMessage))).toBeNull();
+    expect(screen.queryByText(new RegExp(httpResponseBody))).toBeNull();
+    expect(screen.queryByText(new RegExp(accessToken))).toBeNull();
+    expect(screen.queryByText(new RegExp(refreshToken))).toBeNull();
   });
 
   it('disables retry while recovery is in progress', async () => {
