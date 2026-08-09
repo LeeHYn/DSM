@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   NativeScrollEvent,
@@ -24,18 +23,31 @@ import {
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
 import { tutorialPages } from '@/features/prototype/prototype-data';
+import { useSession } from '@/features/auth/session-context';
 
 export default function TutorialScreen() {
-  const router = useRouter();
+  const { action, completeOnboarding, error } = useSession();
   const palette = useDailyupPalette();
   const { width } = useWindowDimensions();
   const isDesktopShowcase = Platform.OS === 'web' && width >= 700;
   const pageWidth = isDesktopShowcase ? APP_WIDTH : width;
   const scrollRef = useRef<ScrollView>(null);
+  const completionRequestedRef = useRef(false);
   const [pageIndex, setPageIndex] = useState(0);
   const lastIndex = tutorialPages.length - 1;
+  const isCompleting = action === 'completing-onboarding';
+  const completionFailed = error?.kind === 'network' || error?.kind === 'timeout';
 
-  const finish = () => router.replace('/(tabs)');
+  const finish = () => {
+    if (isCompleting || completionRequestedRef.current) {
+      return;
+    }
+
+    completionRequestedRef.current = true;
+    void completeOnboarding().finally(() => {
+      completionRequestedRef.current = false;
+    });
+  };
 
   const next = () => {
     if (pageIndex === lastIndex) {
@@ -99,10 +111,19 @@ export default function TutorialScreen() {
               />
             ))}
           </View>
-          <AppButton onPress={next}>
+          {completionFailed ? (
+            <AppText color={palette.muted} style={styles.errorCopy} variant="label">
+              완료 상태를 저장하지 못했어요. 다시 시도해 주세요.
+            </AppText>
+          ) : null}
+          <AppButton disabled={pageIndex === lastIndex && isCompleting} onPress={next}>
             {pageIndex === lastIndex ? '시작하기' : '다음'}
           </AppButton>
-          <Pressable accessibilityRole="button" onPress={finish} style={styles.skip}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isCompleting}
+            onPress={finish}
+            style={styles.skip}>
             <AppText color={palette.muted} variant="label">
               건너뛰기
             </AppText>
@@ -148,6 +169,9 @@ const styles = StyleSheet.create({
     gap: 7,
     justifyContent: 'center',
     marginBottom: dailyupSpacing.three,
+  },
+  errorCopy: {
+    textAlign: 'center',
   },
   page: {
     alignItems: 'center',
