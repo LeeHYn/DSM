@@ -33,6 +33,7 @@ let controller: SessionController;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  authenticatedClient.request.mockReset();
   refreshDeferred = new Promise<typeof TOKEN_PAIR>((resolve) => {
     resolveRefresh = resolve;
   });
@@ -187,6 +188,61 @@ it('uses the canonical onboarding timestamp returned by the server', async () =>
     onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
   });
 });
+
+it.each([
+  ['network', new ApiError('network', 'diagnostic-network-message', { status: 503 })],
+  ['timeout', new ApiError('timeout', 'diagnostic-timeout-message')],
+] as const)(
+  'keeps onboarding retryable after a %s completion failure',
+  async (_kind, error) => {
+    tokenStore.read.mockResolvedValue('old.secret');
+    authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+    authenticatedClient.request
+      .mockResolvedValueOnce({
+        userId: 'user-1',
+        onboardingCompletedAt: null,
+      })
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce({
+        userId: 'user-1',
+        onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+      });
+
+    await controller.bootstrap();
+    await controller.completeOnboarding();
+
+    expect(controller.getSnapshot().state).toEqual({
+      status: 'onboarding',
+      userId: 'user-1',
+      onboardingCompletedAt: null,
+    });
+    expect(controller.getSnapshot().action).toBe('idle');
+    expect(controller.getSnapshot().error).toMatchObject({
+      kind: error.kind,
+      message:
+        error.kind === 'network' ? 'Network unavailable' : 'Request timed out',
+      status: error.status,
+    });
+    expect(controller.getSnapshot().error).not.toMatchObject({
+      message: error.message,
+    });
+    expect(controller.getSnapshot().error?.cause).toBeUndefined();
+
+    await controller.completeOnboarding();
+
+    expect(authenticatedClient.request).toHaveBeenCalledTimes(3);
+    expect(authenticatedClient.request).toHaveBeenLastCalledWith({
+      path: '/auth/me/onboarding',
+      method: 'PATCH',
+      validate: parseCurrentUser,
+    });
+    expect(controller.getSnapshot().state).toEqual({
+      status: 'authenticated',
+      userId: 'user-1',
+      onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+    });
+  },
+);
 
 it('logs out locally when server revocation is offline', async () => {
   tokenStore.readAndClear.mockResolvedValue('record.secret');
