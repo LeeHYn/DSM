@@ -14,7 +14,7 @@ import {
 } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import '@/global.css';
@@ -34,6 +34,7 @@ void SplashScreen.preventAutoHideAsync().catch(() => {
 function DailyupNavigator() {
   const { theme } = usePrototype();
   const { state } = useSession();
+  const hasRequestedSplashHide = useRef(false);
   const palette = dailyupColors[theme];
   const navigationTheme = useMemo<Theme>(() => {
     const base = theme === 'dark' ? DarkTheme : DefaultTheme;
@@ -53,8 +54,11 @@ function DailyupNavigator() {
   }, [palette, theme]);
 
   useEffect(() => {
-    if (state.status !== 'bootstrapping') {
-      void SplashScreen.hideAsync();
+    if (state.status !== 'bootstrapping' && !hasRequestedSplashHide.current) {
+      hasRequestedSplashHide.current = true;
+      void SplashScreen.hideAsync().catch(() => {
+        // The splash screen may already be hidden during fast refresh.
+      });
     }
   }, [state.status]);
 
