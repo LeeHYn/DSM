@@ -192,7 +192,13 @@ export class SessionController implements SessionControllerPort {
     this.setAction('completing-onboarding');
     const epoch = this.epoch;
     try {
-      this.publishUser(await this.patchOnboarding());
+      const user = await this.patchOnboarding();
+      if (
+        epoch === this.epoch &&
+        this.snapshot.state.status === 'onboarding'
+      ) {
+        this.publishUser(user);
+      }
     } catch (error) {
       const sanitized = this.sanitizeError(error);
       if (

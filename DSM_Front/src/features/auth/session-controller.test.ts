@@ -244,6 +244,45 @@ it.each([
   },
 );
 
+it('does not publish a late onboarding completion after logout', async () => {
+  tokenStore.read.mockResolvedValue('old.secret');
+  authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+  let resolveCompletion!: (user: {
+    userId: string;
+    onboardingCompletedAt: string;
+  }) => void;
+  const completionResponse = new Promise<{
+    userId: string;
+    onboardingCompletedAt: string;
+  }>((resolve) => {
+    resolveCompletion = resolve;
+  });
+  authenticatedClient.request
+    .mockResolvedValueOnce({
+      userId: 'user-1',
+      onboardingCompletedAt: null,
+    })
+    .mockReturnValueOnce(completionResponse);
+
+  await controller.bootstrap();
+  const completion = controller.completeOnboarding();
+
+  expect(authenticatedClient.request).toHaveBeenCalledTimes(2);
+  await controller.logout();
+  resolveCompletion({
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+  await completion;
+
+  expect(controller.getAccessToken()).toBeNull();
+  expect(controller.getSnapshot()).toEqual({
+    state: { status: 'unauthenticated' },
+    action: 'idle',
+    error: null,
+  });
+});
+
 it('logs out locally when server revocation is offline', async () => {
   tokenStore.readAndClear.mockResolvedValue('record.secret');
   authApi.revokeSession.mockRejectedValue(
