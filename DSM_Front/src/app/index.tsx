@@ -1,13 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   AppText,
@@ -21,20 +14,16 @@ import {
 } from '@/constants/dailyup-theme';
 import { usePrototype } from '@/features/prototype/prototype-context';
 
-type LoginProvider = 'google' | 'kakao';
-
 function SocialButton({
   disabled = false,
   label,
-  loading = false,
   onPress,
   provider,
 }: {
   disabled?: boolean;
   label: string;
-  loading?: boolean;
   onPress: () => void;
-  provider: 'apple' | LoginProvider;
+  provider: 'apple' | 'google' | 'kakao';
 }) {
   const palette = useDailyupPalette();
   const isKakao = provider === 'kakao';
@@ -45,8 +34,8 @@ function SocialButton({
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
-      accessibilityState={{ disabled, busy: loading }}
-      disabled={disabled || loading}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.socialButton,
@@ -56,9 +45,7 @@ function SocialButton({
           opacity: disabled ? 0.38 : pressed ? 0.74 : 1,
         },
       ]}>
-      {loading ? (
-        <ActivityIndicator color={foreground} size="small" />
-      ) : provider === 'google' ? (
+      {provider === 'google' ? (
         <View style={styles.googleMark}>
           <MaterialCommunityIcons color="#4285F4" name="google" size={19} />
         </View>
@@ -70,37 +57,17 @@ function SocialButton({
         />
       )}
       <AppText color={foreground} style={styles.socialLabel} variant="button">
-        {loading ? '로그인 중...' : label}
+        {label}
       </AppText>
     </Pressable>
   );
 }
 
 export default function LoginScreen() {
-  const router = useRouter();
   const palette = useDailyupPalette();
   const { showToast } = usePrototype();
-  const [loadingProvider, setLoadingProvider] = useState<LoginProvider | null>(null);
-  const loginTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (loginTimerRef.current) {
-        clearTimeout(loginTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  const login = (provider: LoginProvider) => {
-    if (loadingProvider) {
-      return;
-    }
-    setLoadingProvider(provider);
-    loginTimerRef.current = setTimeout(() => {
-      setLoadingProvider(null);
-      router.replace('/tutorial');
-    }, 680);
+  const explainProviderStep = () => {
+    showToast('소셜 로그인 연결은 다음 단계에서 제공됩니다.');
   };
 
   return (
@@ -125,14 +92,12 @@ export default function LoginScreen() {
         <View style={styles.socialStack}>
           <SocialButton
             label="Google로 계속하기"
-            loading={loadingProvider === 'google'}
-            onPress={() => login('google')}
+            onPress={explainProviderStep}
             provider="google"
           />
           <SocialButton
             label="Kakao로 계속하기"
-            loading={loadingProvider === 'kakao'}
-            onPress={() => login('kakao')}
+            onPress={explainProviderStep}
             provider="kakao"
           />
           <SocialButton
