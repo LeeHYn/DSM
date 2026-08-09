@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { ApiError } from '@/lib/api/api-error';
 import type { SessionState } from '@/features/auth/session-controller';
 import { PrototypeProvider } from '@/features/prototype/prototype-context';
 
@@ -15,11 +16,12 @@ function makeSessionValue(
   state: SessionState,
   retryRecovery = jest.fn().mockResolvedValue(undefined),
   action: 'idle' | 'recovering' = 'idle',
+  error: ApiError | null = null,
 ) {
   return {
     state,
     action,
-    error: null,
+    error,
     completeOnboarding: jest.fn(),
     logout: jest.fn(),
     retryRecovery,
@@ -51,10 +53,23 @@ describe('SessionRecoveryScreen', () => {
 
   it('invokes retry without exposing diagnostic token data', async () => {
     const retryRecovery = jest.fn().mockResolvedValue(undefined);
+    const diagnosticMessage = 'diagnostic-message-sentinel';
+    const httpResponseBody = 'http-response-body-sentinel';
+    const accessToken = 'access-token-sentinel';
+    const refreshToken = 'refresh-token-sentinel';
+    const error = new ApiError('http', diagnosticMessage, {
+      cause: {
+        accessToken,
+        body: httpResponseBody,
+        refreshToken,
+      },
+    });
     mockUseSession.mockReturnValue(
       makeSessionValue(
         { status: 'offline', retry: 'bootstrap' },
         retryRecovery,
+        'idle',
+        error,
       ),
     );
 
@@ -67,7 +82,10 @@ describe('SessionRecoveryScreen', () => {
     await fireEvent.press(screen.getByRole('button', { name: '다시 시도' }));
 
     expect(retryRecovery).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(/token|Network unavailable|Secure token storage failed/i)).toBeNull();
+    expect(screen.queryByText(diagnosticMessage)).toBeNull();
+    expect(screen.queryByText(httpResponseBody)).toBeNull();
+    expect(screen.queryByText(accessToken)).toBeNull();
+    expect(screen.queryByText(refreshToken)).toBeNull();
   });
 
   it('disables retry while recovery is in progress', async () => {
