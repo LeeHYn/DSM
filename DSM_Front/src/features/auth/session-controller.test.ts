@@ -165,6 +165,86 @@ it('keeps the rotated token when profile loading is offline', async () => {
   expect(tokenStore.readAndClear).not.toHaveBeenCalled();
 });
 
+it('does not restore a logged-out session when an obsolete profile succeeds', async () => {
+  let signalProfileStarted!: () => void;
+  const profileStarted = new Promise<void>((resolve) => {
+    signalProfileStarted = resolve;
+  });
+  let resolveProfile!: (user: {
+    userId: string;
+    onboardingCompletedAt: string;
+  }) => void;
+  const profileResponse = new Promise<{
+    userId: string;
+    onboardingCompletedAt: string;
+  }>((resolve) => {
+    resolveProfile = resolve;
+  });
+  authApi.exchangeProviderToken.mockResolvedValue(TOKEN_PAIR);
+  authenticatedClient.request.mockImplementationOnce(() => {
+    signalProfileStarted();
+    return profileResponse;
+  });
+
+  const signIn = controller.signIn('GOOGLE', 'provider-token');
+  await profileStarted;
+  await controller.logout();
+  resolveProfile({
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+  await signIn;
+
+  expect(controller.getAccessToken()).toBeNull();
+  expect(controller.getSnapshot()).toEqual({
+    state: { status: 'unauthenticated' },
+    action: 'idle',
+    error: null,
+  });
+});
+
+it('does not replace a newer sign-in with an obsolete profile success', async () => {
+  let signalFirstProfileStarted!: () => void;
+  const firstProfileStarted = new Promise<void>((resolve) => {
+    signalFirstProfileStarted = resolve;
+  });
+  let resolveFirstProfile!: (user: {
+    userId: string;
+    onboardingCompletedAt: string;
+  }) => void;
+  const firstProfileResponse = new Promise<{
+    userId: string;
+    onboardingCompletedAt: string;
+  }>((resolve) => {
+    resolveFirstProfile = resolve;
+  });
+  authApi.exchangeProviderToken.mockResolvedValue(TOKEN_PAIR);
+  authenticatedClient.request
+    .mockImplementationOnce(() => {
+      signalFirstProfileStarted();
+      return firstProfileResponse;
+    })
+    .mockResolvedValueOnce({
+      userId: 'user-2',
+      onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+    });
+
+  const firstSignIn = controller.signIn('GOOGLE', 'first-provider-token');
+  await firstProfileStarted;
+  await controller.signIn('GOOGLE', 'second-provider-token');
+  resolveFirstProfile({
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+  await firstSignIn;
+
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'authenticated',
+    userId: 'user-2',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+});
+
 it('uses the canonical onboarding timestamp returned by the server', async () => {
   tokenStore.read.mockResolvedValue('old.secret');
   tokenStore.writeIfCurrent.mockResolvedValue(true);
@@ -185,6 +265,113 @@ it('uses the canonical onboarding timestamp returned by the server', async () =>
   expect(controller.getSnapshot().state).toEqual({
     status: 'authenticated',
     userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+});
+
+it('shares a pending onboarding completion with concurrent callers', async () => {
+  let resolveCompletion!: (user: {
+    userId: string;
+    onboardingCompletedAt: string;
+  }) => void;
+  const completionResponse = new Promise<{
+    userId: string;
+    onboardingCompletedAt: string;
+  }>((resolve) => {
+    resolveCompletion = resolve;
+  });
+  tokenStore.read.mockResolvedValue('old.secret');
+  authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+  authenticatedClient.request
+    .mockResolvedValueOnce({
+      userId: 'user-1',
+      onboardingCompletedAt: null,
+    })
+    .mockReturnValueOnce(completionResponse);
+
+  await controller.bootstrap();
+  const firstCompletion = controller.completeOnboarding();
+  const secondCompletion = controller.completeOnboarding();
+
+  expect(firstCompletion).toBe(secondCompletion);
+  expect(authenticatedClient.request).toHaveBeenCalledTimes(2);
+  expect(authenticatedClient.request).toHaveBeenLastCalledWith({
+    path: '/auth/me/onboarding',
+    method: 'PATCH',
+    validate: parseCurrentUser,
+  });
+
+  resolveCompletion({
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+  await expect(Promise.all([firstCompletion, secondCompletion])).resolves.toEqual([
+    undefined,
+    undefined,
+  ]);
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'authenticated',
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+});
+
+it('does not share an obsolete onboarding completion with a newer session', async () => {
+  let resolveFirstCompletion!: (user: {
+    userId: string;
+    onboardingCompletedAt: string;
+  }) => void;
+  const firstCompletionResponse = new Promise<{
+    userId: string;
+    onboardingCompletedAt: string;
+  }>((resolve) => {
+    resolveFirstCompletion = resolve;
+  });
+  const secondTokenPair = {
+    accessToken: 'second.header.payload.signature',
+    refreshToken: 'second.record.secret',
+  };
+  tokenStore.read.mockResolvedValue('old.secret');
+  authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+  authApi.exchangeProviderToken.mockResolvedValue(secondTokenPair);
+  authenticatedClient.request
+    .mockResolvedValueOnce({
+      userId: 'user-1',
+      onboardingCompletedAt: null,
+    })
+    .mockReturnValueOnce(firstCompletionResponse)
+    .mockResolvedValueOnce({
+      userId: 'user-2',
+      onboardingCompletedAt: null,
+    })
+    .mockResolvedValueOnce({
+      userId: 'user-2',
+      onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+    });
+
+  await controller.bootstrap();
+  const firstCompletion = controller.completeOnboarding();
+  await controller.logout();
+  await controller.signIn('GOOGLE', 'second-provider-token');
+  const secondCompletion = controller.completeOnboarding();
+
+  expect(secondCompletion).not.toBe(firstCompletion);
+  expect(authenticatedClient.request).toHaveBeenCalledTimes(4);
+  expect(authenticatedClient.request).toHaveBeenLastCalledWith({
+    path: '/auth/me/onboarding',
+    method: 'PATCH',
+    validate: parseCurrentUser,
+  });
+  await secondCompletion;
+  resolveFirstCompletion({
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+  await firstCompletion;
+
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'authenticated',
+    userId: 'user-2',
     onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
   });
 });

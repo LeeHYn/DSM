@@ -77,6 +77,9 @@ export class SessionController implements SessionControllerPort {
   private accessToken: string | null = null;
   private bootstrapPromise: Promise<void> | null = null;
   private epoch = 0;
+  private onboardingCompletion:
+    | { epoch: number; operation: Promise<void> }
+    | null = null;
   private refreshPromise: Promise<string> | null = null;
   private unauthorizedCleanupPromise: Promise<void> | null = null;
   private snapshot: SessionSnapshot = {
@@ -181,16 +184,33 @@ export class SessionController implements SessionControllerPort {
     return operation;
   }
 
-  async completeOnboarding(): Promise<void> {
+  completeOnboarding(): Promise<void> {
+    if (this.onboardingCompletion?.epoch === this.epoch) {
+      return this.onboardingCompletion.operation;
+    }
+
     if (
       !this.accessToken ||
       this.snapshot.state.status !== 'onboarding'
     ) {
-      return;
+      return Promise.resolve();
     }
 
-    this.setAction('completing-onboarding');
     const epoch = this.epoch;
+    const operation = this.completeOnboardingInternal(epoch);
+    const completion = { epoch, operation };
+    this.onboardingCompletion = completion;
+    const clear = () => {
+      if (this.onboardingCompletion === completion) {
+        this.onboardingCompletion = null;
+      }
+    };
+    void operation.then(clear, clear);
+    return operation;
+  }
+
+  private async completeOnboardingInternal(epoch: number): Promise<void> {
+    this.setAction('completing-onboarding');
     try {
       const user = await this.patchOnboarding();
       if (
@@ -395,8 +415,16 @@ export class SessionController implements SessionControllerPort {
   }
 
   private async loadProfile(epoch: number): Promise<void> {
+    const accessToken = this.accessToken;
     try {
-      this.publishUser(await this.getCurrentUser());
+      const user = await this.getCurrentUser();
+      if (
+        accessToken &&
+        epoch === this.epoch &&
+        this.accessToken === accessToken
+      ) {
+        this.publishUser(user);
+      }
     } catch (error) {
       await this.handleProfileError(error, epoch);
     }
