@@ -50,9 +50,8 @@ const makePrismaMock = () => {
     },
     transactionClient,
     $transaction: jest.fn(
-      async (
-        callback: (tx: typeof transactionClient) => Promise<unknown>,
-      ) => callback(transactionClient),
+      async (callback: (tx: typeof transactionClient) => Promise<unknown>) =>
+        callback(transactionClient),
     ),
   };
 };
@@ -62,9 +61,7 @@ const makeJwtMock = () => ({
   verify: jest.fn(),
 });
 
-const makeConfigMock = (
-  overrides: Record<string, string | undefined> = {},
-) => {
+const makeConfigMock = (overrides: Record<string, string | undefined> = {}) => {
   const values: Record<string, string | undefined> = {
     JWT_ACCESS_SECRET: 'test-access-secret-for-dsm-backend',
     GOOGLE_CLIENT_ID: 'test-google-client-id',
@@ -216,9 +213,9 @@ describe('AuthService', () => {
         count: 0,
       });
 
-      await expect(
-        service.refreshTokens(`rt-1.${secret}`),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshTokens(`rt-1.${secret}`)).rejects.toThrow(
+        UnauthorizedException,
+      );
 
       expect(
         prismaMock.transactionClient.refreshToken.create,
@@ -368,7 +365,10 @@ describe('AuthService', () => {
         onboardingCompletedAt: completedAt,
       });
 
-      const result = await service.completeOnboarding(MOCK_USER.id, completedAt);
+      const result = await service.completeOnboarding(
+        MOCK_USER.id,
+        completedAt,
+      );
 
       expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
         where: {

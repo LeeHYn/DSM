@@ -36,9 +36,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.googleClientId = this.configService.getOrThrow<string>(
-      'GOOGLE_CLIENT_ID',
-    );
+    this.googleClientId =
+      this.configService.getOrThrow<string>('GOOGLE_CLIENT_ID');
     this.googleClient = new OAuth2Client(this.googleClientId);
   }
 
