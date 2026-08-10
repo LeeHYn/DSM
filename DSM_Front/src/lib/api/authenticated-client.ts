@@ -108,6 +108,9 @@ export function createAuthenticatedClient(
       initialAccessToken,
       initialUnauthorizedError,
     );
+    if (session.getAccessToken() !== refreshedAccessToken) {
+      throw initialUnauthorizedError;
+    }
 
     try {
       return await http.request(withAccessToken(request, refreshedAccessToken));
