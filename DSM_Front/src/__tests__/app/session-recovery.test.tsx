@@ -4,7 +4,7 @@ import { ApiError } from '@/lib/api/api-error';
 import type { SessionState } from '@/features/auth/session-controller';
 import { PrototypeProvider } from '@/features/prototype/prototype-context';
 
-import SessionRecoveryScreen from './session-recovery';
+import SessionRecoveryScreen from '../../app/session-recovery';
 
 const mockUseSession = jest.fn();
 

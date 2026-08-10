@@ -5,7 +5,7 @@ import { ApiError } from '@/lib/api/api-error';
 import { PrototypeProvider } from '@/features/prototype/prototype-context';
 import { tutorialPages } from '@/features/prototype/prototype-data';
 
-import TutorialScreen from './tutorial';
+import TutorialScreen from '../../app/tutorial';
 
 const mockUseSession = jest.fn();
 

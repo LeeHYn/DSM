@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import MyPageScreen from './mypage';
+import MyPageScreen from '../../../app/(tabs)/mypage';
 
 const mockReplace = jest.fn();
 const mockUseSession = jest.fn();
