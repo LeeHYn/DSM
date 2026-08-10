@@ -82,10 +82,12 @@ model RefreshToken {
   expiresAt DateTime  @db.Timestamptz(6)
   revokedAt DateTime? @db.Timestamptz(6)
   userId    String
+  sessionId String    @default(uuid())
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([userId, sessionId])
 }
 
 model FcmToken {
