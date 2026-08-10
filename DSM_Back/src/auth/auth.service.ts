@@ -19,7 +19,10 @@ import type { TokenResponseDto } from './dto/token-response.dto';
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const BCRYPT_ROUNDS = 10;
-type RefreshTokenClient = Pick<Prisma.TransactionClient, 'refreshToken'>;
+type RefreshTokenClient = Pick<
+  Prisma.TransactionClient,
+  'refreshToken' | '$queryRaw'
+>;
 
 export type CurrentUser = {
   userId: string;
@@ -65,6 +68,7 @@ export class AuthService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockUserForSessionMutation(tx, record.userId);
       const revokedAt = new Date();
       const revoked = await tx.refreshToken.updateMany({
         where: {
@@ -79,7 +83,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
 
-      return this.issueTokens(record.userId, tx);
+      return this.issueTokens(record.userId, tx, record.sessionId);
     });
   }
 
@@ -97,15 +101,21 @@ export class AuthService {
     if (
       !record ||
       record.userId !== userId ||
-      record.revokedAt !== null ||
       !(await bcrypt.compare(parsed.secret, record.tokenHash))
     ) {
       return;
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: record.id },
-      data: { revokedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUserForSessionMutation(tx, userId);
+      await tx.refreshToken.updateMany({
+        where: {
+          userId,
+          sessionId: record.sessionId,
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
     });
   }
 
@@ -154,6 +164,7 @@ export class AuthService {
   private async issueTokens(
     userId: string,
     client: RefreshTokenClient = this.prisma,
+    sessionId?: string,
   ): Promise<TokenResponseDto> {
     const payload: JwtPayload = { sub: userId, type: 'access' };
     const accessToken = this.jwtService.sign(payload, {
@@ -168,10 +179,20 @@ export class AuthService {
         userId,
         tokenHash,
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        ...(sessionId === undefined ? {} : { sessionId }),
       },
     });
 
     return { accessToken, refreshToken: `${record.id}.${secret}` };
+  }
+
+  private async lockUserForSessionMutation(
+    client: RefreshTokenClient,
+    userId: string,
+  ): Promise<void> {
+    await client.$queryRaw`
+      SELECT 1 FROM "User" WHERE id = ${userId} FOR UPDATE
+    `;
   }
 
   private async findOrCreateUser(

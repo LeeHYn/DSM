@@ -25,6 +25,7 @@ const MOCK_USER = {
 };
 
 const makeTransactionClientMock = () => ({
+  $queryRaw: jest.fn(),
   refreshToken: {
     create: jest.fn(),
     updateMany: jest.fn(),
@@ -78,6 +79,27 @@ const makeConfigMock = (overrides: Record<string, string | undefined> = {}) => {
       return value;
     }),
   };
+};
+
+const expectUserRowLock = (queryRaw: jest.Mock, userId: string) => {
+  expect(queryRaw).toHaveBeenCalledTimes(1);
+  const [strings, value] = queryRaw.mock.calls[0] as [
+    TemplateStringsArray,
+    unknown,
+  ];
+  expect(Array.from(strings).join('?').replace(/\s+/g, ' ').trim()).toBe(
+    'SELECT 1 FROM "User" WHERE id = ? FOR UPDATE',
+  );
+  expect(value).toBe(userId);
+};
+
+const expectLockBeforeFamilyMutation = (
+  queryRaw: jest.Mock,
+  familyMutation: jest.Mock,
+) => {
+  expect(queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+    familyMutation.mock.invocationCallOrder[0],
+  );
 };
 
 describe('AuthService', () => {
@@ -135,7 +157,10 @@ describe('AuthService', () => {
         idToken: 'google-id-token',
         audience: 'test-google-client-id',
       });
-      expect(prismaMock.refreshToken.create).toHaveBeenCalledTimes(1);
+      expect(prismaMock.refreshToken.create).toHaveBeenCalledWith({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.not.objectContaining({ sessionId: expect.any(String) }),
+      });
     });
 
     it('fails service construction when the client ID is missing', () => {
@@ -164,6 +189,7 @@ describe('AuthService', () => {
         tokenHash: hash,
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: null,
+        sessionId: 'family-1',
       });
       prismaMock.transactionClient.refreshToken.updateMany.mockResolvedValue({
         count: 1,
@@ -180,6 +206,11 @@ describe('AuthService', () => {
         where: { id: 'rt-1' },
       });
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expectUserRowLock(prismaMock.transactionClient.$queryRaw, MOCK_USER.id);
+      expectLockBeforeFamilyMutation(
+        prismaMock.transactionClient.$queryRaw,
+        prismaMock.transactionClient.refreshToken.updateMany,
+      );
       expect(
         prismaMock.transactionClient.refreshToken.updateMany,
       ).toHaveBeenCalledWith({
@@ -194,7 +225,13 @@ describe('AuthService', () => {
       });
       expect(
         prismaMock.transactionClient.refreshToken.create,
-      ).toHaveBeenCalledTimes(1);
+      ).toHaveBeenCalledWith({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.objectContaining({
+          userId: MOCK_USER.id,
+          sessionId: 'family-1',
+        }),
+      });
       expect(prismaMock.refreshToken.create).not.toHaveBeenCalled();
     });
 
@@ -208,6 +245,7 @@ describe('AuthService', () => {
         tokenHash: hash,
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: null,
+        sessionId: 'family-1',
       });
       prismaMock.transactionClient.refreshToken.updateMany.mockResolvedValue({
         count: 0,
@@ -234,6 +272,7 @@ describe('AuthService', () => {
         tokenHash: hash,
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: null,
+        sessionId: 'family-1',
       });
       prismaMock.transactionClient.refreshToken.updateMany.mockResolvedValue({
         count: 1,
@@ -271,6 +310,7 @@ describe('AuthService', () => {
         tokenHash: hash,
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: new Date(),
+        sessionId: 'family-1',
       });
 
       await expect(service.refreshTokens('rt-1.s')).rejects.toThrow(
@@ -286,6 +326,7 @@ describe('AuthService', () => {
         tokenHash: hash,
         expiresAt: new Date(Date.now() - 60_000),
         revokedAt: null,
+        sessionId: 'family-1',
       });
 
       await expect(service.refreshTokens('rt-1.s')).rejects.toThrow(
@@ -301,6 +342,7 @@ describe('AuthService', () => {
         tokenHash: hash,
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: null,
+        sessionId: 'family-1',
       });
 
       await expect(service.refreshTokens('rt-1.wrong')).rejects.toThrow(
@@ -310,7 +352,7 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('revokes the matching refresh token', async () => {
+    it('revokes only the active family when given an already-revoked predecessor', async () => {
       const secret = 'raw-secret';
       const hash = await bcrypt.hash(secret, 1);
 
@@ -319,19 +361,33 @@ describe('AuthService', () => {
         userId: MOCK_USER.id,
         tokenHash: hash,
         expiresAt: new Date(Date.now() + 60_000),
-        revokedAt: null,
+        revokedAt: new Date(),
+        sessionId: 'family-1',
       });
-      prismaMock.refreshToken.update.mockResolvedValue({});
+      prismaMock.transactionClient.refreshToken.updateMany.mockResolvedValue({
+        count: 2,
+      });
 
       await service.logout(MOCK_USER.id, `rt-1.${secret}`);
 
-      expect(prismaMock.refreshToken.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'rt-1' },
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: { revokedAt: expect.any(Date) },
-        }),
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expectUserRowLock(prismaMock.transactionClient.$queryRaw, MOCK_USER.id);
+      expectLockBeforeFamilyMutation(
+        prismaMock.transactionClient.$queryRaw,
+        prismaMock.transactionClient.refreshToken.updateMany,
       );
+      expect(
+        prismaMock.transactionClient.refreshToken.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          userId: MOCK_USER.id,
+          sessionId: 'family-1',
+          revokedAt: null,
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(prismaMock.refreshToken.update).not.toHaveBeenCalled();
     });
 
     it('does nothing when no matching token exists', async () => {
@@ -340,6 +396,53 @@ describe('AuthService', () => {
       await expect(
         service.logout(MOCK_USER.id, 'rt-1.not-found'),
       ).resolves.toBeUndefined();
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('does nothing for a malformed token', async () => {
+      await expect(
+        service.logout(MOCK_USER.id, 'legacy-no-dot'),
+      ).resolves.toBeUndefined();
+
+      expect(prismaMock.refreshToken.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the refresh token belongs to a different user', async () => {
+      const secret = 'raw-secret';
+      const hash = await bcrypt.hash(secret, 1);
+      prismaMock.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'other-user',
+        tokenHash: hash,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        sessionId: 'other-family',
+      });
+
+      await expect(
+        service.logout(MOCK_USER.id, `rt-1.${secret}`),
+      ).resolves.toBeUndefined();
+
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the refresh secret does not match', async () => {
+      const hash = await bcrypt.hash('correct-secret', 1);
+      prismaMock.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: MOCK_USER.id,
+        tokenHash: hash,
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+        sessionId: 'family-1',
+      });
+
+      await expect(
+        service.logout(MOCK_USER.id, 'rt-1.wrong-secret'),
+      ).resolves.toBeUndefined();
+
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
     });
   });
 
