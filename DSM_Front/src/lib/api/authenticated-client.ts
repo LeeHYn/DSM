@@ -35,6 +35,7 @@ export function createAuthenticatedClient(
   session: SessionCallbacks,
 ): AuthenticatedClient {
   let refreshPromise: Promise<string> | null = null;
+  let refreshPromisePreviousAccessToken: string | null = null;
   let completedRefresh: CompletedRefresh | null = null;
 
   const refreshAccessToken = (
@@ -55,7 +56,11 @@ export function createAuthenticatedClient(
     }
 
     if (refreshPromise !== null) {
-      return refreshPromise;
+      if (refreshPromisePreviousAccessToken === previousAccessToken) {
+        return refreshPromise;
+      }
+
+      throw initialUnauthorizedError;
     }
 
     completedRefresh = null;
@@ -63,16 +68,19 @@ export function createAuthenticatedClient(
       session.refreshAccessToken(),
     );
     refreshPromise = operation;
+    refreshPromisePreviousAccessToken = previousAccessToken;
     void operation.then(
       (refreshedAccessToken) => {
         completedRefresh = { previousAccessToken, refreshedAccessToken };
         if (refreshPromise === operation) {
           refreshPromise = null;
+          refreshPromisePreviousAccessToken = null;
         }
       },
       () => {
         if (refreshPromise === operation) {
           refreshPromise = null;
+          refreshPromisePreviousAccessToken = null;
         }
       },
     );

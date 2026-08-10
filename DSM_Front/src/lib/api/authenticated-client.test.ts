@@ -277,6 +277,59 @@ it('returns a delayed account A 401 without recovery after switching to account 
   expect(onUnauthorized).not.toHaveBeenCalled();
 });
 
+it('returns account B 401 instead of joining account A pending refresh', async () => {
+  const accountAInitialError = new ApiError(
+    'unauthorized',
+    'Account A access token expired',
+    { status: 401 },
+  );
+  const accountBInitialError = new ApiError(
+    'unauthorized',
+    'Account B access token expired',
+    { status: 401 },
+  );
+  const refresh = createDeferred<string>();
+  const refreshStarted = createDeferred<void>();
+  let currentAccessToken: string | null = 'account-a-token';
+  const request = jest.fn().mockImplementation((httpRequest: HttpRequest<unknown>) => {
+    if (httpRequest.accessToken === 'account-a-token') {
+      return Promise.reject(accountAInitialError);
+    }
+    if (httpRequest.accessToken === 'account-b-token') {
+      return Promise.reject(accountBInitialError);
+    }
+    return Promise.resolve({ id: httpRequest.path });
+  });
+  const http: HttpClient = { request };
+  const refreshAccessToken = jest.fn(() => {
+    refreshStarted.resolve();
+    return refresh.promise;
+  });
+  const onUnauthorized = jest.fn();
+  const client = createAuthenticatedClient(http, {
+    getAccessToken: () => currentAccessToken,
+    refreshAccessToken,
+    onUnauthorized,
+  });
+
+  const accountARequest = client.request({ path: '/account-a-operation' });
+  await refreshStarted.promise;
+  currentAccessToken = 'account-b-token';
+  const accountBRequest = client.request({ path: '/account-b-operation' });
+
+  refresh.resolve('account-a-refreshed-token');
+
+  await expect(accountBRequest).rejects.toBe(accountBInitialError);
+  await expect(accountARequest).resolves.toEqual({ id: '/account-a-operation' });
+  expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+  expect(request).toHaveBeenCalledTimes(3);
+  expect(request).toHaveBeenLastCalledWith({
+    path: '/account-a-operation',
+    accessToken: 'account-a-refreshed-token',
+  });
+  expect(onUnauthorized).not.toHaveBeenCalled();
+});
+
 it('reuses a completed refresh for a delayed initial 401 from the same token generation', async () => {
   const firstInitialFailure = createDeferred<never>();
   const secondInitialFailure = createDeferred<never>();
