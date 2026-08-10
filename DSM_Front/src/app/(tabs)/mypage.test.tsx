@@ -64,6 +64,9 @@ it('resets prototype state and invokes secure logout without manual routing', as
   expect(resetPrototype).toHaveBeenCalledTimes(1);
   expect(mockReplace).not.toHaveBeenCalled();
   expect(logout).toHaveBeenCalledTimes(1);
+  expect(resetPrototype.mock.invocationCallOrder[0]).toBeLessThan(
+    logout.mock.invocationCallOrder[0],
+  );
 });
 
 it('disables the accessible logout button while secure logout is pending', async () => {
