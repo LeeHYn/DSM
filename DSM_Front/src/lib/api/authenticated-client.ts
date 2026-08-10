@@ -85,6 +85,17 @@ export function createAuthenticatedClient(
     initialAccessToken: string | null,
     initialUnauthorizedError: ApiError,
   ): Promise<T> => {
+    const currentAccessToken = session.getAccessToken();
+    const canUseCompletedRefresh =
+      completedRefresh?.previousAccessToken === initialAccessToken &&
+      completedRefresh.refreshedAccessToken === currentAccessToken;
+    if (
+      currentAccessToken !== initialAccessToken &&
+      !canUseCompletedRefresh
+    ) {
+      throw initialUnauthorizedError;
+    }
+
     const refreshedAccessToken = await refreshAccessToken(
       initialAccessToken,
       initialUnauthorizedError,

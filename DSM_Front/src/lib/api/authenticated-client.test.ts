@@ -247,6 +247,36 @@ it('propagates a refresh callback failure unchanged', async () => {
   expect(onUnauthorized).not.toHaveBeenCalled();
 });
 
+it('returns a delayed account A 401 without recovery after switching to account B', async () => {
+  const initialFailure = createDeferred<never>();
+  const initialError = new ApiError('unauthorized', 'Access token expired', {
+    status: 401,
+  });
+  let currentAccessToken: string | null = 'account-a-token';
+  const request = jest.fn().mockReturnValue(initialFailure.promise);
+  const http: HttpClient = { request };
+  const refreshAccessToken = jest.fn().mockResolvedValue('account-b-token');
+  const onUnauthorized = jest.fn();
+  const client = createAuthenticatedClient(http, {
+    getAccessToken: () => currentAccessToken,
+    refreshAccessToken,
+    onUnauthorized,
+  });
+
+  const outcome = client.request({ path: '/account-a-operation' });
+  currentAccessToken = 'account-b-token';
+  initialFailure.reject(initialError);
+
+  await expect(outcome).rejects.toBe(initialError);
+  expect(request).toHaveBeenCalledTimes(1);
+  expect(request).toHaveBeenCalledWith({
+    path: '/account-a-operation',
+    accessToken: 'account-a-token',
+  });
+  expect(refreshAccessToken).not.toHaveBeenCalled();
+  expect(onUnauthorized).not.toHaveBeenCalled();
+});
+
 it('reuses a completed refresh for a delayed initial 401 from the same token generation', async () => {
   const firstInitialFailure = createDeferred<never>();
   const secondInitialFailure = createDeferred<never>();
