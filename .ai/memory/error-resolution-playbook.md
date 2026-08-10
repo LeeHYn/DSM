@@ -71,6 +71,11 @@
 | `ER-20260726-010` | `VERIFIED` | Session controller, replay `401`, epoch, account switch | delegated cleanup 뒤 재진입한 cleanup이 새 세션 token을 지울 수 있음 |
 | `ER-20260726-011` | `VERIFIED` | Session controller, onboarding, state precondition | onboarding 외 상태에서도 완료 PATCH를 호출함 |
 | `ER-20260726-012` | `VERIFIED` | Session controller, protocol error, revoke, profile | malformed profile 뒤 발급된 server refresh token을 revoke하지 않음 |
+| `ER-20260811-001` | `VERIFIED` | Session controller, profile, epoch, stale success | error path는 fenced지만 늦은 profile 성공이 logout·계정 전환 상태를 덮음 |
+| `ER-20260811-002` | `VERIFIED` | Session controller, onboarding, single-flight, epoch | 중복 onboarding PATCH 또는 이전 session promise가 새 session 호출을 가로막음 |
+| `ER-20260811-003` | `VERIFIED` | Auth, refresh token family, logout, row lock | refresh successor가 성공한 logout 뒤에도 유효하게 남음 |
+| `ER-20260811-004` | `VERIFIED` | Expo Router, Jest, app route, Web export | `src/app` 아래 test module이 production route로 실행됨 |
+| `ER-20260811-005` | `VERIFIED` | Prisma generate, Windows DLL, `EPERM`, concurrency | build/test와 병렬 generate가 query engine DLL rename에서 실패함 |
 
 ## 해결 record
 
@@ -751,38 +756,39 @@
   [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts)
 - `lastVerifiedAt`: `2026-07-26`
 
-### ER-20260726-007 — Completed refresh cache의 세션 경계 replay
+### ER-20260726-007 — Authenticated request generation의 3단계 session fence
 
 - `resolutionId`: `ER-20260726-007`
 - `status`: `VERIFIED`
-- 증상/signature: A/B가 이전 세션 token E로 시작하고 A가 `E → F` refresh를 완료한
-  뒤 logout 또는 account switch가 발생해도, B의 늦은 `401`이 cached F로 replay된다.
+- 증상/signature: 이전 session A의 delayed `401`이 B session refresh를 시작하거나,
+  B 요청이 A의 in-flight refresh에 합류하거나, A refresh 대기 중 logout/B 전환 뒤
+  A 요청이 replay된다. completed cache만 확인하면 세 경계 중 일부가 남는다.
 - 적용 조건: authenticated client가 완료 refresh mapping을 보존하지만 session epoch를
   직접 받지 않고 `getAccessToken()`만 current-session 관찰점으로 사용하는 경우.
-- root cause: previous token E 일치만 cache provenance로 사용하고, 현재 session이
-  refreshed token F를 여전히 소유하는지 확인하지 않았다.
+- root cause: initial request, in-flight refresh, completed refresh와 replay 직전 상태를
+  하나의 token generation provenance로 묶지 않았다.
 - 해결 절차:
   1. 초기 unauthorized 객체와 initial token을 요청별로 보존한다.
-  2. completed mapping 재사용 전 `getAccessToken() === cached refreshed token`을
-     확인한다.
-  3. current token이 `null` 또는 unrelated token이면 mapping을 무효화하고 원래
-     initial unauthorized를 그대로 반환한다.
-  4. 이 mismatch 경로에서는 refresh, replay와 `onUnauthorized`를 호출하지 않아 새
+  2. refresh 시작 전 current token이 initial token과 같거나, completed mapping의
+     previous/refreshed token이 initial/current와 각각 일치해야 한다.
+  3. in-flight refresh에 source token을 저장하고 같은 initial token 요청만 합류시킨다.
+  4. refresh await 직후 HTTP replay 전에 `getAccessToken() === refreshed token`을 다시
+     확인한다. logout 또는 account switch면 원래 initial unauthorized를 반환한다.
+  5. mismatch 경로에서는 새 refresh, replay와 `onUnauthorized`를 호출하지 않아 새
      세션을 회전·종료하거나 이전 요청을 새 계정으로 실행하지 않는다.
-  5. logout/null과 account-switch token을 각각 deterministic delayed-response
-     회귀로 검증한다.
-- 검증: 수정 전 두 case 모두 이전 session F로 replay돼 `{ id: 2 }`로 성공하는
-  RED였다. 수정 후 focused 12/12, 전체 Front 9 suites·74 tests, lint, TypeScript가
-  통과했고 scoped re-review가 `ADDRESSED`, 신규 중요 회귀 없음으로 판정했다.
-- 재발 방지/금지: 이전 token 일치만으로 cache를 신뢰하거나, mismatch된 이전 요청을
-  현재 새 세션 refresh에 전달하지 않는다. 로그나 persistent storage에 token mapping을
-  남기지 않는다.
+  6. delayed A→B, cross-generation pending refresh join, refresh 대기 중 logout/B 전환,
+     same-generation in-flight/completed reuse를 모두 deterministic test로 검증한다.
+- 검증: 세 취약 interleaving이 각각 RED였고 수정 후 focused 15/15, 전체 Front
+  17 suites·136 tests, lint, TypeScript가 통과했다. 독립 fix-recheck `RECHECKED`.
+- 재발 방지/금지: cache 또는 전역 promise 존재만으로 generation 소유권을 추론하지
+  않는다. mismatch된 이전 요청을 현재 세션 refresh/replay에 전달하지 않고 token
+  mapping을 로그·persistent storage에 남기지 않는다.
 - 적용 불가/잔여 위험: access token publish와 refresh callback resolve 순서가
   보장되지 않는 다른 session interface에서는 명시적 epoch/owner ID가 필요하다.
 - 근거: [Authenticated client](../../DSM_Front/src/lib/api/authenticated-client.ts),
   [Authenticated client tests](../../DSM_Front/src/lib/api/authenticated-client.test.ts),
   [Front secure session 실행 기록](./plan.md)
-- `lastVerifiedAt`: `2026-07-26`
+- `lastVerifiedAt`: `2026-08-11`
 
 ### ER-20260726-008 — Token read 실패 뒤 verified local cleanup
 
@@ -924,6 +930,134 @@
   [Session controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-26`
+
+### ER-20260811-001 — Profile stale success의 epoch/token fence
+
+- `resolutionId`: `ER-20260811-001`
+- `status`: `VERIFIED`
+- 증상/signature: `/auth/me` error path는 epoch를 확인하지만 success path가 곧바로
+  `publishUser`를 호출해, logout 또는 새 계정 sign-in 뒤 이전 user가 protected state를
+  복원하거나 새 token session 위에 이전 profile을 덮는다.
+- 적용 조건: credential/session generation을 epoch로 관리하고 profile request가 별도
+  async operation인 controller.
+- root cause: stale failure만 위험하다고 보고 성공 completion의 소유 session을 검증하지
+  않았다.
+- 해결 절차:
+  1. profile 요청 시작 시 epoch와 현재 access token을 캡처한다.
+  2. 응답 성공 뒤 captured epoch/current epoch와 captured/current access token이 모두
+     일치할 때만 user state를 publish한다.
+  3. deferred profile → logout → success, A profile pending → B sign-in → A success를
+     각각 회귀 테스트한다.
+- 검증: 두 경로가 RED였고 `befac64` 후 focused session-controller 34/34, 전체 Front
+  17 suites·136 tests, TypeScript·lint가 통과했으며 independent recheck `RECHECKED`.
+- 재발 방지/금지: error fence만으로 async operation 전체가 session-safe하다고 가정하지
+  않는다. 성공·실패 양쪽 completion에 owner generation을 적용한다.
+- 적용 불가/잔여 위험: HTTP request 자체는 abort하지 않으며 state 반영만 차단한다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts),
+  [Auth change-gate](../audits/20260725-change-gate-front-secure-session/findings.jsonl)
+- `lastVerifiedAt`: `2026-08-11`
+
+### ER-20260811-002 — Onboarding completion의 epoch-scoped single-flight
+
+- `resolutionId`: `ER-20260811-002`
+- `status`: `VERIFIED`
+- 증상/signature: 같은 onboarding state에서 두 PATCH가 실행돼 첫 성공 뒤 두 번째 late
+  failure가 state를 훼손하거나, global pending promise가 logout/new sign-in 뒤 새
+  account의 onboarding 호출을 이전 operation에 합친다.
+- 적용 조건: controller public mutation을 UI 외 여러 caller가 호출할 수 있고 session
+  generation이 epoch로 바뀌는 구조.
+- root cause: UI disabled/ref를 controller invariant로 오인하거나 single-flight promise를
+  session generation에 묶지 않았다.
+- 해결 절차:
+  1. pending completion을 `{ epoch, operation }`으로 저장한다.
+  2. 같은 current epoch만 기존 operation을 반환하고 다른 epoch는 새 PATCH를 시작한다.
+  3. resolve/reject cleanup은 record identity가 여전히 같을 때만 pending 값을 지운다.
+  4. success/error state mutation은 captured epoch와 onboarding state가 유지될 때만 한다.
+  5. same-epoch 두 caller와 A pending → logout → B onboarding을 각각 테스트한다.
+- 검증: duplicate/cross-epoch 경로가 RED였고 `befac64` 후 focused 34/34와 independent
+  recheck가 통과했다.
+- 재발 방지/금지: action label·버튼 disabled를 domain single-flight로 사용하지 않는다.
+- 적용 불가/잔여 위험: 보장은 한 `SessionController` 인스턴스 범위다.
+- 근거: [Session controller](../../DSM_Front/src/features/auth/session-controller.ts),
+  [Controller tests](../../DSM_Front/src/features/auth/session-controller.test.ts)
+- `lastVerifiedAt`: `2026-08-11`
+
+### ER-20260811-003 — Refresh/logout의 token-family row-lock 직렬화
+
+- `resolutionId`: `ER-20260811-003`
+- `status`: `VERIFIED`
+- 증상/signature: 같은 raw refresh token으로 refresh와 logout이 교차하면 refresh가
+  successor를 만든 뒤 logout이 revoked predecessor만 다시 처리해 204를 반환하고
+  successor가 살아남는다.
+- 적용 조건: refresh token rotation을 DB row로 저장하고 여러 device/session을 같은
+  user가 가질 수 있는 PostgreSQL/Prisma backend.
+- root cause: token lineage가 없고 refresh/logout이 같은 serialization lock과 revocation
+  boundary를 공유하지 않았다.
+- 해결 절차:
+  1. `RefreshToken.sessionId`를 non-null로 추가하고 legacy row는 `sessionId=id`로 backfill한다.
+  2. initial login은 새 family default를 쓰고 rotation은 predecessor `sessionId`를 승계한다.
+  3. refresh와 logout transaction이 같은 `User` row를 `FOR UPDATE`로 먼저 잠근다.
+  4. logout은 ownership/hash가 맞는 revoked predecessor도 family locator로 허용하고
+     `{ userId, sessionId, revokedAt: null }`만 `updateMany`한다.
+  5. refresh-first/logout-first/two-refresh 순서와 unrelated family exclusion을 검증한다.
+- 검증: `bd4354b`, `f99e28b`, focused AuthService 18/18, Backend 전체 23 suites·214 tests,
+  build/lint가 통과했다. local DB에 migration 1회 적용 후 4 migrations up-to-date,
+  zero drift, live text NOT NULL/index를 확인했고 independent recheck `RECHECKED`.
+- 재발 방지/금지: logout 204를 predecessor 한 행 update와 동일시하지 않는다. user 전체
+  token revoke로 family 경계를 과도하게 넓히지 않는다.
+- 적용 불가/잔여 위험: 실제 multi-connection service interleaving test는 미실행이다.
+- 근거: [Auth service](../../DSM_Back/src/auth/auth.service.ts),
+  [Auth tests](../../DSM_Back/src/auth/auth.service.spec.ts),
+  [Session-family migration](../../DSM_Back/prisma/migrations/20260810_refresh_token_session_family/migration.sql)
+- `lastVerifiedAt`: `2026-08-11`
+
+### ER-20260811-004 — Expo Router app tree의 Jest module 오염
+
+- `resolutionId`: `ER-20260811-004`
+- `status`: `VERIFIED`
+- 증상/signature: `src/app/**` 아래 `.test.tsx`가 Expo Router route manifest와 Web
+  bundle에 포함돼 browser에서 `expect is not defined`로 startup이 차단된다.
+- 적용 조건: Expo Router file-based routing과 Jest colocated test를 함께 쓰는 SDK 55 app.
+- root cause: 일반 React source colocation 규칙을 route discovery root에도 적용했다.
+- 해결 절차:
+  1. app route tests를 `src/__tests__/app/**`로 이동하고 import를 조정한다.
+  2. `src/app`을 재귀 검색해 `.test.[jt]sx?`가 0개임을 강제하는 regression을 둔다.
+  3. focused/full Jest와 Web export route list, generated artifact/sentinel scan, browser
+     console을 확인한다.
+- 검증: `eb0e5d5` 후 17 suites·136 tests, 11-route Web export, desktop/mobile Browser QA와
+  independent fix-recheck가 통과했다.
+- 재발 방지/금지: Expo Router app tree에 Jest module을 colocate하지 않는다.
+- 적용 불가/잔여 위험: 현재 guard는 `.test.*` convention을 고정하며 future `.spec.*`도
+  사용하려면 guard pattern을 함께 확장해야 한다.
+- 근거: [Route boundary test](../../DSM_Front/src/features/auth/app-route-boundary.test.ts),
+  [Auth change-gate](../audits/20260725-change-gate-front-secure-session/findings.jsonl)
+- `lastVerifiedAt`: `2026-08-11`
+
+### ER-20260811-005 — Windows Prisma generate의 engine DLL rename `EPERM`
+
+- `resolutionId`: `ER-20260811-005`
+- `status`: `VERIFIED`
+- 증상/signature: `prisma generate`가 `query_engine-windows.dll.node.tmp<id>`를 최종 DLL로
+  rename할 때 `EPERM: operation not permitted`로 실패한다. schema validate는 통과한다.
+- 적용 조건: Windows에서 Nest build/Jest/e2e 등 Prisma Client를 load하는 Node process와
+  `prisma generate`를 병렬 실행한 경우.
+- root cause: 실행 중인 backend process가 기존 query engine DLL handle을 보유한 동안
+  generate가 같은 파일을 교체하려 했다.
+- 해결 절차:
+  1. 오류 path가 `node_modules/.prisma/client/query_engine-windows.dll.node`인지 확인한다.
+  2. 같은 worktree의 build/test/dev-server와 generate를 병렬 실행하지 않는다.
+  3. 관련 backend command가 종료됐고 임시 DLL이 남지 않았는지 확인한다.
+  4. schema나 migration을 바꾸지 않고 `prisma generate`만 단독 재실행한다.
+- 검증: build/e2e와 병렬 실행에서 같은 rename `EPERM` 재현 후, 종료 상태에서 단독
+  generate가 Prisma Client v6.19.3을 175ms에 생성했다. 이후 build/e2e도 통과했다.
+- 재발 방지/금지: DLL 잠금을 schema·migration 오류로 오인해 DB reset/apply, package
+  reinstall 또는 engine 파일 강제 삭제를 수행하지 않는다.
+- 적용 불가/잔여 위험: 장기 실행 dev server가 같은 client를 load했다면 해당 process를
+  명시적으로 종료한 뒤 재시도해야 한다.
+- 근거: [Prisma schema](../../DSM_Back/prisma/schema.prisma),
+  [Front secure session 실행 기록](./plan.md)
+- `lastVerifiedAt`: `2026-08-11`
 
 ## 새 record 템플릿
 

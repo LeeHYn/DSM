@@ -120,7 +120,7 @@
 - [x] Task 12 runtime auth contract validators
 - [x] Task 13 one-attempt JSON HTTP transport
 - [x] Task 14 public auth API
-- [x] Front 전체 Jest 10 suites·101 tests
+- [x] Front 전체 Jest 17 suites·136 tests
 - [x] Front `expo lint`
 - [x] Front TypeScript
 - [x] Tasks 7~19 로컬 커밋과 독립 검토
@@ -129,9 +129,16 @@
 - [x] Task 17 Web module-memory token store — reload 시 빈 상태, 독립 검토 clean
 - [x] Task 18 authenticated client — single-flight·generation reuse·session ownership fence
 - [x] Task 19 session state machine — TDD, fix round 1, scoped re-review clean
-- [ ] Task 20 React session context
-- [ ] Task 31 전체 authentication change-gate
-- [ ] Prisma onboarding migration 실제 개발 DB 적용 — 별도 action-time 승인 필요
+- [x] Task 20~28 session context/routing/UI/logout와 persistent onboarding migration
+- [x] Task 29~30 Web export·responsive Browser QA·Expo Router test-route boundary
+- [x] Task 31 전체 authentication change-gate — F-001~F-005 모두 `RECHECKED`
+- [x] F-001/F-003 stale profile·onboarding single-flight 보완 (`befac64`)
+- [x] F-002 delayed/in-flight/post-refresh 401 generation fence (`fa3af61`, `c61c7cc`, `cb49a13`)
+- [x] F-004 refresh-token family schema·user-row lock·family logout (`bd4354b`, `f99e28b`)
+- [x] Prisma onboarding + refresh-token session-family migrations를 exact local DB에 적용·4 migrations up-to-date·zero drift
+- [x] Task 32 오류 플레이북 갱신
+- [x] Task 33 context/checklist/plan 동기화
+- [ ] 실제 provider-token + iOS/Android SecureStore login/reload/refresh/logout device smoke
 - [ ] dependency audit 55건 별도 compatibility/security triage
 - [x] 2026-08-02 원격 branch push — Front Task 19 `82d03bf`, m12b checkpoint `960f02b`
 - [ ] PR·merge·배포 — 미승인/미실행

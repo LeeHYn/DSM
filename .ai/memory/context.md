@@ -1,17 +1,17 @@
 # 현재 프로젝트 맥락
 
-- **상태**: 마일스톤 12A 완료. 12B backend·지속형 local DB·change-gate 완료; 실제 FCM dispatch는 12C 전 비활성. Auth + Task/Category CRUD + refresh O(1) + DailyScore + ranking + FCM token/schedule + per-device dispatcher 구현.
-- **검증 기준선(2026-07-20)**: backend Jest 22 suites·198 tests, e2e 1 suite·2 tests, direct AppModule compile, backend TypeScript, scoped lint·Prettier, Prisma validate·2 migrations up-to-date·zero drift 통과.
+- **상태**: 마일스톤 12A·12B와 Front secure session/REST client Task 1~31 및 authentication change-gate 완료. 실제 FCM dispatch는 12C 전 비활성이고 Native SecureStore·실제 provider-token OAuth 기기 smoke는 후속 외부 gate다.
+- **검증 기준선(2026-08-11)**: Front Jest 17 suites·136 tests, TypeScript, Expo lint(0 errors·기존 warning 2), Web export 11 routes·artifact scan 통과. Backend Jest 23 suites·214 tests, e2e 1 suite·2 tests, Nest build, non-fixing lint, Prisma validate/generate 통과. local PostgreSQL 4 migrations up-to-date·zero drift.
 - **대상/stack**: `DSM_Back` NestJS + Prisma v6 + PostgreSQL UTC `timestamptz`; `DSM_Front` React Native + Expo Router SDK 55. Jest는 `tsconfig.spec.json` CommonJS. test에서 Prisma 실제 연결 차단.
-- **Auth**: `@nestjs/jwt`, bcrypt refresh hash, Google/Kakao. `GOOGLE_CLIENT_ID` 필수·audience 검증. refresh `<recordId>.<secret>`, conditional revoke 단일 승자 + replacement create 동일 transaction. Apple 검증은 계정 확보 후.
+- **Auth**: `@nestjs/jwt`, bcrypt refresh hash, Google/Kakao. `GOOGLE_CLIENT_ID` 필수·audience 검증. refresh `<recordId>.<secret>`, conditional revoke 단일 승자 + replacement create 동일 transaction. refresh family `sessionId`를 rotation에서 보존하고 refresh/logout은 같은 user-row lock으로 직렬화하며 logout은 제시된 family의 active token만 revoke한다. Apple 검증은 계정 확보 후.
 - **Task/Category/Score**: Task mutation·schedule sync·score recompute 동일 Serializable transaction, Prisma `P2034` 최대 2회 재시도. actor 소유/default Category만 할당. UTC day score 10/20/30 × 1.5/1.3/1.0/0.7, cap 900, 6 tiers.
 - **Ranking**: DAILY/WEEKLY/TOTAL 실시간 계산, leaderboard·snapshot API. Redis/batch/WebSocket 미구현.
 - **알림 12A**: FCM token 등록·same-user 갱신·revoke. foreign-owner token/FID in-place 이전은 mutation 전 409. Task 상태와 `NotificationSchedule` 원자 동기화.
 - **알림 12B**: ADC-only provider, 30초 Cron, schedule 100·delivery 500, 5분 lease·60초 heartbeat, per-device 결과·최대 3회 명시적 failure retry. `sendStartedAt` 이후 모호 결과는 terminal `UNKNOWN`; 자동 재발송 금지. payload는 account-neutral data-only `REMINDER_SYNC`/version.
 - **finding**: F-004·F-010·F-014 포함 12건 `RECHECKED`; F-007 send recall 불가·client 표시 직후 취소 race만 사용자 `ACCEPTED_RISK`. 12C 전 `FCM_DISPATCH_ENABLED=false`.
-- **local DB**: Docker Desktop 4.82.0, Engine/CLI 29.6.1, Compose 5.3.0, WSL 2.7.10. PostgreSQL 17 Alpine, `127.0.0.1:5432`, UTC, healthcheck, `unless-stopped`, named volume. migrations `20260716_init`, `20260720_notification_delivery_outcome_policy` 적용·zero drift.
-- **front Phase 1**: `design/` 5 PNG + prototype 기준 dark-first login/tutorial/home/ranking/my, Task CRUD prototype, loading/empty/error/offline, theme/logout. 909×540·390×844 Browser QA. 실제 OAuth/backend/FCM/WebSocket/DB 연결 미구현.
-- **다음 작업**: front secure session·API client → 12C permission + logout/account-switch Installation rotation + authenticated current-state sync/display → test project/device ADC·FCM sandbox → dispatch 활성 판단 → WebSocket → Redis/batch.
+- **local DB**: Docker Desktop 4.82.0, Engine/CLI 29.6.1, Compose 5.3.0, WSL 2.7.10. PostgreSQL 17 Alpine, `127.0.0.1:5432/dsm`, UTC, healthy, `unless-stopped`, named volume `dsm-back-postgres-data`. `20260716_init`, `20260720_notification_delivery_outcome_policy`, `20260725_user_onboarding_completed_at`, `20260810_refresh_token_session_family` 적용·zero drift.
+- **front Phase 1 + secure session**: dark-first UI/Task prototype 위에 strict API config, runtime validators, one-attempt transport, public/authenticated clients, Native verified-clear SecureStore/Web memory store, session context/routing, OAuth login/onboarding/recovery/logout UI가 연결됐다. Web QA 909×540·390×844 및 11-route export 통과. 실제 provider token과 Native device smoke는 미실행.
+- **다음 작업**: 실제 provider-token 확보 + iOS/Android SecureStore 로그인·reload·refresh·logout smoke → 증거 통과 시 M12C permission + logout/account-switch Installation rotation + authenticated current-state sync/display → test project/device ADC·FCM sandbox → dispatch 활성 판단 → WebSocket → Redis/batch.
 - **운영**: `.ai/agents/README.md` 역할 계약; 제품 조사·구현·review는 적합한 역할 sub-agent, main은 계획·승인·memory·diff 통합. 고위험은 `change-gate`, release 전 `release-audit`; audit JSONL은 증거·상태 이력.
 - **오류 재사용**: 오류 작업 전 `error-resolution-playbook.md` 검색. 환경·root cause 일치 `VERIFIED`만 현재 범위에서 적용·재검증. `MITIGATION_ONLY`는 gate·잔여 위험 유지.
 - **memory backup**: `*.original.md`는 local 복구 snapshot, Git 제외·비활성. 2026-07-20 Anthropic compression script의 Windows CP949 bug로 기존 context pre-image가 손실돼 Git HEAD·plan·architecture·checklist에서 상세 snapshot을 재구성했다.
@@ -22,11 +22,11 @@
 
 - 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
   `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 중 Task 1~19 완료. 다음은 Task 20 React session context.
+- 상세 계획 33개 실행과 로컬 검증·문서 동기화 완료. Task 30의 Native 실제 기기/provider-token 증거만 외부 gate로 남는다.
 - Backend contract:
   - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
   - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
-  - migration 파일은 생성·검증만 했고 persistent 개발 DB에는 미적용.
+  - onboarding 및 refresh-token session-family migrations를 persistent local DB에 적용했고 zero drift를 확인했다.
 - Front security boundary:
   - refresh-token storage는 rejection-safe queue와 epoch guard로 직렬화 완료.
   - Native SecureStore adapter는 versioned key, verified delete, tombstone fallback,
@@ -49,20 +49,19 @@
     `offline/bootstrap`으로 안정화한다.
   - profile operation epoch fence로 delegated replay `401`의 재진입 cleanup이
     새 sign-in을 지우지 않으며 onboarding PATCH는 onboarding state에서만 허용한다.
-- 최신 Front 검증: Jest 10 suites/101 tests, ESLint, TypeScript 모두 통과.
+- 최신 Front 검증: Jest 17 suites/136 tests, Expo lint(0 errors·기존 warning 2), TypeScript, Web export 11 routes와 test artifact/token sentinel scan 모두 통과.
 - 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
   `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.
 - 잔여 위험:
   - dependency audit 55건(critical 1 포함) 별도 triage 필요.
   - Task 4 parser의 hash/non-string 명시 테스트는 Minor deferred.
   - SecureStore native config는 향후 native binary build에서 반영.
-  - 전체 authentication `change-gate`는 Task 31에서 수행하며 아직 미실행.
+  - 전체 authentication `change-gate`는 5 findings 모두 `RECHECKED`로 종료했다.
   - Native SecureStore 실제 device smoke evidence는 후속 gate다.
 - 외부 변경: 2026-08-02 사용자 승인 후
   `origin/codex/front-secure-session-rest-client`에 Task 19 제품·memory snapshot
   `82d03bf`까지, `origin/codex/m12b-front-prototype-checkpoint`에 `960f02b`까지
-  push했다. root checkout의 미커밋 architecture 문서는 제외했다. DB migration
-  apply, PR, merge, deploy는 미실행.
+  push했다. root checkout의 미커밋 architecture 문서는 제외했다. 그 이후 보안 보완과 DB migration은 local branch/DB에만 적용했고 새 push, PR, merge, deploy는 미실행.
 - Task 15 로컬 commit `3a2b9cd` 독립 검토 clean. 비동기 queue race test의
   microtask 선행 조건 해결은 `ER-20260726-001`에 기록.
 - Task 16 로컬 commits `f25125e`, `ce5b28c`; fix round 1 re-review clean.

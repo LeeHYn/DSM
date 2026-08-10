@@ -24,30 +24,30 @@ An initial finder result that inspected the root checkout instead of this worktr
 
 ## Current evidence baseline
 
-- Front: 17 Jest suites / 129 tests pass; TypeScript passes; ESLint exits 0 with two existing `require()` warnings; Web export passes with 11 routes and no test route or test-token sentinel artifacts.
+- Front: 17 Jest suites / 136 tests pass; TypeScript passes; ESLint exits 0 with two existing `require()` warnings; Web export passes with 11 routes and no test route or test-token sentinel artifacts.
 - Browser QA: 909×540 and 390×844 login render; Google action cannot bypass auth and stays on `/`; reload returns unauthenticated; console error/warning log is empty.
-- Backend: 23 Jest suites / 211 unit tests, 1 suite / 2 e2e tests, build, exact scoped lint, Prisma validate/generate, and diff check pass.
-- Local PostgreSQL: migration `20260725_user_onboarding_completed_at` applied once; three migrations up to date; datasource/datamodel diff exit 0; live column is nullable `timestamp with time zone(6)`.
+- Backend: 23 Jest suites / 214 unit tests, 1 suite / 2 e2e tests, build, non-fixing full lint, Prisma validate/generate, and diff check pass.
+- Local PostgreSQL: migration `20260810_refresh_token_session_family` applied once to `127.0.0.1:5432/dsm`; four migrations are up to date; datasource/datamodel diff exit 0; live `RefreshToken.sessionId` is `text NOT NULL` and `RefreshToken_userId_sessionId_idx` is present.
 - Native iOS/Android SecureStore device smoke and provider-token OAuth acquisition are not available and remain external gates.
 
 ## Current status
 
-- `F-001` stale profile success after a session change: two independent `SURVIVED` verdicts, `CONFIRMED`.
-- `F-002` delayed old-session 401 refreshing/replaying through the new session: two independent `SURVIVED` verdicts, `CONFIRMED`.
-- `F-003` parallel onboarding completion late-failure state corruption: two independent `SURVIVED` verdicts, `CONFIRMED`.
-- `F-004` refresh/logout successor-token race: two independent `SURVIVED` verdicts, `CONFIRMED`.
+- `F-001` stale profile success after a session change: fixed in `befac64`, independently `RECHECKED`.
+- `F-002` delayed old-session 401 refreshing/replaying through the new session: fixed across `fa3af61`, `c61c7cc`, and `cb49a13`, independently `RECHECKED`.
+- `F-003` parallel onboarding completion late-failure state corruption: fixed in `befac64`, independently `RECHECKED`.
+- `F-004` refresh/logout successor-token race: fixed in `bd4354b` and `f99e28b`; local migration applied with zero drift; independently `RECHECKED`.
 - `F-005` Jest files inside the Expo Router app tree: two independent `SURVIVED` verdicts on the original condition; commit `eb0e5d5` passed independent fix recheck and is `RECHECKED`.
-- No finding is `REFUTED`, `UNKNOWN`, or `ACCEPTED_RISK`.
-- The change-gate is open and is not a deployment approval.
+- All five findings are `RECHECKED`; none is `UNKNOWN` or `ACCEPTED_RISK`.
+- The change-gate is closed. This is not a deployment approval.
 
-Closure is blocked by the four confirmed P1/P2 findings. Project policy requires a new exact 1–2-file implementation scope and user approval before moving any of them to `FIXING`.
+Closure evidence includes fresh full Front and Backend regression, Web export and artifact scans, Prisma validation/generation, exact local migration status and zero drift, live column/index inspection, and independent fix rechecks. Native iOS/Android SecureStore and real provider-token OAuth smoke remain external evidence gates and do not authorize deployment.
 
 ## Approved remediation design — 2026-08-10
 
 The user replied `ㄱ` after the exact remediation and local-DB scope was presented. Implementation remains split into 1–2-file stages:
 
 1. `F-001` and `F-003`: modify only `DSM_Front/src/features/auth/session-controller.ts` and `DSM_Front/src/features/auth/session-controller.test.ts`. Successful profile publication must remain bound to its captured epoch/state, and onboarding completion must be controller-level single-flight with stale success/error suppression.
-2. `F-002`: modify only `DSM_Front/src/lib/api/authenticated-client.ts` and `DSM_Front/src/lib/api/authenticated-client.test.ts`. Before starting refresh for an initial 401, require the current access token to still match the request's captured token generation; a changed session rejects the stale recovery without refresh or replay.
+2. `F-002`: modify only `DSM_Front/src/lib/api/authenticated-client.ts` and `DSM_Front/src/lib/api/authenticated-client.test.ts`. Require the current access token to match the request generation before refresh, bind each in-flight refresh to its source token, and require the refreshed token to remain current immediately before replay. A changed session rejects the stale recovery without refresh or replay.
 3. `F-004` schema stage: modify only `DSM_Back/prisma/schema.prisma` and create `DSM_Back/prisma/migrations/20260810_refresh_token_session_family/migration.sql`. Add a non-null session-family identifier, backfill each legacy token with its own existing token id, and index user plus family without rewriting token secrets.
 4. `F-004` service stage: modify only `DSM_Back/src/auth/auth.service.ts` and `DSM_Back/src/auth/auth.service.spec.ts`. Initial login creates a family, rotation preserves it, refresh/logout take the same per-user database row lock, and authenticated logout revokes every active token in only the presented token's family. This serializes predecessor/successor creation against family logout without logging out unrelated sessions.
 

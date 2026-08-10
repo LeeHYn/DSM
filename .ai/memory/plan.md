@@ -649,8 +649,9 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   old-session replay를 차단한다. 독립 검토 findings는 수정 라운드 2에서 모두
   `ADDRESSED`됐다.
 - 전체 Front 검증: Jest 10 suites/101 tests, `expo lint`, TypeScript 통과.
-- Prisma migration 파일은 생성·검증만 했으며 실제 개발 DB에는 미적용.
-  migration 적용은 별도 action-time 승인 대상이다.
+- 2026-07-25 snapshot 시점에는 Prisma onboarding migration을 생성·검증만 했고
+  action-time 승인을 기다렸다. 2026-08-11 closure에서 onboarding과 session-family
+  migration 모두 exact local DB에 적용·zero drift 검증했다.
 - Front dependency audit 55건(critical 1 포함)은 자동/force fix 없이 별도
   dependency-security triage로 이관한다.
 - 현재 구현 단계: Task 19 session state machine 완료.
@@ -664,9 +665,29 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
   `git diff --check` 통과. sandbox Jest cache `EPERM`은
   `ER-20260725-002`와 signature·환경·root cause가 일치해 승인 환경에서
   동일 명령으로 검증했다.
-- 다음 구현 시작점: Task 20 React session context. 전체 authentication
-  `change-gate`는 계획의 Task 31이며 아직 미실행이다.
+- 이 2026-07-25 snapshot의 다음 구현 시작점은 Task 20이었다. 최신 완료 상태는 아래
+  `2026-08-11 closure`를 따른다.
 - 2026-08-02 사용자 승인 후 `origin/codex/m12b-front-prototype-checkpoint`를
   `960f02b`까지, `origin/codex/front-secure-session-rest-client`를 Task 19
   제품·memory snapshot `82d03bf`까지 push했다. root checkout의 미커밋
   architecture 문서는 제외했으며 PR, merge, 배포는 수행하지 않았다.
+
+# Front secure session·REST client closure — 2026-08-11
+
+- 승인된 33-task 계획의 구현·Web QA·change-gate·memory/playbook 동기화를 완료했다. Native 실제 기기와 real provider-token smoke는 외부 evidence gate로 남는다.
+- 주요 보안 보완:
+  - `befac64`: stale `/auth/me` 성공을 epoch/token으로 fence하고 onboarding completion을 epoch-scoped single-flight로 고정.
+  - `fa3af61`, `c61c7cc`, `cb49a13`: delayed `401`의 pre-refresh, in-flight generation, pre-replay 세 경계를 모두 fence.
+  - `bd4354b`, `f99e28b`: refresh token family를 저장·승계하고 refresh/logout을 user-row `FOR UPDATE`로 직렬화해 해당 family의 active token만 revoke.
+- change-gate `20260725-change-gate-front-secure-session`: F-001~F-005 모두 2 independent validations, fix evidence와 독립 fix-recheck를 보유한 `RECHECKED`. 미해결 P0/P1, `UNKNOWN`, `ACCEPTED_RISK` 없음. gate 종료는 deploy 승인이 아니다.
+- local PostgreSQL 17 `127.0.0.1:5432/dsm`:
+  - `20260810_refresh_token_session_family`만 pending임을 확인한 뒤 승인 범위에서 1회 적용.
+  - 총 4 migrations up-to-date, datasource↔datamodel zero drift.
+  - live `sessionId`는 `text NOT NULL`, `(userId, sessionId)` index 존재, refresh-token NULL/total은 `0/0`.
+- 최종 fresh 검증:
+  - Front 17 suites/136 tests, TypeScript, Expo lint 0 errors(기존 `require()` warning 2), Web export 11 routes와 artifact/sentinel scan 통과.
+  - Backend 23 suites/214 tests, e2e 1 suite/2 tests, Nest build, non-fixing full lint, Prisma validate/generate 통과.
+  - `git diff --check` 통과. 생성한 Jest cache와 Web export 디렉터리는 검증 후 제거.
+  - Prisma generate를 build/e2e와 병렬 실행하면 Windows engine DLL rename `EPERM`이 재현됐고, backend 프로세스 종료 뒤 단독 generate가 통과했다. generate는 backend 검증과 직렬 실행한다.
+- branch/worktree는 `codex/front-secure-session-rest-client`, `C:\DEV\.worktrees\front-secure-session-rest-client`. 로컬 커밋만 추가했으며 push·PR·merge·deploy·remote DB·Firebase send는 미실행.
+- 다음 승인 가능한 작업은 실제 provider-token과 iOS/Android device에서 SecureStore login→reload/bootstrap→refresh→logout verified clear smoke를 확보하는 것이다. 이 증거 전에는 M12C로 진입했다고 표시하지 않는다.
