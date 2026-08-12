@@ -6,7 +6,7 @@
 
 **Architecture:** A provider adapter owns `react-native-nitro-google-signin`, normalizes success/cancellation/failure, and returns only a Google ID token. The existing `SessionController.signIn('GOOGLE', token)` continues to own backend exchange, SecureStore persistence, routing, refresh, and logout. Native build configuration and external Google/EAS setup remain explicit gates.
 
-**Tech Stack:** Expo SDK 55 (`expo@~55.0.28`), React Native 0.83.10, React 19.2.0, TypeScript 5.9, Jest 29/jest-expo, React Native Testing Library 14, `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, `expo-dev-client@55.0.37`, `eas-cli@21.7.1`, EAS Development Build.
+**Tech Stack:** Expo SDK 55 (`expo@~55.0.28`, `expo-asset@~55.0.18`), React Native 0.83.10, React 19.2.0, TypeScript 5.9, Jest 29/jest-expo, React Native Testing Library 14, `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, `expo-dev-client@55.0.37`, `eas-cli@21.7.1`, EAS Development Build.
 
 ## Global Constraints
 
@@ -69,7 +69,7 @@
 
 **Interfaces:**
 - Consumes: Expo SDK `~55.0.24`, React Native `0.83.6`, React `19.2.0`, plus the SDK 55 patch drift reported by `expo install --check`.
-- Produces: exact installed versions `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, and `expo-dev-client@55.0.37`; SDK-compatible `expo@~55.0.28`, `react-native@0.83.10`, and the ten Expo module patch versions selected by Expo CLI.
+- Produces: exact installed versions `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, and `expo-dev-client@55.0.37`; SDK-compatible `expo@~55.0.28`, `react-native@0.83.10`, and the ten Expo module patch versions selected by Expo CLI; direct `expo-asset@~55.0.18` so top-level `expo-font` resolves its runtime import under npm 11.
 
 - [ ] **Step 1: Capture the missing-dependency baseline**
 
@@ -93,6 +93,12 @@ If `expo install --check` reports only the pre-existing SDK 55 patch drift captu
 
 ```powershell
 npx.cmd expo install --fix
+```
+
+If npm 11 places `expo-asset` only below `expo/node_modules` and the existing Jest suites fail from `expo-font/build/FontLoader.js`, apply the separately approved minimal direct dependency:
+
+```powershell
+npm.cmd install "expo-asset@~55.0.18"
 ```
 
 Expected file scope: only `package.json` and `package-lock.json` change. Preserve exact pins for the three new packages, verify that `app.json` is byte-identical, and do not run an automatic audit fix.
