@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
@@ -12,6 +12,11 @@ import {
   dailyupRadius,
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
+import {
+  googleSignInAdapter,
+  isGoogleProviderError,
+} from '@/features/auth/google-sign-in';
+import { useSession } from '@/features/auth/session-context';
 import { usePrototype } from '@/features/prototype/prototype-context';
 
 function SocialButton({
@@ -66,6 +71,51 @@ function SocialButton({
 export default function LoginScreen() {
   const palette = useDailyupPalette();
   const { showToast } = usePrototype();
+  const { action, error, signIn } = useSession();
+  const [isGooglePending, setIsGooglePending] = useState(false);
+  const googleRequestInFlightRef = useRef(false);
+  const lastSessionErrorRef = useRef<unknown>(null);
+  const providerButtonsDisabled =
+    isGooglePending || action === 'signing-in';
+
+  useEffect(() => {
+    if (error === null) {
+      lastSessionErrorRef.current = null;
+      return;
+    }
+    if (lastSessionErrorRef.current === error) {
+      return;
+    }
+
+    lastSessionErrorRef.current = error;
+    showToast('로그인에 실패했습니다. 다시 시도해 주세요.');
+  }, [error, showToast]);
+
+  const handleGooglePress = async () => {
+    if (googleRequestInFlightRef.current || action === 'signing-in') {
+      return;
+    }
+
+    googleRequestInFlightRef.current = true;
+    setIsGooglePending(true);
+    try {
+      const result = await googleSignInAdapter.acquireIdToken();
+      if (result.status === 'success') {
+        await signIn('GOOGLE', result.idToken);
+      }
+    } catch (providerError) {
+      const message =
+        isGoogleProviderError(providerError) &&
+        providerError.kind === 'configuration'
+          ? 'Google 로그인 설정이 필요합니다.'
+          : 'Google 로그인에 실패했습니다. 다시 시도해 주세요.';
+      showToast(message);
+    } finally {
+      googleRequestInFlightRef.current = false;
+      setIsGooglePending(false);
+    }
+  };
+
   const explainProviderStep = () => {
     showToast('소셜 로그인 연결은 다음 단계에서 제공됩니다.');
   };
@@ -91,11 +141,13 @@ export default function LoginScreen() {
 
         <View style={styles.socialStack}>
           <SocialButton
+            disabled={providerButtonsDisabled}
             label="Google로 계속하기"
-            onPress={explainProviderStep}
+            onPress={() => void handleGooglePress()}
             provider="google"
           />
           <SocialButton
+            disabled={providerButtonsDisabled}
             label="Kakao로 계속하기"
             onPress={explainProviderStep}
             provider="kakao"
