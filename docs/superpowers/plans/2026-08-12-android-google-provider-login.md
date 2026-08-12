@@ -6,7 +6,7 @@
 
 **Architecture:** A provider adapter owns `react-native-nitro-google-signin`, normalizes success/cancellation/failure, and returns only a Google ID token. The existing `SessionController.signIn('GOOGLE', token)` continues to own backend exchange, SecureStore persistence, routing, refresh, and logout. Native build configuration and external Google/EAS setup remain explicit gates.
 
-**Tech Stack:** Expo SDK 55, React Native 0.83.6, React 19.2.0, TypeScript 5.9, Jest 29/jest-expo, React Native Testing Library 14, `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, `expo-dev-client@55.0.37`, `eas-cli@21.7.1`, EAS Development Build.
+**Tech Stack:** Expo SDK 55 (`expo@~55.0.28`), React Native 0.83.10, React 19.2.0, TypeScript 5.9, Jest 29/jest-expo, React Native Testing Library 14, `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, `expo-dev-client@55.0.37`, `eas-cli@21.7.1`, EAS Development Build.
 
 ## Global Constraints
 
@@ -68,8 +68,8 @@
 - Modify: `DSM_Front/package-lock.json`
 
 **Interfaces:**
-- Consumes: Expo SDK `~55.0.24`, React Native `0.83.6`, React `19.2.0`.
-- Produces: exact installed versions `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, and `expo-dev-client@55.0.37`.
+- Consumes: Expo SDK `~55.0.24`, React Native `0.83.6`, React `19.2.0`, plus the SDK 55 patch drift reported by `expo install --check`.
+- Produces: exact installed versions `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, and `expo-dev-client@55.0.37`; SDK-compatible `expo@~55.0.28`, `react-native@0.83.10`, and the ten Expo module patch versions selected by Expo CLI.
 
 - [ ] **Step 1: Capture the missing-dependency baseline**
 
@@ -89,7 +89,13 @@ Run:
 npm.cmd install --save-exact react-native-nitro-google-signin@1.3.0 react-native-nitro-modules@0.36.5 expo-dev-client@55.0.37
 ```
 
-Expected file scope: only `package.json` and `package-lock.json` change. Do not run an automatic audit fix.
+If `expo install --check` reports only the pre-existing SDK 55 patch drift captured on 2026-08-12, apply the user-approved compatibility update:
+
+```powershell
+npx.cmd expo install --fix
+```
+
+Expected file scope: only `package.json` and `package-lock.json` change. Preserve exact pins for the three new packages, verify that `app.json` is byte-identical, and do not run an automatic audit fix.
 
 - [ ] **Step 3: Verify dependency resolution and file scope**
 
