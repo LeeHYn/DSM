@@ -22,7 +22,7 @@ This milestone does not implement Kakao, iOS Google login, Apple login, notifica
 ## 2. Constraints and prerequisites
 
 - Expo SDK 55 is authoritative for Expo configuration and development-build behavior.
-- The selected provider library is `react-native-nitro-google-signin`, using its Expo config plugin and Android Credential Manager support.
+- The selected provider library is `react-native-nitro-google-signin`, using Android Credential Manager support and Expo React Native autolinking. Its 1.3.0 config plugin is intentionally not registered for the Android-only explicit-Web-client-ID path because it requires either iOS URL-scheme configuration or Google Services files and also installs iOS Podfile modifications.
 - The native module requires a development build. Expo Go is not completion evidence.
 - The current Windows machine has no Android SDK, `adb`, or emulator. The approved validation path is an EAS cloud development build installed on a physical Android device.
 - EAS project creation, source upload, Google Console changes, credential registration, and physical-device use are external actions. Each remains blocked until the user explicitly authorizes that action.
@@ -84,11 +84,7 @@ No Google SDK type or provider-specific error is allowed to cross into the sessi
 
 The frontend environment template adds `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. Because every `EXPO_PUBLIC_` value is embedded in the client bundle, this variable may contain only the public OAuth client identifier.
 
-The Expo application configuration adds:
-
-- the native Google sign-in config plugin;
-- an approved Android application ID;
-- only the plugin options required by the selected library and Google project.
+The Expo application configuration adds the approved Android application ID. The installed native Google dependency is linked by Expo React Native autolinking. The package's config plugin is reserved for a later approved iOS URL-scheme or Firebase/Google-Services setup and is not registered in this Android-only explicit-Web-client-ID milestone.
 
 The EAS configuration defines a `development` profile with a development client. Remote development variables are scoped to the EAS `development` environment. No provider client secret, DSM token, signing private key, or backend credential is committed to Git or exposed through an `EXPO_PUBLIC_` variable.
 

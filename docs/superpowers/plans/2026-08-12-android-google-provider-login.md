@@ -37,7 +37,7 @@
 | `DSM_Front/src/features/auth/google-sign-in.test.ts` | Adapter cascade, concurrency, error, and token-safety tests |
 | `DSM_Front/src/app/index.tsx` | Google button orchestration and safe user feedback |
 | `DSM_Front/src/__tests__/app/index.test.tsx` | Login-screen interaction and session-boundary tests |
-| `DSM_Front/app.json` | Android application ID and Nitro Google config plugin |
+| `DSM_Front/app.json` | Approved Android application ID; no iOS/Firebase-only Nitro Google config plugin |
 | `DSM_Front/.env.example` | Public Google Web client-ID contract |
 | `DSM_Front/eas.json` | Internal Android development-build profile |
 | `.ai/docs/android-google-provider-login-smoke.md` | Sanitized physical-device evidence |
@@ -954,8 +954,8 @@ git commit -m "feat(front): connect Google login"
 - Modify: `DSM_Front/.env.example`
 
 **Interfaces:**
-- Consumes: explicitly approved Android application ID and the installed config plugin.
-- Produces: Android package identity, native plugin registration, and a documented blank-by-default public client-ID variable.
+- Consumes: explicitly approved Android application ID and the installed native module.
+- Produces: Android package identity, verified Android autolinking, and a documented blank-by-default public client-ID variable.
 
 - [ ] **Step 1: Stop for application-ID approval**
 
@@ -970,14 +970,14 @@ $env:EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID='123.apps.googleusercontent.com'
 npx.cmd expo config --type prebuild --json
 ```
 
-Expected before the edit: output lacks `android.package` and the `react-native-nitro-google-signin` plugin.
+Expected before the edit: the resolved package is not the approved `com.dsm.dailyup` value. Confirm separately that Expo React Native autolinking discovers `react-native-nitro-google-signin` for Android.
 
 - [ ] **Step 3: Apply the approved app configuration**
 
 In `app.json`:
 
 - set `expo.android.package` to the approved exact application ID;
-- append `react-native-nitro-google-signin` to `expo.plugins`;
+- do not register the package config plugin: version 1.3.0 requires either an iOS URL scheme or Google Services files and patches the iOS Podfile, while this Android-only path uses an explicit Web client ID and Expo React Native autolinking;
 - do not add `google-services.json`, iOS URL-scheme options, OAuth client IDs, or secrets in this Android/manual-Web-client path.
 
 In `.env.example`, append:
@@ -994,10 +994,11 @@ Run:
 ```powershell
 $env:EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID='123.apps.googleusercontent.com'
 npx.cmd expo config --type prebuild --json
+npx.cmd expo-modules-autolinking react-native-config --platform android
 git diff --check -- app.json .env.example
 ```
 
-Expected: Expo config resolves with the approved `android.package` and plugin. No `android/` or `ios/` directory is generated.
+Expected: Expo config resolves with the approved `android.package`; Android autolinking includes `react-native-nitro-google-signin`; the package config plugin is absent; no `android/` or `ios/` directory is generated.
 
 - [ ] **Step 5: Commit after the approved stage gate**
 
