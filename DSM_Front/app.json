@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DSM_Front",
-    "slug": "DSM_Front",
+    "slug": "dsmfront",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -41,6 +41,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "defcd3ba-c89b-4115-a84c-97a42ee4c667"
+      }
+    },
+    "owner": "jack9812s-team"
   }
 }
