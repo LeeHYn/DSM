@@ -3,7 +3,7 @@
 - **상태**: M1~M12A 완료. M12B backend·local DB·change-gate 완료; M12C·실제 FCM sandbox 미완료라 parent `[/]`. Front secure session·REST client Task 1~33·Web QA·auth change-gate 완료.
 - **Android Google**: 현재 Android Studio debug signer용 OAuth client를 value-redacted 검증·사용자 승인 아래 추가했다. Google ID token→backend session→Keychain reload/refresh rotation→logout revoke→post-logout Login actual smoke가 통과했다.
 - **Release audit**: `20260817-release-audit-full-project`는 canonical 26건(confirmed 22, unknown 2, rechecked 2)으로 열려 있다. `F-016` Android Git handoff와 `F-025` external OAuth fix는 독립 fix-recheck 뒤 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
-- **다음 gate**: 다음 confirmed P1 `F-006`을 별도 plan·승인·수정·독립 recheck → 남은 P1 3건 → UNKNOWN `F-013`·`F-015` 확정 → P2/P3와 자유 탐색 종료 조건. M12C는 audit 종료 뒤 진행한다.
+- **다음 gate**: confirmed P1 `F-006`은 정책·설계 승인 후 written spec review 단계다. implementation plan·별도 승인·TDD·독립 recheck → 남은 P1 3건 → UNKNOWN `F-013`·`F-015` 확정 → P2/P3와 자유 탐색 종료 조건. M12C는 audit 종료 뒤 진행한다.
 - **실행 위치**: branch `codex/front-secure-session-rest-client`, worktree `C:\DEV\fsr`.
 
 ## Stack·환경
@@ -56,6 +56,7 @@
 
 - Task mutation·schedule sync·score recompute 동일 Serializable transaction. Prisma `P2034`만 최대 2회 retry.
 - Category actor-owned/default only. UTC score 10/20/30 × 1.5/1.3/1.0/0.7, cap 900, 6 tiers.
+- F-006 승인 정책: UTC `startAt` 날짜당 active Task 최대 20개. 점수는 `COMPLETED`이고 non-null `completedAt`이 같은 UTC 날짜 범위일 때만 인정한다. 과거·미래 Task 생성은 유지하고 late/early/null completion은 0점이다. 기존 projection은 data-only migration으로 재계산하되 remote/prod DB에는 적용하지 않는다.
 - DAILY/WEEKLY/TOTAL ranking·leaderboard·snapshot 완료. Redis/batch/WebSocket 미구현.
 - 12A: FCM token lifecycle + Task-`NotificationSchedule` 원자 동기화. foreign-owner token/FID는 mutation 전 409.
 - 12B: ADC only, Cron 30초, schedule 100, delivery 500, lease 5분, heartbeat 60초, per-device 최대 3회 failure retry.
@@ -79,7 +80,7 @@
 
 ## Git·외부 경계
 
-- Android-only 기준선·handoff 문서·audit/memory 기준선을 feature branch에 push했고 local/remote HEAD가 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`로 일치한다.
+- Android-only 기준선·F-016 handoff closure·audit/memory의 upstream 기준선은 `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`다. F-006 설계 문서 커밋은 local-only ahead 1이다.
 - 추가 Git stage·commit·push와 PR·merge·deploy, remote/prod DB, Firebase send는 새 실행 범위 확인 전 진행하지 않는다.
 - 제품 단계 exact 1~2 files. main이 승인·memory·diff·audit ledger 소유.
 - 고위험 변경은 `change-gate`; release 전 `release-audit`.

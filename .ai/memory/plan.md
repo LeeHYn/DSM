@@ -28,7 +28,7 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - 재시도에서 Google ID token→`/auth/login`→Keychain session이 성공했다. force-stop/relaunch는 Home과 refresh rotation을 복구했고, logout은 active refresh token을 0으로 만든 뒤 재실행에서도 Login을 유지했다.
 - current debug OAuth blocker `F-025`는 독립 validator 2명과 fix-recheck를 거쳐 `RECHECKED`; provider reauth/OAuth 실패를 silent cancellation으로 삼키는 `F-026`은 `CONFIRMED P2`다.
 - full-project release-audit는 26건(confirmed 22, unknown 2, rechecked 2)으로 열려 있다. `F-016`과 `F-025`는 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
-- branch `codex/front-secure-session-rest-client`; Android-only 기준선과 handoff 문서를 origin에 push해 local/remote HEAD가 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`로 일치한다. PR·merge·deploy·remote DB·Firebase send 없음.
+- branch `codex/front-secure-session-rest-client`; Android-only 기준선, F-016 closure와 active memory의 upstream 기준선은 `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`다. F-006 설계 문서 커밋은 local-only ahead 1이며 push·PR·merge·deploy·remote DB·Firebase send 없음.
 
 # 핵심 기술 계약
 
@@ -107,10 +107,23 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - 이유: `android/` 52개가 모두 untracked이고, 네이티브 프로젝트가 요구하는 `package.json`, entrypoint, navigation/config/toolchain 변경도 미커밋이라 Android-only 기준선이 분리될 수 없다.
 - Git 경계: 작업 시작 시 branch는 origin보다 36 commits ahead였고, 승인된 push 뒤 현재 feature branch는 origin과 동기화됐다. `main` direct push·force push·PR·merge는 금지하고 `codex/front-secure-session-rest-client`만 사용한다.
 - 보안 경계: `.env.local`, `android/local.properties`, debug/release keystore, `.idea`, `.gradle`, build/cache, credential·token·OAuth 식별자 완전값은 stage·문서·출력에서 제외한다.
-- 완료 근거: commit `846cf1968ae0b729e0525ccb2af82f6fc5bd8e20`이 Android-only product와 native 52개를 추적했다. docs/audit/memory commit을 포함한 remote HEAD는 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`다.
+- 완료 근거: commit `846cf1968ae0b729e0525ccb2af82f6fc5bd8e20`이 Android-only product와 native 52개를 추적했다. clean checkout 기준선은 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`, F-016 closure까지 포함한 current remote HEAD는 `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`다.
 - clean handoff: 별도 checkout에서 npm install/test/type/lint/autolinking과 Gradle debug APK를 재현했다. `.env.local`, `local.properties`, keystore, `.gradle`, `.idea`, build/cache는 추적되지 않는다.
 - 독립 recheck: reviewer `f016_fix_rechecker_c`가 corrected commit range, remote/clean tree, wrapper/config, APK metadata/hash와 secret/local 경계를 확인해 `RECHECKED`; 신규 P0/P1 없음.
 - 후속: `F-016` RECHECKED 뒤 `F-006`을 별도 data-integrity change-gate로 설계·승인·TDD한다.
+
+# F-006 Task score integrity 계획 — 2026-08-17
+
+- 상태: 정책·설계 승인(`ㄱ`) 후 formal spec 작성·self-review 중. 제품 코드, migration, DB 적용 전 implementation plan과 별도 승인이 필요하다.
+- 설계 SSOT: `docs/superpowers/specs/2026-08-17-f006-score-integrity-design.md`.
+- 승인 정책: 과거·미래 Task 생성은 유지하되 사용자별 UTC `startAt` 날짜당 active Task 최대 20개, `completedAt`이 같은 UTC 날짜인 COMPLETED Task만 점수 인정, 기존 900점 cap 유지.
+- Task 상태 계약: generic update의 완료 전환은 `completedAt=now`, 완료 상태 이탈은 null, 반복 complete는 기존 non-null timestamp를 보존한다.
+- score 계약: 등록 수는 `startAt` 날짜 기준을 유지하고 same-day completion만 난이도 점수에 포함한다. late/early/null completion은 상태만 보존하고 점수는 0이다.
+- 기존 데이터: schema 변경 없이 data-only Prisma migration으로 `DailyScore`, `User.totalScore`와 tier를 canonical Task에서 재계산한다. Task timestamp와 historical `RankingSnapshot`은 변경하지 않는다.
+- 구현 경계: Task service+spec, Score service+spec, migration+real-DB e2e의 exact 2-file stages. remote/prod DB 적용 없음.
+- 검증: unit TDD, UTC boundary, 20개 create/move, completion state, disposable PostgreSQL 17 migration repair와 19+2 concurrent create, backend full gate, 구현자와 분리된 `fix-recheck`.
+- 오류 플레이북: `ER-20260715-004`는 Serializable stale-score/P2034 concurrency 해결이지만 이번 F-006의 arbitrary-date eligibility·20-count 누락과 root cause가 달라 직접 재사용하지 않는다. 기존 transaction retry 계약만 보존한다.
+- 다음 정지점: spec 문서 commit 뒤 사용자 written-spec review. 승인 전 제품 source/test/migration 수정 금지.
 
 # 승인·안전 경계
 

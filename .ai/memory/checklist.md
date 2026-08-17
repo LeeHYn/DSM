@@ -108,7 +108,12 @@
      - [x] current feature branch push·remote HEAD 일치
      - [x] clean checkout `npm ci`·Jest 162·typecheck·lint·Community CLI·`assembleDebug` 재현 검증
      - [x] independent fix-recheck `RECHECKED`·audit/memory closure
-   - [ ] 다음 P1 `F-006` data-integrity change-gate plan·승인·TDD·independent recheck
+   - [/] 다음 P1 `F-006` data-integrity change-gate
+     - [x] 과거·미래 Task 유지, UTC `startAt` 날짜당 active Task 20개, same-day `completedAt` score eligibility 정책 승인
+     - [x] formal design spec 작성·self-review
+     - [ ] written-spec review 뒤 implementation plan·별도 승인
+     - [ ] exact 2-file stages TDD·disposable PostgreSQL migration/concurrency 검증
+     - [ ] implementation-independent fix-recheck·audit closure
 5. [ ] UNKNOWN 2건 readiness/notification scope 증거 확정
 6. [ ] 나머지 P2/P3 처리·release-audit 종료 조건 충족
 7. [ ] M12C
