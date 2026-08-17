@@ -85,8 +85,9 @@
 - [x] 3개 free-exploration lens + 독립 validator 2명 + disagreement tie-break
 - [x] audit ledger 26행 JSON parse·ID/fingerprint/hash·static schema contract
 - [x] `F-025` external Android OAuth fix: independent validators 2명 `SURVIVED`, fix-recheck `RECHECKED`
-- [/] audit open: confirmed 23, unknown 2, rechecked 1; release-ready 아님
-- [ ] P1 5건 remediation + 독립 recheck
+- [x] `F-016` Android Git handoff: native 52개 추적·feature branch push·clean checkout build·independent fix-recheck `RECHECKED`
+- [/] audit open: confirmed 22, unknown 2, rechecked 2; release-ready 아님
+- [/] P1 5건 remediation + 독립 recheck — `F-016` 완료, 4건 남음
 - [ ] P2/UNKNOWN remediation·scope evidence
 - [ ] 서로 다른 2개 자유 탐색 round에서 신규 confirmed P0~P2 0건 연속
 
@@ -95,18 +96,19 @@
 1. [x] Google Cloud same-project의 current debug package/SHA Android OAuth 불일치 확인·matching client 생성
 2. [x] emulator Google account 인증·로그인 재시도
 3. [x] login→reload/bootstrap→profile→refresh rotation→logout verified-clear smoke
-4. [/] release-audit confirmed P1 5건 plan·승인·수정·recheck
-   - [/] `F-016` Android Git handoff
+4. [/] release-audit confirmed P1 5건 중 `F-016` 완료, 4건 plan·승인·수정·recheck 남음
+   - [x] `F-016` Android Git handoff
      - [x] 설계·memory plan 작성 및 사용자 승인
      - [x] 구현 계획 작성
      - [x] dirty worktree provenance·commit 경계 검수
      - [x] ignore·secret·diff boundary 검증
      - [x] frontend Jest 18/162·typecheck·lint 0 errors·Community CLI gate
      - [x] Android Studio JDK 17 Gradle build: 281 tasks, `BUILD SUCCESSFUL in 6m 10s`
-     - [ ] 의도별 staged diff 검수·commit
-     - [ ] current feature branch push·remote HEAD 일치
-     - [ ] clean checkout 재현 검증
-     - [ ] independent fix-recheck·audit/memory closure
+     - [x] 의도별 staged diff 검수·commit
+     - [x] current feature branch push·remote HEAD 일치
+     - [x] clean checkout `npm ci`·Jest 162·typecheck·lint·Community CLI·`assembleDebug` 재현 검증
+     - [x] independent fix-recheck `RECHECKED`·audit/memory closure
+   - [ ] 다음 P1 `F-006` data-integrity change-gate plan·승인·TDD·independent recheck
 5. [ ] UNKNOWN 2건 readiness/notification scope 증거 확정
 6. [ ] 나머지 P2/P3 처리·release-audit 종료 조건 충족
 7. [ ] M12C

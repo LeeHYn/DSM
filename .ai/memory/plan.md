@@ -1,6 +1,6 @@
 # 목표
 
-DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이력을 함께 유지한다. 현재 최우선 목표는 완료된 current-PC Google session smoke를 기준선으로 보존하면서, 열린 full-project release-audit의 confirmed P1부터 수정·독립 recheck하는 것이다. audit 종료 전 M12C 완료 또는 release-ready로 표시하지 않는다.
+DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이력을 함께 유지한다. 현재 최우선 목표는 완료된 current-PC Google session smoke와 `F-016` Android Git handoff를 기준선으로 보존하면서, 열린 full-project release-audit의 다음 confirmed P1 `F-006`을 별도 계획·승인 아래 수정·독립 recheck하는 것이다. audit 종료 전 M12C 완료 또는 release-ready로 표시하지 않는다.
 
 # Memory SSOT
 
@@ -27,8 +27,8 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - value-redacted 비교로 앱 Web client와 Google Cloud project의 Web client 일치를 확인했고, 기존 Android clients 두 개가 현재 Android Studio debug signer와 불일치함을 확인했다. 사용자 승인 뒤 현재 signer용 Android OAuth client를 별도로 생성했다.
 - 재시도에서 Google ID token→`/auth/login`→Keychain session이 성공했다. force-stop/relaunch는 Home과 refresh rotation을 복구했고, logout은 active refresh token을 0으로 만든 뒤 재실행에서도 Login을 유지했다.
 - current debug OAuth blocker `F-025`는 독립 validator 2명과 fix-recheck를 거쳐 `RECHECKED`; provider reauth/OAuth 실패를 silent cancellation으로 삼키는 `F-026`은 `CONFIRMED P2`다.
-- full-project release-audit는 26건(confirmed 23, unknown 2, rechecked 1)으로 열려 있다. confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
-- branch `codex/front-secure-session-rest-client`; origin보다 36 commits ahead. 최근 변경은 local only. 새 push·PR·merge·deploy·remote DB·Firebase send 없음.
+- full-project release-audit는 26건(confirmed 22, unknown 2, rechecked 2)으로 열려 있다. `F-016`과 `F-025`는 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
+- branch `codex/front-secure-session-rest-client`; Android-only 기준선과 handoff 문서를 origin에 push해 local/remote HEAD가 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`로 일치한다. PR·merge·deploy·remote DB·Firebase send 없음.
 
 # 핵심 기술 계약
 
@@ -85,13 +85,14 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - EAS Android development build는 `FINISHED`와 archive 존재를 재검증했다.
 - 순수 React Native `assembleDebug`: `BUILD SUCCESSFUL in 19m 1s`, 365 tasks. Android Studio Gradle sync 뒤 Expo modules가 사라졌고 `Run app` build/install도 성공했다.
 - 2026-08-17 fresh gate: Backend 23 suites/214 + e2e 2, build/ESLint/Prisma; Frontend 18 suites/162, typecheck/ESLint; disposable DB migration 4개; Android assembleDebug 365 tasks 전부 통과했다.
-- audit ledger는 26행 JSON parse, unique ID/fingerprint, SHA-256 재계산, severity별 validation 정적 계약을 통과했다. F-025 external fix 반영 뒤 status count는 confirmed 23·unknown 2·rechecked 1이다. 완전한 Draft 2020-12 validator는 설치하지 않았다.
+- 원격 feature branch clean checkout에서 `npm ci`, Frontend 18 suites/162, typecheck, ESLint, Community CLI config와 `assembleDebug` 365 tasks가 통과했다. Android 52개 추적, 금지 파일 0개, clean status와 APK SHA-256을 확인했다.
+- audit ledger는 26행 JSON parse, unique ID/fingerprint, SHA-256 재계산, severity별 validation 정적 계약을 통과했다. F-016 독립 recheck 반영 뒤 status count는 confirmed 22·unknown 2·rechecked 2다. 완전한 Draft 2020-12 validator는 설치하지 않았다.
 - Backend Prettier는 66 files에서 실패했다. npm audit는 Backend 15건, Frontend 17건, critical 0이다.
 - Prisma generate는 Windows DLL rename `EPERM` 방지를 위해 backend build/e2e와 직렬 실행한다.
 
 # 다음 실행 계획
 
-1. P1 `F-003`, `F-005`, `F-006`, `F-016`, `F-017`을 위험·의존성 순서로 새 plan과 exact 1–2-file stages로 분해하고 사용자 승인을 받는다.
+1. 다음 P1 `F-006` 데이터 무결성 문제를 새 plan과 exact 1–2-file stages로 분해하고 사용자 승인을 받는다. 남은 P1 `F-003`, `F-005`, `F-017`도 같은 절차로 처리한다.
 2. UNKNOWN `F-013`, `F-015`의 readiness·notification release scope 증거를 확정한다.
 3. `F-026`을 포함한 confirmed P2/P3를 수정·독립 recheck하고, 서로 다른 자유 탐색 2회에서 신규 confirmed P0–P2 0건을 연속 달성한다.
 4. audit 종료 후 M12C: permission, Firebase token rotation, data-only signal, authenticated current-state client를 진행한다.
@@ -100,18 +101,15 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 
 # F-016 Android Git handoff 계획 — 2026-08-17
 
-- 상태: 설계 방향 승인(`ㄱ`) 후 formal spec 작성 완료. 제품 구현·Git stage/commit/push 전 spec/계획 재승인 대기.
+- 상태: 완료. 설계·구현 계획 승인, 검증, 의도별 commit, feature branch push, clean checkout 재현과 독립 fix-recheck까지 마쳤고 audit `F-016`은 `RECHECKED`다.
 - 설계 SSOT: `docs/superpowers/specs/2026-08-17-f016-android-git-handoff-design.md`.
 - 선택안: `android/`만 단독 commit하지 않고 현재 Android-only React Native 전환 기준선 전체를 검증한 뒤 의도별 commit과 current feature branch push, clean-checkout 검증으로 handoff를 닫는다.
 - 이유: `android/` 52개가 모두 untracked이고, 네이티브 프로젝트가 요구하는 `package.json`, entrypoint, navigation/config/toolchain 변경도 미커밋이라 Android-only 기준선이 분리될 수 없다.
-- Git 경계: 현재 branch는 origin보다 36 commits ahead. `main` direct push·force push·PR·merge는 금지하고 `codex/front-secure-session-rest-client`만 사용한다.
+- Git 경계: 작업 시작 시 branch는 origin보다 36 commits ahead였고, 승인된 push 뒤 현재 feature branch는 origin과 동기화됐다. `main` direct push·force push·PR·merge는 금지하고 `codex/front-secure-session-rest-client`만 사용한다.
 - 보안 경계: `.env.local`, `android/local.properties`, debug/release keystore, `.idea`, `.gradle`, build/cache, credential·token·OAuth 식별자 완전값은 stage·문서·출력에서 제외한다.
-- 단계 1(읽기 전용): 기존 dirty diff를 Android-only product, native project, docs/audit로 분류하고 pre-existing 변경을 보존한다. 수정 파일 없음.
-- 단계 2(검증): frontend Jest/typecheck/lint, secret scan, `git diff --check`, JDK 17 `assembleDebug`를 fresh 실행한다. 수정 파일 없음.
-- 단계 3(Git tracking): 검증된 기존 Android-only product diff와 `DSM_Front/android`의 non-local 52개 파일을 의도별 staged diff로 검토·commit한다. working-file 내용 수정 없음; Git index/objects만 변경한다.
-- 단계 4(handoff): current feature branch push 후 별도 clean checkout에서 `npm ci`, frontend gate, Gradle build와 `git ls-files -- DSM_Front/android`를 재검증한다. clean checkout의 local environment 파일은 Git에 추가하지 않는다.
-- 단계 5(audit recheck): 구현자와 분리된 reviewer가 `F-016` 원래 조건과 회귀를 재검증한다. main만 `findings.jsonl`과 active memory를 각각 exact 1-file 단계로 갱신한다.
-- 수정 필요 시 정지: 검증 중 결함이 나오면 관련 정확한 1~2개 파일 allowlist와 새 계획·승인 없이는 source를 수정하지 않는다.
+- 완료 근거: commit `846cf1968ae0b729e0525ccb2af82f6fc5bd8e20`이 Android-only product와 native 52개를 추적했다. docs/audit/memory commit을 포함한 remote HEAD는 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`다.
+- clean handoff: 별도 checkout에서 npm install/test/type/lint/autolinking과 Gradle debug APK를 재현했다. `.env.local`, `local.properties`, keystore, `.gradle`, `.idea`, build/cache는 추적되지 않는다.
+- 독립 recheck: reviewer `f016_fix_rechecker_c`가 corrected commit range, remote/clean tree, wrapper/config, APK metadata/hash와 secret/local 경계를 확인해 `RECHECKED`; 신규 P0/P1 없음.
 - 후속: `F-016` RECHECKED 뒤 `F-006`을 별도 data-integrity change-gate로 설계·승인·TDD한다.
 
 # 승인·안전 경계
@@ -127,7 +125,7 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 # 잔여 위험·보류
 
 - 현재 PC의 native provider-token/session lifecycle smoke는 통과했다. Google OAuth client는 Git 밖의 persistent external state이고 backend audience는 이번 process에만 임시 연결했으므로 repository release provisioning은 여전히 없다.
-- Android native project 전체가 현재 Git 미추적이라 commit/push 전 다른 PC checkout에는 전달되지 않는다.
+- Android native project는 feature branch에 52개 파일이 추적·push되어 clean checkout 재현이 가능하다. `main` 통합은 아직 하지 않았다.
 - release signing과 release `.env` provisioning이 없어 production artifact/start path가 닫히지 않는다.
 - 핵심 Task/Score/Ranking Android UI는 prototype state·고정 data를 사용한다.
 - 임의 날짜 Task 즉시 완료가 누적 점수/TOTAL ranking에 반영되는 integrity blocker가 있다.

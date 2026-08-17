@@ -44,10 +44,10 @@ Current release audit: [`20260817-release-audit-full-project`](../audits/2026081
 
 | File | Pre-image bytes | Active bytes | 감소 | Active SHA-256 |
 |---|---:|---:|---:|---|
-| `plan.md` | 26,170 | 13,645 | 47.9% | `D4DE94B5C8EC476EFD1D582E3CB160365C8DDC7AA1D3B8598C747F472D8AD597` |
-| `context.md` | 9,908 | 11,143 | -12.5% | `C8CD279071C3A147BF93208E6022F68FB3F8EAD9803A0F11CB65C0F9353817F9` |
-| `checklist.md` | 7,875 | 7,966 | -1.2% | `A5442EE7E62CED40D8FD1B3CF65EBC3434F42C0632E9FA077F86C4D492BDC23D` |
-| **active 3 total** | **43,953** | **32,754** | **25.5%** | — |
+| `plan.md` | 26,170 | 16,296 | 37.7% | `DC01B3ACDE44ED1752DE18BEA693B1DB64C2AE6728C83DF717CD95843107553F` |
+| `context.md` | 9,908 | 11,822 | -19.3% | `17F176268C8DDF89C4C22E142CC0028FBB1F4D4525135D1060FA80C2F5EA5209` |
+| `checklist.md` | 7,875 | 9,225 | -17.1% | `6F85BF496627756FC47C674721BE96B5465CFABCEF6CDAC522334531932FD970` |
+| **active 3 total** | **43,953** | **37,343** | **15.0%** | — |
 
 - active 3문서는 2026-08-17 full-project release-audit와 current-PC Google auth/session smoke 완료 상태로 갱신했다. 2026-08-16 recovery pre-image는 그대로 보존한다.
 - `caveman-compress` current source는 `read_text(errors="ignore")`와 인코딩 미지정 `write_text()`를 유지해 `ER-20260720-014` 조건과 일치한다. 직접 실행·외부 Claude 전송 없음.
@@ -55,5 +55,6 @@ Current release audit: [`20260817-release-audit-full-project`](../audits/2026081
 - active/recovery Markdown은 strict UTF-8. credential/private-key/JWT/Bearer token 형식 scan과 Markdown/Git 검증은 checklist 완료 상태를 따른다.
 - `error-resolution-playbook.md`: actual record index 52개; `VERIFIED` 51 + `MITIGATION_ONLY` 1. template heading/placeholder는 record count에서 제외한다. `ER-20260817-001`에 current Android Studio debug signer OAuth 누락과 `[16]` 해결·검증 절차를 값 비출력 계약으로 추가했다.
 - Front는 Android-only React Native Community CLI로 전환했다. Expo runtime/CLI/Router와 Web/iOS target을 제거했고 Android Studio sync/build/install/run을 검증했다.
-- Audit `20260817-release-audit-full-project`는 confirmed 23·unknown 2·rechecked 1로 열려 있으며 release-ready가 아니다. `F-025` external OAuth fix는 독립 검증·fix-recheck 뒤 `RECHECKED`다.
-- Disposable DB와 local backend/Metro로 Google login·session rotation·logout smoke를 마친 뒤 모두 종료했고 `--rm` 임시 DB만 제거했다. remote DB, Firebase, Git stage·commit·push·PR·merge·deploy 변경 없음.
+- Audit `20260817-release-audit-full-project`는 confirmed 22·unknown 2·rechecked 2로 열려 있으며 release-ready가 아니다. `F-016` Android Git handoff와 `F-025` external OAuth fix는 독립 fix-recheck 뒤 `RECHECKED`다.
+- Android-only 기준선은 feature branch에 push됐고 local/remote HEAD가 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`로 일치한다. 별도 clean checkout에서 npm/frontend/Gradle gate와 Android 52개 추적·금지 파일 0개를 재현했다.
+- Disposable DB와 local backend/Metro로 Google login·session rotation·logout smoke를 마친 뒤 모두 종료했고 `--rm` 임시 DB만 제거했다. 승인된 F-016 feature-branch Git stage·commit·push 외에 remote DB, Firebase, PR·merge·deploy 변경 없음.

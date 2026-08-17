@@ -2,8 +2,8 @@
 
 - **상태**: M1~M12A 완료. M12B backend·local DB·change-gate 완료; M12C·실제 FCM sandbox 미완료라 parent `[/]`. Front secure session·REST client Task 1~33·Web QA·auth change-gate 완료.
 - **Android Google**: 현재 Android Studio debug signer용 OAuth client를 value-redacted 검증·사용자 승인 아래 추가했다. Google ID token→backend session→Keychain reload/refresh rotation→logout revoke→post-logout Login actual smoke가 통과했다.
-- **Release audit**: `20260817-release-audit-full-project`는 canonical 26건(confirmed 23, unknown 2, rechecked 1)으로 열려 있다. `F-025`는 독립 검증·fix-recheck 뒤 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
-- **다음 gate**: confirmed P1 5건을 별도 plan·승인·수정·독립 recheck → UNKNOWN `F-013`·`F-015` 확정 → P2/P3와 자유 탐색 종료 조건. M12C는 audit 종료 뒤 진행한다.
+- **Release audit**: `20260817-release-audit-full-project`는 canonical 26건(confirmed 22, unknown 2, rechecked 2)으로 열려 있다. `F-016` Android Git handoff와 `F-025` external OAuth fix는 독립 fix-recheck 뒤 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
+- **다음 gate**: 다음 confirmed P1 `F-006`을 별도 plan·승인·수정·독립 recheck → 남은 P1 3건 → UNKNOWN `F-013`·`F-015` 확정 → P2/P3와 자유 탐색 종료 조건. M12C는 audit 종료 뒤 진행한다.
 - **실행 위치**: branch `codex/front-secure-session-rest-client`, worktree `C:\DEV\fsr`.
 
 ## Stack·환경
@@ -21,7 +21,7 @@
 - Android SDK: `C:\Users\jemie\AppData\Local\Android\Sdk`; host Android Studio에서 실제 확인.
 - JDK 17: `C:\Users\jemie\.jdks\ms-17.0.20`.
 - NDK: `27.1.12297006`.
-- Android project: `C:\DEV\fsr\DSM_Front\android`; pure React Native Gradle project지만 현재 Git 전체 미추적(`F-016`)이다. commit/push 전 다른 PC checkout에는 전달되지 않는다. `org.gradle.parallel=false`, `org.gradle.tooling.parallel=false` 유지.
+- Android project: `C:\DEV\fsr\DSM_Front\android`; pure React Native Gradle project 52개 파일이 feature branch에 추적·push됐다. 별도 clean checkout의 동일 tree에서 Gradle build가 재현되어 `F-016`은 `RECHECKED`다. `org.gradle.parallel=false`, `org.gradle.tooling.parallel=false` 유지.
 - API 36 `Medium_Phone` AVD 연결. `assembleDebug`: `BUILD SUCCESSFUL in 19m 1s`, 365 tasks. Android Studio `Run app`: Gradle build·install 성공.
 - Gradle sync 후 project tree에는 app과 Community autolink native modules만 남고 Expo modules는 없다. Metro `index.js` bundle과 로그인 화면 렌더를 확인했다.
 - 이전 `build.ninja still dirty after 100 tries`는 긴 worktree path가 Nitro prefab CMake 입력을 Windows path 한계로 보이게 한 문제. worktree를 `C:\DEV\fsr`로 이동하고 generated build/CMake cache를 재생성해 해결.
@@ -68,6 +68,7 @@
 - Backend: Jest 23 suites/214 tests, e2e 1 suite/2 tests, Nest build, non-fixing lint, Prisma validate/generate 통과.
 - Disposable PostgreSQL 17: 4 migrations 순차 적용, backend `/health` 응답 확인. permanent local volume은 기존 role 불일치 때문에 변경하지 않았다.
 - Android fresh `assembleDebug`: 365 tasks, `BUILD SUCCESSFUL in 2m 28s`; current debug signer install·launch·Metro 1029-module bundle·로그인 화면 확인. 기존 다른 signer APK는 emulator exact package만 제거 후 재설치했다.
+- Remote clean checkout: HEAD `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`, Android tracked 52·forbidden tracked 0·Git status clean. `npm ci`, Jest 18/162, typecheck, ESLint, Community CLI config와 `assembleDebug` 365 tasks가 통과했고 APK SHA-256을 확인했다.
 - Android actual auth/session: Google ID-token fetch와 `/auth/login` 성공, user/social/active refresh 생성, force-stop/relaunch Home 복구와 refresh rotation, logout 후 active refresh 0, post-logout relaunch Login 확인.
 - Backend Prettier check는 66 TS files에서 실패했다. dependency audit는 Backend 15건(critical 0/high 7/moderate 6/low 2), Frontend 17건(critical 0/high 11/moderate 5/low 1)이다.
 - Local DB: 4 migrations up-to-date, zero drift, `sessionId text NOT NULL`, `(userId, sessionId)` index, refresh-token NULL/total `0/0`.
@@ -78,14 +79,14 @@
 
 ## Git·외부 경계
 
-- origin보다 36 commits ahead. 2026-08-02 이후 제품·DB migration·memory·Android login 작업은 local only.
-- Git stage·commit·push·PR·merge·deploy, remote/prod DB, Firebase send는 현재 승인 범위 밖.
+- Android-only 기준선·handoff 문서·audit/memory 기준선을 feature branch에 push했고 local/remote HEAD가 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`로 일치한다.
+- 추가 Git stage·commit·push와 PR·merge·deploy, remote/prod DB, Firebase send는 새 실행 범위 확인 전 진행하지 않는다.
 - 제품 단계 exact 1~2 files. main이 승인·memory·diff·audit ledger 소유.
 - 고위험 변경은 `change-gate`; release 전 `release-audit`.
 
 ## 다음 작업·잔여 위험
 
-1. release-audit confirmed P1 5건부터 별도 plan·승인·TDD·독립 recheck한다.
+1. release-audit 다음 confirmed P1 `F-006`부터 별도 plan·승인·TDD·독립 recheck하고, 남은 P1 `F-003`, `F-005`, `F-017`을 이어서 처리한다.
 2. UNKNOWN `F-013`·`F-015`의 배포 readiness·notification release scope 증거를 확정한다.
 3. confirmed P2/P3를 처리하고 신규 자유 탐색 2회 zero-new-P0~P2 종료 조건을 충족한다.
 4. M12C → Firebase sandbox → dispatch 판단 → WebSocket → Redis/batch.
