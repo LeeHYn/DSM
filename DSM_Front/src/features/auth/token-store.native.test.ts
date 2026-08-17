@@ -1,129 +1,157 @@
-import * as SecureStore from 'expo-secure-store';
+import * as Keychain from 'react-native-keychain';
 
 import { ApiError } from '@/lib/api/api-error';
 
 import { createRefreshTokenStore } from './token-store.native';
 
-jest.mock('expo-secure-store', () => ({
-  deleteItemAsync: jest.fn(),
-  getItemAsync: jest.fn(),
-  setItemAsync: jest.fn(),
-}));
+jest.mock(
+  'react-native-keychain',
+  () => ({
+    ACCESSIBLE: { WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'device-only' },
+    getGenericPassword: jest.fn(),
+    resetGenericPassword: jest.fn(),
+    setGenericPassword: jest.fn(),
+  }),
+  { virtual: true },
+);
 
-const mockDeleteItemAsync = jest.mocked(SecureStore.deleteItemAsync);
-const mockGetItemAsync = jest.mocked(SecureStore.getItemAsync);
-const mockSetItemAsync = jest.mocked(SecureStore.setItemAsync);
+const mockGetGenericPassword = jest.mocked(Keychain.getGenericPassword);
+const mockResetGenericPassword = jest.mocked(Keychain.resetGenericPassword);
+const mockSetGenericPassword = jest.mocked(Keychain.setGenericPassword);
 
 const KEY = 'dsm.auth.refresh-token.v1';
 const TOMBSTONE = '__dsm_logged_out_v1__';
-const OPTIONS = { requireAuthentication: false };
+const OPTIONS = {
+  accessible: 'device-only',
+  service: KEY,
+};
 
 beforeEach(() => {
   jest.resetAllMocks();
 });
 
-it('uses the versioned key and treats the tombstone as empty', async () => {
-  mockGetItemAsync.mockResolvedValue(TOMBSTONE);
-  const store = createRefreshTokenStore();
+it('uses a versioned Android Keychain service and treats the tombstone as empty', async () => {
+  mockGetGenericPassword.mockResolvedValue({
+    password: TOMBSTONE,
+    service: KEY,
+    storage: 'keychain',
+    username: 'refresh-token',
+  } as never);
 
-  await expect(store.read()).resolves.toBeNull();
-  expect(mockGetItemAsync).toHaveBeenCalledWith(KEY);
+  await expect(createRefreshTokenStore().read()).resolves.toBeNull();
+  expect(mockGetGenericPassword).toHaveBeenCalledWith({ service: KEY });
 });
 
 it('returns a stored refresh token', async () => {
-  mockGetItemAsync.mockResolvedValue('safe-test-token');
-  const store = createRefreshTokenStore();
+  mockGetGenericPassword.mockResolvedValue({
+    password: 'safe-test-token',
+    service: KEY,
+    storage: 'keychain',
+    username: 'refresh-token',
+  } as never);
 
-  await expect(store.read()).resolves.toBe('safe-test-token');
+  await expect(createRefreshTokenStore().read()).resolves.toBe('safe-test-token');
+});
+
+it('returns null when the keychain service is empty', async () => {
+  mockGetGenericPassword.mockResolvedValue(false);
+
+  await expect(createRefreshTokenStore().read()).resolves.toBeNull();
 });
 
 it('wraps read failures as a fixed storage error without the token', async () => {
-  mockGetItemAsync.mockRejectedValue(new Error('native read failed'));
-  const store = createRefreshTokenStore();
+  mockGetGenericPassword.mockRejectedValue(new Error('native read failed'));
 
-  await expect(store.read()).rejects.toMatchObject({
+  await expect(createRefreshTokenStore().read()).rejects.toMatchObject({
     kind: 'storage',
     message: 'Secure token storage failed',
   });
 });
 
-it('writes with the versioned key and fixed options', async () => {
-  const store = createRefreshTokenStore();
+it('writes to the versioned service with device-only accessibility', async () => {
+  mockSetGenericPassword.mockResolvedValue({ service: KEY, storage: 'keychain' } as never);
 
-  await expect(store.write('safe-test-token')).resolves.toBeUndefined();
-  expect(mockSetItemAsync).toHaveBeenCalledWith(KEY, 'safe-test-token', OPTIONS);
+  await expect(
+    createRefreshTokenStore().write('safe-test-token'),
+  ).resolves.toBeUndefined();
+  expect(mockSetGenericPassword).toHaveBeenCalledWith(
+    'refresh-token',
+    'safe-test-token',
+    OPTIONS,
+  );
 });
 
 it('wraps write failures as a fixed storage error without the token', async () => {
-  mockSetItemAsync.mockRejectedValue(new Error('native write failed'));
-  const store = createRefreshTokenStore();
+  mockSetGenericPassword.mockRejectedValue(new Error('native write failed'));
 
-  await expect(store.write('safe-test-token')).rejects.toMatchObject({
+  await expect(
+    createRefreshTokenStore().write('safe-test-token'),
+  ).rejects.toMatchObject({
     kind: 'storage',
     message: 'Secure token storage failed',
   });
 });
 
 it('verifies successful deletion left no value', async () => {
-  mockGetItemAsync.mockResolvedValue(null);
-  const store = createRefreshTokenStore();
+  mockResetGenericPassword.mockResolvedValue(true);
+  mockGetGenericPassword.mockResolvedValue(false);
 
-  await expect(store.clear()).resolves.toBeUndefined();
-  expect(mockDeleteItemAsync).toHaveBeenCalledWith(KEY);
-  expect(mockGetItemAsync).toHaveBeenCalledWith(KEY);
-  expect(mockSetItemAsync).not.toHaveBeenCalled();
+  await expect(createRefreshTokenStore().clear()).resolves.toBeUndefined();
+  expect(mockResetGenericPassword).toHaveBeenCalledWith({ service: KEY });
+  expect(mockGetGenericPassword).toHaveBeenCalledWith({ service: KEY });
+  expect(mockSetGenericPassword).not.toHaveBeenCalled();
 });
 
-it('falls back to a verified tombstone when delete fails', async () => {
-  mockDeleteItemAsync.mockRejectedValue(new Error('delete failed'));
-  mockGetItemAsync.mockResolvedValue(TOMBSTONE);
-  const store = createRefreshTokenStore();
+it('falls back to a verified tombstone when deletion fails', async () => {
+  mockResetGenericPassword.mockRejectedValue(new Error('delete failed'));
+  mockSetGenericPassword.mockResolvedValue({ service: KEY, storage: 'keychain' } as never);
+  mockGetGenericPassword.mockResolvedValue({
+    password: TOMBSTONE,
+    service: KEY,
+    storage: 'keychain',
+    username: 'refresh-token',
+  } as never);
 
-  await expect(store.clear()).resolves.toBeUndefined();
-  expect(mockSetItemAsync).toHaveBeenCalledWith(KEY, TOMBSTONE, OPTIONS);
-  expect(mockGetItemAsync).toHaveBeenCalledWith(KEY);
+  await expect(createRefreshTokenStore().clear()).resolves.toBeUndefined();
+  expect(mockSetGenericPassword).toHaveBeenCalledWith(
+    'refresh-token',
+    TOMBSTONE,
+    OPTIONS,
+  );
 });
 
 it('uses the tombstone fallback when deletion leaves a residual value', async () => {
-  mockGetItemAsync
-    .mockResolvedValueOnce('safe-residual-value')
-    .mockResolvedValueOnce(TOMBSTONE);
-  const store = createRefreshTokenStore();
+  mockResetGenericPassword.mockResolvedValue(true);
+  mockSetGenericPassword.mockResolvedValue({ service: KEY, storage: 'keychain' } as never);
+  mockGetGenericPassword
+    .mockResolvedValueOnce({ password: 'residual' } as never)
+    .mockResolvedValueOnce({ password: TOMBSTONE } as never);
 
-  await expect(store.clear()).resolves.toBeUndefined();
-  expect(mockSetItemAsync).toHaveBeenCalledWith(KEY, TOMBSTONE, OPTIONS);
+  await expect(createRefreshTokenStore().clear()).resolves.toBeUndefined();
+  expect(mockSetGenericPassword).toHaveBeenCalledWith(
+    'refresh-token',
+    TOMBSTONE,
+    OPTIONS,
+  );
 });
 
-it('throws a storage error when delete and tombstone verification fail', async () => {
-  mockDeleteItemAsync.mockRejectedValue(new Error('delete failed'));
-  mockSetItemAsync.mockRejectedValue(new Error('write failed'));
-  const store = createRefreshTokenStore();
+it('throws a fixed storage error when fallback write fails', async () => {
+  mockResetGenericPassword.mockRejectedValue(new Error('delete failed'));
+  mockSetGenericPassword.mockRejectedValue(new ApiError('network', 'native detail'));
 
-  await expect(store.clear()).rejects.toMatchObject({
+  await expect(createRefreshTokenStore().clear()).rejects.toMatchObject({
     kind: 'storage',
     message: 'Secure token storage failed',
   });
 });
+it('throws a fixed storage error when tombstone verification fails', async () => {
+  mockResetGenericPassword.mockResolvedValue(true);
+  mockSetGenericPassword.mockResolvedValue({ service: KEY, storage: 'keychain' } as never);
+  mockGetGenericPassword
+    .mockResolvedValueOnce({ password: 'residual' } as never)
+    .mockResolvedValueOnce({ password: 'wrong-readback' } as never);
 
-it('throws a storage error when tombstone readback is not the exact marker', async () => {
-  mockGetItemAsync
-    .mockResolvedValueOnce('safe-residual-value')
-    .mockResolvedValueOnce('safe-wrong-readback');
-  const store = createRefreshTokenStore();
-
-  await expect(store.clear()).rejects.toMatchObject({
-    kind: 'storage',
-    message: 'Secure token storage failed',
-  });
-});
-
-it('wraps a native ApiError during tombstone readback as the fixed storage error', async () => {
-  mockGetItemAsync
-    .mockResolvedValueOnce('safe-residual-value')
-    .mockRejectedValueOnce(new ApiError('network', 'native error message'));
-  const store = createRefreshTokenStore();
-
-  await expect(store.clear()).rejects.toMatchObject({
+  await expect(createRefreshTokenStore().clear()).rejects.toMatchObject({
     kind: 'storage',
     message: 'Secure token storage failed',
   });

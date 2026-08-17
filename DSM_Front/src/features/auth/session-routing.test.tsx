@@ -1,14 +1,23 @@
-import { render, screen, within } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 
 import type { SessionSnapshot, SessionState } from './session-controller';
 import { SessionProvider } from './session-context';
-import { getSessionRouteGuards, SessionStack } from './session-routing';
+import {
+  getSessionRouteGuards,
+  getSessionRouteName,
+  SessionStack,
+} from './session-routing';
 
-jest.mock('expo-router', () => {
+jest.mock('@/app/(tabs)/_layout', () => () => null);
+jest.mock('@/app/index', () => () => null);
+jest.mock('@/app/session-recovery', () => () => null);
+jest.mock('@/app/tutorial', () => () => null);
+
+jest.mock('@react-navigation/native-stack', () => {
   const React = require('react');
   const { Text: NativeText, View: NativeView } = require('react-native');
 
-  function Stack({ children, screenOptions }: any) {
+  function Navigator({ children, screenOptions }: any) {
     return React.createElement(
       NativeView,
       {
@@ -22,25 +31,17 @@ jest.mock('expo-router', () => {
     );
   }
 
-  Stack.Protected = function Protected({ guard, children }: any) {
-    return React.createElement(
-      NativeView,
-      {
-        accessibilityState: { disabled: !guard },
-        testID: 'session-route-guard',
-      },
-      children,
-    );
-  };
-  Stack.Screen = function Screen({ name }: any) {
+  function Screen({ name }: any) {
     return React.createElement(
       NativeText,
       { testID: `session-route-${name}` },
       name,
     );
-  };
+  }
 
-  return { Stack };
+  return {
+    createNativeStackNavigator: () => ({ Navigator, Screen }),
+  };
 });
 
 function createController(state: SessionState) {
@@ -83,6 +84,17 @@ it.each([
   ]).toEqual(expected);
 });
 
+it.each([
+  ['bootstrapping', null],
+  ['unauthenticated', 'Login'],
+  ['offline', 'SessionRecovery'],
+  ['storage-error', 'SessionRecovery'],
+  ['onboarding', 'Tutorial'],
+  ['authenticated', 'AppTabs'],
+])('maps %s to the single active native route %s', (status, expected) => {
+  expect(getSessionRouteName(status as SessionState['status'])).toBe(expected);
+});
+
 it('renders no navigator while the session is bootstrapping', async () => {
   await render(
     <SessionProvider
@@ -94,7 +106,7 @@ it('renders no navigator while the session is bootstrapping', async () => {
   expect(screen.queryByTestId('session-stack')).toBeNull();
 });
 
-it('declares each route once under its session guard and preserves root options', async () => {
+it('renders only the active native route and preserves root options', async () => {
   await render(
     <SessionProvider
       controller={createController({
@@ -107,25 +119,8 @@ it('declares each route once under its session guard and preserves root options'
   );
 
   expect(await screen.findByLabelText('root-options-preserved')).toBeOnTheScreen();
-  expect(screen.getAllByTestId('session-route-guard')).toHaveLength(4);
-  expect(screen.getAllByTestId('session-route-index')).toHaveLength(1);
-  expect(screen.getAllByTestId('session-route-explore')).toHaveLength(1);
-  expect(screen.getAllByTestId('session-route-session-recovery')).toHaveLength(1);
-  expect(screen.getAllByTestId('session-route-tutorial')).toHaveLength(1);
-  expect(screen.getAllByTestId('session-route-(tabs)')).toHaveLength(1);
-
-  const guards = screen.getAllByTestId('session-route-guard');
-  expect(guards.map((guard) => guard.props.accessibilityState)).toEqual([
-    { disabled: true },
-    { disabled: true },
-    { disabled: false },
-    { disabled: true },
-  ]);
-  expect(within(guards[0]).getByTestId('session-route-index')).toBeOnTheScreen();
-  expect(within(guards[0]).getByTestId('session-route-explore')).toBeOnTheScreen();
-  expect(
-    within(guards[1]).getByTestId('session-route-session-recovery'),
-  ).toBeOnTheScreen();
-  expect(within(guards[2]).getByTestId('session-route-tutorial')).toBeOnTheScreen();
-  expect(within(guards[3]).getByTestId('session-route-(tabs)')).toBeOnTheScreen();
+  expect(screen.getByTestId('session-route-Tutorial')).toBeOnTheScreen();
+  expect(screen.queryByTestId('session-route-Login')).toBeNull();
+  expect(screen.queryByTestId('session-route-SessionRecovery')).toBeNull();
+  expect(screen.queryByTestId('session-route-AppTabs')).toBeNull();
 });

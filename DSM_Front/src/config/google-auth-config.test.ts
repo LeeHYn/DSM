@@ -4,21 +4,15 @@ import {
   isGoogleAuthConfigurationError,
 } from './google-auth-config';
 
-const originalClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+jest.mock('react-native-config', () => ({
+  GOOGLE_WEB_CLIENT_ID: 'native.apps.googleusercontent.com',
+}));
 
-beforeEach(() => {
-  delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+it('reads the Google client ID from native config by default', () => {
+  expect(getGoogleWebClientId()).toBe('native.apps.googleusercontent.com');
 });
 
-afterAll(() => {
-  if (originalClientId === undefined) {
-    delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  } else {
-    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = originalClientId;
-  }
-});
-
-it.each([undefined, '', '   '])('rejects missing client ID: %p', (value) => {
+it.each(['', '   '])('rejects missing client ID: %p', (value) => {
   expect(() => getGoogleWebClientId(value)).toThrow(
     GoogleAuthConfigurationError,
   );

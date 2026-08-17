@@ -47,6 +47,14 @@ beforeEach(() => {
   });
 });
 
+it('starts in bootstrapping before the provider effect runs', () => {
+  expect(controller.getSnapshot()).toEqual({
+    state: { status: 'bootstrapping' },
+    action: 'recovering',
+    error: null,
+  });
+});
+
 it.each([
   ['missing token', null, 'unauthenticated'],
   ['completed account', 'record.secret', 'authenticated'],

@@ -7,7 +7,6 @@ import {
 
 import LoginScreen from '../../app/index';
 
-const mockReplace = jest.fn();
 const mockShowToast = jest.fn();
 const mockAcquireIdToken = jest.fn();
 const mockSignIn = jest.fn().mockResolvedValue(undefined);
@@ -31,10 +30,6 @@ function providerError(kind: string) {
     kind,
   });
 }
-
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
-}));
 
 jest.mock('@/features/prototype/prototype-context', () => ({
   usePrototype: () => ({
@@ -64,7 +59,6 @@ beforeEach(() => {
   mockAcquireIdToken.mockReset();
   mockSignIn.mockReset().mockResolvedValue(undefined);
   mockShowToast.mockReset();
-  mockReplace.mockReset();
 });
 
 afterEach(() => {
@@ -85,7 +79,6 @@ it('passes one acquired Google ID token to the session', async () => {
   expect(mockAcquireIdToken).toHaveBeenCalledTimes(1);
   expect(mockSignIn).toHaveBeenCalledTimes(1);
   expect(mockSignIn).toHaveBeenCalledWith('GOOGLE', 'google-id-token');
-  expect(mockReplace).not.toHaveBeenCalled();
 });
 
 it('silently restores the button after user cancellation', async () => {
@@ -172,7 +165,7 @@ it('shows a safe message for a newly published session error', async () => {
   );
 });
 
-it('keeps Kakao as a placeholder and never replaces routes', async () => {
+it('keeps Kakao as a placeholder without starting authentication', async () => {
   await render(<LoginScreen />);
 
   await fireEvent.press(
@@ -184,5 +177,4 @@ it('keeps Kakao as a placeholder and never replaces routes', async () => {
   );
   expect(mockAcquireIdToken).not.toHaveBeenCalled();
   expect(mockSignIn).not.toHaveBeenCalled();
-  expect(mockReplace).not.toHaveBeenCalled();
 });

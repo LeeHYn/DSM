@@ -55,11 +55,11 @@ export const dailyupColors: Record<ThemeMode, DailyupPalette> = {
 };
 
 export const dailyupFonts = {
-  regular: 'NotoSansKR_400Regular',
-  medium: 'NotoSansKR_500Medium',
-  semiBold: 'NotoSansKR_600SemiBold',
-  bold: 'NotoSansKR_700Bold',
-  extraBold: 'NotoSansKR_800ExtraBold',
+  regular: 'sans-serif',
+  medium: 'sans-serif-medium',
+  semiBold: 'sans-serif-medium',
+  bold: 'sans-serif-medium',
+  extraBold: 'sans-serif-black',
 } as const satisfies Record<string, NonNullable<TextStyle['fontFamily']>>;
 
 export const dailyupSpacing = {

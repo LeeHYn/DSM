@@ -1,3 +1,5 @@
+import Config from 'react-native-config';
+
 function isPrivateDevelopmentHost(hostname: string): boolean {
   if (
     hostname === 'localhost' ||
@@ -24,18 +26,18 @@ function isPrivateDevelopmentHost(hostname: string): boolean {
 }
 
 export function getApiBaseUrl(
-  raw = process.env.EXPO_PUBLIC_API_BASE_URL,
+  raw = Config.API_BASE_URL,
   isDevelopment = __DEV__,
 ): string {
   if (!raw) {
-    throw new Error('EXPO_PUBLIC_API_BASE_URL is required');
+    throw new Error('API_BASE_URL is required');
   }
 
   let url: URL;
   try {
     url = new URL(raw);
   } catch {
-    throw new Error('EXPO_PUBLIC_API_BASE_URL is unsafe');
+    throw new Error('API_BASE_URL is unsafe');
   }
   const serializedUrl = url.toString();
 
@@ -53,7 +55,7 @@ export function getApiBaseUrl(
     serializedUrl.includes('?') ||
     serializedUrl.includes('#')
   ) {
-    throw new Error('EXPO_PUBLIC_API_BASE_URL is unsafe');
+    throw new Error('API_BASE_URL is unsafe');
   }
 
   return serializedUrl.replace(/\/+$/, '');

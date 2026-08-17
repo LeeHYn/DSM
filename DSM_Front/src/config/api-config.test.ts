@@ -1,5 +1,13 @@
 import { getApiBaseUrl } from './api-config';
 
+jest.mock('react-native-config', () => ({
+  API_BASE_URL: 'http://10.0.2.2:3000/',
+}));
+
+it('reads the Android emulator API URL from native config by default', () => {
+  expect(getApiBaseUrl()).toBe('http://10.0.2.2:3000');
+});
+
 it('normalizes a private development URL', () => {
   expect(getApiBaseUrl('http://192.168.0.10:3000/', true)).toBe(
     'http://192.168.0.10:3000',
@@ -19,7 +27,6 @@ it('allows public HTTPS in production', () => {
 });
 
 it.each([
-  [undefined, true],
   ['not a URL', true],
   ['http://example.com', true],
   ['http://api.example.com', false],
@@ -30,6 +37,6 @@ it.each([
   ['https://api.example.com#', false],
 ])('rejects unsafe base URL %p', (raw, isDevelopment) => {
   expect(() => getApiBaseUrl(raw, isDevelopment)).toThrow(
-    /EXPO_PUBLIC_API_BASE_URL/,
+    /API_BASE_URL/,
   );
 });

@@ -1,7 +1,15 @@
-const { defineConfig, globalIgnores } = require('eslint/config');
-const expoConfig = require('eslint-config-expo/flat');
+const { FlatCompat } = require('@eslint/eslintrc');
+const path = require('path');
 
-module.exports = defineConfig([
-  globalIgnores(['dist/*', '.expo/*', 'coverage/*']),
-  expoConfig,
-]);
+const reactNativeConfigDirectory = path.dirname(
+  require.resolve('@react-native/eslint-config/package.json'),
+);
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  resolvePluginsRelativeTo: reactNativeConfigDirectory,
+});
+
+module.exports = [
+  { ignores: ['android/**', 'coverage/**', 'node_modules/**'] },
+  ...compat.extends('@react-native'),
+];

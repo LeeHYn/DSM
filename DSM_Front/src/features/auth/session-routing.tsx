@@ -1,5 +1,10 @@
 import type { ComponentProps } from 'react';
-import { Stack } from 'expo-router';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import AppTabs from '@/app/(tabs)/_layout';
+import LoginScreen from '@/app/index';
+import SessionRecoveryScreen from '@/app/session-recovery';
+import TutorialScreen from '@/app/tutorial';
 
 import type { SessionState } from './session-controller';
 import { useSession } from './session-context';
@@ -11,7 +16,25 @@ export type SessionRouteGuards = {
   authenticated: boolean;
 };
 
-export type SessionStackProps = Omit<ComponentProps<typeof Stack>, 'children'>;
+export type SessionRouteName =
+  | 'Login'
+  | 'SessionRecovery'
+  | 'Tutorial'
+  | 'AppTabs';
+
+export type SessionStackParamList = {
+  Login: undefined;
+  SessionRecovery: undefined;
+  Tutorial: undefined;
+  AppTabs: undefined;
+};
+
+const Stack = createNativeStackNavigator<SessionStackParamList>();
+
+export type SessionStackProps = Omit<
+  ComponentProps<typeof Stack.Navigator>,
+  'children'
+>;
 
 export function getSessionRouteGuards(
   status: SessionState['status'],
@@ -24,30 +47,49 @@ export function getSessionRouteGuards(
   };
 }
 
+export function getSessionRouteName(
+  status: SessionState['status'],
+): SessionRouteName | null {
+  if (status === 'bootstrapping') {
+    return null;
+  }
+  if (status === 'unauthenticated') {
+    return 'Login';
+  }
+  if (status === 'offline' || status === 'storage-error') {
+    return 'SessionRecovery';
+  }
+  if (status === 'onboarding') {
+    return 'Tutorial';
+  }
+  return 'AppTabs';
+}
+
 export function SessionStack(props: SessionStackProps) {
   const { state } = useSession();
+  const routeName = getSessionRouteName(state.status);
 
-  if (state.status === 'bootstrapping') {
+  if (routeName === null) {
     return null;
   }
 
-  const guards = getSessionRouteGuards(state.status);
-
   return (
-    <Stack {...props}>
-      <Stack.Protected guard={guards.unauthenticated}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="explore" />
-      </Stack.Protected>
-      <Stack.Protected guard={guards.recovery}>
-        <Stack.Screen name="session-recovery" />
-      </Stack.Protected>
-      <Stack.Protected guard={guards.onboarding}>
-        <Stack.Screen name="tutorial" />
-      </Stack.Protected>
-      <Stack.Protected guard={guards.authenticated}>
-        <Stack.Screen name="(tabs)" />
-      </Stack.Protected>
-    </Stack>
+    <Stack.Navigator {...props} key={routeName} initialRouteName={routeName}>
+      {routeName === 'Login' ? (
+        <Stack.Screen component={LoginScreen} name="Login" />
+      ) : null}
+      {routeName === 'SessionRecovery' ? (
+        <Stack.Screen
+          component={SessionRecoveryScreen}
+          name="SessionRecovery"
+        />
+      ) : null}
+      {routeName === 'Tutorial' ? (
+        <Stack.Screen component={TutorialScreen} name="Tutorial" />
+      ) : null}
+      {routeName === 'AppTabs' ? (
+        <Stack.Screen component={AppTabs} name="AppTabs" />
+      ) : null}
+    </Stack.Navigator>
   );
 }

@@ -1,3 +1,5 @@
+import Config from 'react-native-config';
+
 const SAFE_CONFIGURATION_MESSAGE =
   'Google sign-in configuration is unavailable';
 
@@ -23,7 +25,7 @@ export function isGoogleAuthConfigurationError(
 }
 
 export function getGoogleWebClientId(
-  value = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  value = Config.GOOGLE_WEB_CLIENT_ID,
 ): string {
   const clientId = value?.trim();
   if (!clientId) {

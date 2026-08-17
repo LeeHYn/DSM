@@ -13,6 +13,6 @@ function findTestRoutes(directory: string): string[] {
   });
 }
 
-it('keeps Jest files outside the Expo Router app directory', () => {
+it('keeps Jest files outside the production screen directory', () => {
   expect(findTestRoutes(join(process.cwd(), 'src', 'app'))).toEqual([]);
 });

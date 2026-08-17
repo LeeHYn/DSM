@@ -3,16 +3,14 @@
 # dependencies
 node_modules/
 
-# Expo
-.expo/
+# generated bundles
 dist/
-web-build/
-expo-env.d.ts
 
 # Native
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
@@ -20,6 +18,7 @@ expo-env.d.ts
 
 # Metro
 .metro-health-check*
+.jest-cache-*/
 
 # debug
 npm-debug.*
@@ -40,4 +39,3 @@ app-example
 
 # generated native folders
 /ios
-/android

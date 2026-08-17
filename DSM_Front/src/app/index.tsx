@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons/static';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -52,10 +52,10 @@ function SocialButton({
       ]}>
       {provider === 'google' ? (
         <View style={styles.googleMark}>
-          <MaterialCommunityIcons color="#4285F4" name="google" size={19} />
+          <MaterialDesignIcons color="#4285F4" name="google" size={19} />
         </View>
       ) : (
-        <MaterialCommunityIcons
+        <MaterialDesignIcons
           color={foreground}
           name={provider === 'kakao' ? 'chat' : 'apple'}
           size={20}

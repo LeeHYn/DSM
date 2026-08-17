@@ -1,6 +1,6 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { MaterialDesignIconsIconName } from '@react-native-vector-icons/material-design-icons';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons/static';
 import React, {
-  type ComponentProps,
   type PropsWithChildren,
   useEffect,
   useMemo,
@@ -34,7 +34,7 @@ import {
 } from '@/constants/dailyup-theme';
 import { usePrototype } from '@/features/prototype/prototype-context';
 
-export type DailyupIconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
+export type DailyupIconName = MaterialDesignIconsIconName;
 
 type AppTextVariant =
   | 'body'
@@ -124,7 +124,7 @@ export function Icon({
   size?: number;
 }) {
   const palette = useDailyupPalette();
-  return <MaterialCommunityIcons color={color ?? palette.text} name={name} size={size} />;
+  return <MaterialDesignIcons color={color ?? palette.text} name={name} size={size} />;
 }
 
 export function SurfaceCard({

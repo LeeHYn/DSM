@@ -83,8 +83,8 @@ export class SessionController implements SessionControllerPort {
   private refreshPromise: Promise<string> | null = null;
   private unauthorizedCleanupPromise: Promise<void> | null = null;
   private snapshot: SessionSnapshot = {
-    state: { status: 'unauthenticated' },
-    action: 'idle',
+    state: { status: 'bootstrapping' },
+    action: 'recovering',
     error: null,
   };
   private readonly listeners = new Set<() => void>();

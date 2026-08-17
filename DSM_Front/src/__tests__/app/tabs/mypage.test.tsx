@@ -2,13 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import MyPageScreen from '../../../app/(tabs)/mypage';
 
-const mockReplace = jest.fn();
 const mockUseSession = jest.fn();
 const mockUsePrototype = jest.fn();
-
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
-}));
 
 jest.mock('@/features/auth/session-context', () => ({
   useSession: () => mockUseSession(),
@@ -62,7 +57,6 @@ it('resets prototype state and invokes secure logout without manual routing', as
   await fireEvent.press(screen.getByRole('button', { name: '로그아웃' }));
 
   expect(resetPrototype).toHaveBeenCalledTimes(1);
-  expect(mockReplace).not.toHaveBeenCalled();
   expect(logout).toHaveBeenCalledTimes(1);
   expect(resetPrototype.mock.invocationCallOrder[0]).toBeLessThan(
     logout.mock.invocationCallOrder[0],
