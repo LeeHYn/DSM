@@ -76,6 +76,16 @@
 | `ER-20260811-003` | `VERIFIED` | Auth, refresh token family, logout, row lock | refresh successor가 성공한 logout 뒤에도 유효하게 남음 |
 | `ER-20260811-004` | `VERIFIED` | Expo Router, Jest, app route, Web export | `src/app` 아래 test module이 production route로 실행됨 |
 | `ER-20260811-005` | `VERIFIED` | Prisma generate, Windows DLL, `EPERM`, concurrency | build/test와 병렬 generate가 query engine DLL rename에서 실패함 |
+| `ER-20260813-001` | `VERIFIED` | Expo CLI, npm 11, peer dependency, `ERESOLVE`, lockfile | SDK patch 도중 구 Router/LogBox peer가 lock에 남아 두 번째 install이 실패함 |
+| `ER-20260813-002` | `VERIFIED` | Expo Font, Expo Asset, npm hoist, Jest, module resolution | `expo-asset`이 Expo 아래에만 중첩돼 top-level `expo-font` import가 실패함 |
+| `ER-20260813-003` | `VERIFIED` | Nitro Modules, Jest, TurboModule, native boundary | native Google package import가 Jest에서 `NitroModules`를 찾지 못함 |
+| `ER-20260813-004` | `VERIFIED` | Jest, TypeScript, callback arity, `TS2322` | 0-argument mock이 1-argument dependency callback에 할당되지 않음 |
+| `ER-20260813-005` | `VERIFIED` | Jest, mock factory, hoist, early binding | mock 객체가 초기화 전 함수를 값으로 캡처해 호출이 0회인 채 `TypeError`로 흐름 |
+| `ER-20260813-006` | `VERIFIED` | Expo config plugin, Android, autolinking, Google Sign-In | Android-only explicit client-ID 설정인데 plugin이 iOS/Firebase 설정을 요구해 config가 exit 1 |
+| `ER-20260816-001` | `VERIFIED` | ESLint 8, flat config, React Native, package exports | `eslint/config` subpath 또는 nested plugin을 찾지 못해 lint가 시작되지 않음 |
+| `ER-20260816-002` | `VERIFIED` | Jest, transform cache, isolated cache | focused test는 통과하지만 기존 cache를 쓴 full suite에서 Keychain mock이 어긋남 |
+| `ER-20260816-003` | `VERIFIED` | Metro, Windows Temp, cache, `EPERM` | Metro cache deserialize 실패 뒤 bundle이 멈추거나 reset이 권한 오류로 종료됨 |
+| `ER-20260817-001` | `VERIFIED` | Android, Google OAuth, debug signer, Credential Manager, `[16]` | 계정 선택 뒤 `Account reauth failed`로 ID token 전에 Login으로 복귀함 |
 
 ## 해결 record
 
@@ -428,8 +438,9 @@
 - 검증: active Markdown 5개 strict UTF-8 decode, exact backup 3개 pre-image SHA-256 일치, critical status/gate·playbook index/body·relative link·secret scan·`git diff --check`, 잔류 compression process 0을 확인한다.
 - 재발 방지/금지: locale default I/O, `errors='ignore'`, primary 직접 truncate/write, text readback equality만으로 backup 무결성을 주장하지 않는다.
 - 적용 불가/잔여 위험: 손실된 byte-exact pre-image는 Git/다른 snapshot이 없으면 복구할 수 없다. semantic reconstruction은 반드시 출처와 비정확성을 기록한다.
+- 2026-08-16 재검증: installed `caveman-compress/scripts/compress.py`가 `filepath.read_text(errors="ignore")`, 인코딩 미지정 `backup_path.write_text(original_text)`·`filepath.write_text(...)`를 계속 사용해 적용 조건과 정확히 일치했다. active memory 직접 실행과 외부 Claude 전송을 중단하고 날짜가 붙은 byte-exact local backup + `apply_patch` 압축으로 전환했다.
 - 근거: [Memory routing](./README.md), [압축·복구 기록](./plan.md), [복구 context snapshot](./context.original.md)
-- `lastVerifiedAt`: `2026-07-20`
+- `lastVerifiedAt`: `2026-08-16`
 
 ### ER-20260722-001 — Obsidian Windows junction 전환 후 stale IndexedDB 복구
 
@@ -480,13 +491,14 @@
 - 해결 절차:
   1. test summary와 stack trace를 분리해 assertion 실패인지 cache write 실패인지 확인한다.
   2. 제품 코드나 Jest 설정을 임의로 바꾸지 않는다.
-  3. 현재 task가 허용하면 사용자 승인으로 동일 명령을 sandbox 밖에서 재실행하거나, 계획된 writable temp 경로를 별도 승인 범위로 사용한다.
-  4. 재실행의 실제 exit code와 전체 suite/test count를 확인한다.
-- 검증: sandbox 밖 동일 checkout에서 backend unit 22 suites·198 tests와 e2e 1 suite·2 tests가 모두 exit 0으로 통과했다.
-- 재발 방지/금지: cache write `EPERM`을 assertion 실패로 보고 제품 코드를 수정하지 않는다. 최초 실행의 “tests passed” 문구만으로 성공을 주장하지 않고 exit code를 확인한다.
+  3. 현재 task가 허용하면 `--cacheDirectory`를 workspace 안의 task-specific 경로로 지정해 같은 test를 재실행한다. e2e도 동일하게 별도 project-local cache를 사용한다.
+  4. project-local cache 사용이 불가능하거나 사용자 Temp가 반드시 필요한 명령이면 승인된 sandbox 밖 재실행을 사용한다.
+  5. 재실행의 실제 exit code와 전체 suite/test count를 확인하고 task-specific cache는 exact path를 검증한 뒤 정리한다.
+- 검증: 2026-08-17 backend default Temp cache는 test 시작 전 `EPERM`으로 중단됐다. 같은 checkout에서 project-local cache를 지정해 unit 23 suites·214 tests와 e2e 1 suite·2 tests가 모두 exit 0으로 통과했다. 기존 sandbox 밖 backend 22 suites·198 tests/e2e 2 tests 통과 이력도 유지한다.
+- 재발 방지/금지: cache write `EPERM`을 assertion 실패로 보고 제품 코드를 수정하지 않는다. 최초 실행의 “tests passed” 문구만으로 성공을 주장하지 않고 exit code를 확인한다. workspace root 전체나 사용자 Temp를 broad delete하지 않는다.
 - 적용 불가/잔여 위험: sandbox 밖에서도 실패하거나 stack trace가 application/test code를 가리키면 실제 test failure로 별도 진단한다. 외부 실행은 항상 현재 사용자 승인·권한 정책을 따른다.
 - 근거: [Git checkpoint 검증 기록](./plan.md)
-- `lastVerifiedAt`: `2026-07-25`
+- `lastVerifiedAt`: `2026-08-17`
 
 ### ER-20260725-003 — managed sandbox의 npm cache write `EPERM`
 
@@ -1058,6 +1070,255 @@
 - 근거: [Prisma schema](../../DSM_Back/prisma/schema.prisma),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-08-11`
+
+### ER-20260813-001 — Expo SDK patch의 stale peer lock `ERESOLVE`
+
+- `resolutionId`: `ER-20260813-001`
+- `status`: `VERIFIED`
+- 증상/signature: npm 11에서 `npx expo install --fix`가 먼저 `expo`와 root version range를
+  갱신한 뒤 재진입한 두 번째 install에서 구 `expo-router`와 `@expo/log-box`를 lockfile에서
+  읽어 `ERESOLVE could not resolve`로 중단한다.
+- 적용 조건: Expo SDK 55 patch update, npm 11.6.2, `expo-router@55.0.17`이
+  `@expo/metro-runtime@^55.0.12`와 `@expo/log-box@55.0.13`을 요구하지만 lockfile에는
+  Router 55.0.14, Metro Runtime 55.0.11, LogBox 55.0.12가 남은 경우.
+- root cause: Expo CLI의 2단계 SDK update가 root version range를 먼저 publish했고, npm
+  Arborist가 두 번째 단계에서 호환 불가능한 구 exact peer tuple을 lockfile 기준으로
+  전환하려 했다.
+- 해결 절차:
+  1. `package.json`, lockfile, disk package version을 각각 확인해 partial update인지 구분한다.
+  2. registry metadata와 `npm install --dry-run --no-save`로 새 Router/Metro/LogBox tuple이
+     자체적으로 호환되는지 확인한다.
+  3. `--force`와 `--legacy-peer-deps`를 사용하지 않는다.
+  4. partial lock을 task-local ignored 경로에 임시 보존한 뒤 현재 승인된 `package.json`으로
+     `npm install --package-lock-only --ignore-scripts`를 실행한다.
+  5. 정상 install 뒤 `npm ls --all`, `expo install --check`, full test/typecheck/lint와 exact
+     changed-file scope를 검증하고 임시 lock을 제거한다.
+- 검증: fresh lock 생성과 compatible install 후 전체 npm tree와 Expo compatibility check가
+  exit 0이었다. Front 17 suites·136 tests, TypeScript, ESLint(0 errors)가 통과했다.
+- 재발 방지/금지: partial lock에서 같은 install을 반복하거나 peer 검증을 무력화하지 않는다.
+  자동 audit fix와 broad dependency update를 함께 수행하지 않는다.
+- 적용 불가/잔여 위험: fresh lock에서 특정 runtime import가 nested-only layout 때문에
+  실패하면 `ER-20260813-002`를 별도로 적용한다.
+- 근거: [Android Google provider login plan](../../docs/superpowers/plans/2026-08-12-android-google-provider-login.md)
+- `lastVerifiedAt`: `2026-08-13`
+
+### ER-20260813-002 — npm hoist 차이에 따른 `expo-asset` module resolution 실패
+
+- `resolutionId`: `ER-20260813-002`
+- `status`: `VERIFIED`
+- 증상/signature: SDK patch 뒤 Jest가 `expo-font/build/FontLoader.js`에서
+  `Cannot find module 'expo-asset'`로 여러 UI suite를 시작하지 못한다. lockfile에는
+  `node_modules/expo/node_modules/expo-asset`만 있고 top-level entry가 없다.
+- 적용 조건: Expo 55.0.28, `expo-font` 55.0.8, `expo-asset` 55.0.18, npm 11.6.2에서
+  app이 top-level `expo-font` 또는 `@expo/vector-icons`를 사용하고 fresh lock이 asset을
+  Expo dependency 아래에만 배치한 경우.
+- root cause: `expo-font` runtime이 `expo-asset`을 import하지만 해당 package metadata가
+  이를 직접 dependency로 선언하지 않아, npm의 유효한 nested layout에서는 Node/Jest
+  resolver가 sibling package import를 찾을 수 없다.
+- 해결 절차:
+  1. lockfile과 disk에서 top-level/nested `expo-asset` 위치를 각각 확인한다.
+  2. `npm dedupe --dry-run`이 광범위 transitive 변경을 제안하면 적용하지 않는다.
+  3. 사용자 승인 뒤 app runtime dependency에 `expo-asset@~55.0.18`을 직접 선언한다.
+  4. 최초 실패 UI suites를 focused 재실행한 뒤 full Jest, TypeScript, ESLint, `npm ls
+     --all`, `expo install --check`를 실행한다.
+  5. Expo config file hash와 Git changed-file allowlist가 보존됐는지 확인한다.
+- 검증: direct declaration 전 4 suites가 같은 module-resolution 오류로 실패했고, 추가 후
+  focused 4 suites·14 tests와 full 17 suites·136 tests가 통과했다. TypeScript, 전체 npm
+  tree, Expo compatibility check는 exit 0이고 ESLint는 0 errors·기존 warnings 2였다.
+- 재발 방지/금지: test mock이나 Jest resolver alias로 실제 runtime dependency 누락을
+  숨기지 않는다. 하나의 hoist를 위해 broad `npm dedupe`를 실행하지 않는다.
+- 적용 불가/잔여 위험: 이후 Expo/`expo-font` release가 dependency metadata를 고치면 direct
+  declaration 필요성을 공식 versioned docs와 clean install에서 다시 평가한다.
+- 근거: [Front package manifest](../../DSM_Front/package.json),
+  [Android Google provider login plan](../../docs/superpowers/plans/2026-08-12-android-google-provider-login.md)
+- `lastVerifiedAt`: `2026-08-13`
+
+### ER-20260813-003 — Jest의 eager Nitro TurboModule import 차단
+
+- `resolutionId`: `ER-20260813-003`
+- `status`: `VERIFIED`
+- 증상/signature: Jest가 native Google package를 import할 때 `Failed to get NitroModules`와
+  `TurboModuleRegistry.getEnforcing(...): 'NitroModules' could not be found`로 suite 시작 전에
+  실패한다.
+- 적용 조건: Jest/Node test runtime에서 import한 React Native package가 module evaluation
+  시점에 `NitroModules.createHybridObject(...)`를 호출하고, 실제 native binary는 없는 경우.
+- root cause: test 대상 adapter의 injected logic이 아니라 외부 package singleton의 eager
+  native-module 초기화가 Jest runtime 경계를 넘어 실행됐다.
+- 해결 절차:
+  1. stack이 제품 함수 호출 전 package import와 Nitro TurboModule registry에서 끝나는지 확인한다.
+  2. test file에서 외부 package 중 제품 module이 참조하는 export와 native method만 mock한다.
+  3. adapter factory와 제품 error/normalization logic은 mock하지 않고 injected dependency로
+     실제 실행한다.
+  4. mock 자체를 assertion 대상으로 삼지 않고 focused Jest, TypeScript와 lint를 재실행한다.
+- 검증: mock 전 suite는 0 tests로 native import에서 실패했고, 경계 mock 뒤 adapter 9 tests가
+  통과했다. TypeScript와 focused lint도 exit 0이었다.
+- 재발 방지/금지: 제품 adapter 전체를 mock해 behavior test를 무효화하거나 Jest를 위해 native
+  product import를 임의 dynamic-import 구조로 바꾸지 않는다.
+- 적용 불가/잔여 위험: native bridge, autolinking, config plugin과 실제 Credential Manager 동작은
+  development build·physical device에서 별도 검증해야 한다.
+- 근거: [Google sign-in adapter tests](../../DSM_Front/src/features/auth/google-sign-in.test.ts),
+  [Google sign-in adapter](../../DSM_Front/src/features/auth/google-sign-in.ts)
+- `lastVerifiedAt`: `2026-08-13`
+
+### ER-20260813-004 — Jest callback arity 추론의 `TS2322`
+
+- `resolutionId`: `ER-20260813-004`
+- `status`: `VERIFIED`
+- 증상/signature: `jest.fn(() => false)`가 `Mock<boolean, [], unknown>`으로 추론돼
+  `(error: unknown) => boolean` dependency에 할당될 때 `TS2322`가 발생한다.
+- 적용 조건: Jest 29·TypeScript 5.9에서 test double callback이 argument를 사용하지 않지만
+  제품 interface는 하나 이상의 필수 argument를 선언한 경우.
+- root cause: Jest가 callback 구현의 실제 0-argument arity를 보존해, 제품 dependency의 필수
+  argument tuple과 다른 mock type을 만들었다.
+- 해결 절차:
+  1. TypeScript 오류가 제품 interface가 아니라 test fake 할당 위치를 가리키는지 확인한다.
+  2. mock callback에 제품 계약과 같은 typed argument를 선언한다(예: `(_error: unknown) => false`).
+  3. 제품 callback type을 optional로 약화하거나 broad cast로 오류를 숨기지 않는다.
+  4. focused Jest와 전체 TypeScript, lint를 재실행한다.
+- 검증: 수정 전 `google-sign-in.test.ts`에서 정확한 `Mock<boolean, []>` 대
+  `MockInstance<boolean, [error: unknown]>` 오류를 재현했고, argument type 추가 후 adapter
+  9 tests, TypeScript와 focused lint가 통과했다.
+- 재발 방지/금지: 사용하지 않는 argument라는 이유로 test double의 interface arity를
+  삭제하지 않는다. generic return mismatch는 별도 `ER-20260726-004`를 사용한다.
+- 적용 불가/잔여 위험: callback 자체가 generic이면 단순 argument 추가로 충분하지 않으므로
+  generic mock record의 절차를 따른다.
+- 근거: [Google sign-in adapter tests](../../DSM_Front/src/features/auth/google-sign-in.test.ts)
+- `lastVerifiedAt`: `2026-08-13`
+
+### ER-20260813-005 — Jest mock factory의 초기화 전 함수 값 캡처
+
+- `resolutionId`: `ER-20260813-005`
+- `status`: `VERIFIED`
+- 증상/signature: UI handler는 generic failure 경로에 들어가지만 `jest.fn()`으로 만든 adapter
+  operation의 호출 수는 0이다. 성공·취소 fixture도 모두 같은 generic error로 바뀐다.
+- 적용 조건: Jest 29의 hoisted `jest.mock()` factory가 뒤에서 선언한 `mock*` 변수를 객체
+  property 값으로 직접 할당하고, 대상 제품 module이 test top-level import로 먼저 평가되는 경우.
+- root cause: mock factory 평가 시점에 `googleSignInAdapter: { acquireIdToken:
+  mockAcquireIdToken }`가 초기화 전 값을 캡처했다. 제품 handler는 undefined operation 호출에서
+  `TypeError`를 받아 generic failure로 정상화했으므로 원래 mock은 호출되지 않았다.
+- 해결 절차:
+  1. 제품 handler 진입 여부와 mock call count·generic catch 결과를 함께 확인한다.
+  2. factory가 mock 함수 값을 직접 복사하는지 확인한다.
+  3. property를 `acquireIdToken: () => mockAcquireIdToken()`처럼 호출 시점에 참조하는 좁은
+     wrapper로 바꾼다.
+  4. 제품 코드를 우회하거나 error classifier를 약화하지 않고 focused UI와 auth 회귀 suite,
+     TypeScript, lint를 재실행한다.
+- 검증: 직접 값 캡처에서는 login screen 9 tests 중 4개가 실패했고 adapter mock call은 0이었다.
+  호출 시점 wrapper 적용 뒤 9/9, 관련 auth 4 suites·54 tests, TypeScript와 focused lint가 통과했다.
+- 재발 방지/금지: mock 초기화 순서를 숨기기 위해 제품 import를 dynamic import로 바꾸거나 제품
+  예외 처리를 제거하지 않는다. mock factory에서 뒤 선언된 함수 값의 eager property 할당을 피한다.
+- 적용 불가/잔여 위험: factory가 호출 시점 callback 자체를 만들 수 없거나 ESM unstable mock을
+  사용한다면 해당 Jest module-loading 계약을 별도로 검증해야 한다.
+- 근거: [Login screen tests](../../DSM_Front/src/__tests__/app/index.test.tsx),
+  [Login screen](../../DSM_Front/src/app/index.tsx)
+- `lastVerifiedAt`: `2026-08-13`
+
+### ER-20260813-006 — Android-only explicit Google client-ID에서 config plugin 충돌
+
+- `resolutionId`: `ER-20260813-006`
+- `status`: `VERIFIED`
+- 증상/signature: `react-native-nitro-google-signin`을 `expo.plugins`에 문자열로 추가한 뒤
+  `expo config --type prebuild --json`이 exit 1하고 유효한 config JSON을 출력하지 않는다.
+- 적용 조건: Expo SDK 55, `react-native-nitro-google-signin@1.3.0`, Android-only milestone,
+  `GoogleOneTapSignIn.configure({ webClientId: <explicit public Web client ID> })`를 사용하며 iOS
+  URL scheme과 Google Services plist/json을 아직 승인·구성하지 않은 경우.
+- root cause: package 1.3.0 config plugin은 platform-neutral config 평가에서 iOS URL scheme 또는
+  Google Services file을 필수로 요구하고 iOS Podfile mod도 등록한다. Android native module
+  자체는 설치 dependency에서 Expo React Native autolinking으로 발견된다.
+- 해결 절차:
+  1. package의 설치된 `app.plugin.js`와 plugin source, versioned README를 확인한다.
+  2. Android explicit client-ID 경로에서는 가짜 iOS scheme, placeholder Google Services file,
+     client secret을 추가하지 않는다.
+  3. package를 runtime dependency로 유지하되 해당 config plugin을 `expo.plugins`에 등록하지 않는다.
+  4. 승인된 `expo.android.package`를 설정하고 `expo config --type prebuild --json`을 실행한다.
+  5. `expo-modules-autolinking react-native-config --platform android` 출력에 package와
+     `NitroGoogleSigninPackage`가 있는지 확인하고 native folder가 생성되지 않았는지 검증한다.
+- 검증: plugin 등록 상태에서 Expo config는 exit 1이었다. 미등록 후 package
+  `com.dsm.dailyup`이 해석됐고 Android autolinking이 Google/Nitro native package를 발견했으며
+  config·diff check가 통과했다. `android/`·`ios/`은 생성되지 않았다.
+- 재발 방지/금지: config 통과를 위해 가짜 iOS OAuth 값이나 Google Services 파일을 만들지 않는다.
+  이후 package plugin이 Android-only option을 공식 지원하면 installed source와 clean config에서
+  다시 평가한다.
+- 적용 불가/잔여 위험: iOS 또는 Firebase/`autoDetect`를 도입할 때는 plugin과 실제 승인된
+  URL scheme/Google Services 설정이 필요하다. EAS Android build와 physical-device 동작은 미검증이다.
+- 근거: [Google login design](../../docs/superpowers/specs/2026-08-12-android-google-provider-login-design.md),
+  [implementation plan](../../docs/superpowers/plans/2026-08-12-android-google-provider-login.md),
+  [Expo app config](../../DSM_Front/app.json)
+- `lastVerifiedAt`: `2026-08-13`
+
+### ER-20260816-001 — ESLint 8과 React Native flat-config/plugin 해석 충돌
+
+- `resolutionId`: `ER-20260816-001`
+- `status`: `VERIFIED`
+- 증상/signature: ESLint 8.57에서 `ERR_PACKAGE_PATH_NOT_EXPORTED: eslint/config`가 발생하거나 `eslint-plugin-react-hooks`를 root에서 찾지 못한다.
+- 적용 조건: `@react-native/eslint-config@0.83.x`, ESLint 8, `FlatCompat`를 사용하는 npm install에서 plugin들이 config package 아래에 nested된 경우.
+- root cause: config가 ESLint 9 전용 helper를 사용했고 legacy shareable config의 plugin 해석 기준이 package 설치 위치와 달랐다.
+- 해결 절차: `eslint/config` helper 없이 flat config 배열을 export하고 `FlatCompat.resolvePluginsRelativeTo`를 `@react-native/eslint-config` package directory로 지정한다.
+- 검증: `npm run lint` exit 0, errors 0. 기존 style/no-void warnings는 별도 cleanup 대상이다.
+- 재발 방지/금지: lint를 끄거나 plugin rule을 임의 제거하지 않는다. ESLint major 변경 시 official React Native config 호환성을 함께 재검증한다.
+- 근거: [ESLint config](../../DSM_Front/eslint.config.js)
+- `lastVerifiedAt`: `2026-08-16`
+
+### ER-20260816-002 — 이전 Jest transform cache로 native mock identity 불일치
+
+- `resolutionId`: `ER-20260816-002`
+- `status`: `VERIFIED`
+- 증상/signature: Keychain test는 focused fresh cache에서 11/11 통과하지만 기존 cache를 재사용한 full run에서 정상 case만 고정 storage error로 실패한다.
+- 적용 조건: Jest preset/module mapper/native mock 설정을 변경한 뒤 같은 project-local cache directory를 재사용한 경우.
+- root cause: 이전 transform/module-resolution 상태가 cache에 남아 test가 설정한 mock과 production import가 같은 identity를 보지 못했다.
+- 해결 절차: 제품 코드를 바꾸기 전에 focused fresh cache로 재현성을 분리하고, verified project-local Jest cache만 제거한 뒤 unique fresh cache로 full suite를 실행한다.
+- 검증: fresh cache full run에서 18 suites, 161 tests 전부 통과했다.
+- 재발 방지/금지: cache-only 실패를 제품의 fail-closed storage 동작을 약화해 해결하지 않는다. Windows sandbox에서는 system Temp 대신 project-local cache를 사용한다.
+- 근거: [Jest config](../../DSM_Front/jest.config.js), [Keychain tests](../../DSM_Front/src/features/auth/token-store.native.test.ts)
+- `lastVerifiedAt`: `2026-08-16`
+
+### ER-20260816-003 — Metro Windows cache 손상과 sandbox reset 권한 오류
+
+- `resolutionId`: `ER-20260816-003`
+- `status`: `VERIFIED`
+- 증상/signature: `Unable to deserialize cloned data` 뒤 Metro full crawl이 오래 걸리거나 `--reset-cache`가 `%LOCALAPPDATA%\Temp\metro-cache`의 `EPERM`으로 종료된다.
+- 적용 조건: React Native 0.83 Metro on Windows, sandbox가 user Temp 삭제를 제한하고 project root에 대형 test cache가 남은 경우.
+- root cause: 손상된 Metro disk cache와 불필요한 project-local test cache crawl, sandbox의 user Temp 삭제 제한이 겹쳤다.
+- 해결 절차: Metro를 중지하고 exact project-local `.jest-cache-*`만 경로 검증 후 제거한다. `npm start -- --port 8081 --reset-cache`를 필요한 Temp 권한으로 실행하고 `Dev server ready` 뒤 앱을 재시작한다.
+- 검증: reset 뒤 Metro가 `index.js` bundle을 다시 생성했고 Android Studio 설치 앱이 Community bundle을 요청했다.
+- 재발 방지/금지: source/build output을 포괄 삭제하거나 broad Temp delete를 하지 않는다. 삭제 대상은 exact cache path로 제한한다.
+- 적용 불가/잔여 위험: 최초 clean transform은 수 분 걸릴 수 있으므로 진행률과 CPU를 확인한다.
+- 근거: [Metro config](../../DSM_Front/metro.config.js), [Android local plan](../../docs/superpowers/plans/2026-08-15-android-studio-local-development.md)
+- `lastVerifiedAt`: `2026-08-16`
+
+### ER-20260817-001 — Android Studio debug signer OAuth 누락으로 Google 로그인이 `[16]`에서 중단됨
+
+- `resolutionId`: `ER-20260817-001`
+- `status`: `VERIFIED`
+- 증상/signature: Android emulator에서 Google 계정을 선택해도 Credential Manager가
+  `[16] Account reauth failed`를 반환하고 앱이 Login으로 복귀한다. backend `/auth/login`과
+  Keychain refresh token 생성 전이다.
+- 적용 조건: React Native Android 앱이 PC별 기본 debug keystore로 서명되고, package와 Web OAuth
+  audience는 맞지만 현재 debug signer의 SHA-1이 같은 Google Cloud project의 Android OAuth
+  client에 등록되지 않은 경우.
+- root cause: 기존 Android OAuth clients는 package만 일치하고 현재 Android Studio debug signer와
+  fingerprint가 달랐다. Credential Manager/native adapter는 이 signer trust 실패를 사용자 취소와
+  같은 cancellation 계열로 축약했다.
+- 해결 절차:
+  1. 앱의 Web client와 선택한 Google Cloud project의 Web client가 같은지 값 비출력 digest 비교로 확인한다.
+  2. 현재 APK/debug keystore signer와 기존 same-package Android clients를 값 비출력 digest로 비교한다.
+  3. 기존 client를 덮어쓰지 않고 `com.dsm.dailyup`과 현재 PC debug signer용 Android OAuth client를
+     별도로 생성한다. 전송·영구 생성 직전에 사용자 action-time 승인을 받는다.
+  4. 생성 UI 오류만 믿지 않고 client list/detail을 다시 읽어 matching client가 정확히 존재하는지 확인한다.
+  5. Google ID-token→backend exchange→relaunch/refresh→logout→post-logout relaunch까지 검증한다.
+- 검증: matching client 생성 뒤 Google ID-token fetch와 sign-in이 성공했다. disposable DB에
+  user/social/session이 생성됐고, 재실행은 authenticated Home과 refresh rotation을 복구했다.
+  logout 뒤 active refresh token은 0이었고 재실행도 Login을 유지했다. 독립 validator 2명이
+  historical finding을 `SURVIVED`, 구현자와 분리된 reviewer가 external fix를 `RECHECKED`로 판정했다.
+- 재발 방지/금지: SHA-1·client ID·token 완전값을 Git, memory, chat, log에 남기지 않는다. 다른 PC의
+  debug keystore나 release/Play signer를 기존 client에 덮어쓰지 말고 signer별 client로 등록한다.
+  Cloud UI가 일반 오류를 표시해도 같은 요청을 즉시 반복하지 말고 list/detail의 실제 최종 상태를 먼저 읽는다.
+- 적용 불가/잔여 위험: 이 record는 현재 PC debug signer만 다룬다. release/Play signing, 다른 PC,
+  production environment provisioning과 앱의 silent cancellation 분류 결함 `F-026`은 별도 gate다.
+- 근거: [Android local runbook](../../DSM_Front/README.md),
+  [Android Gradle config](../../DSM_Front/android/app/build.gradle),
+  [release audit](../audits/20260817-release-audit-full-project/README.md)
+- `lastVerifiedAt`: `2026-08-17`
 
 ## 새 record 템플릿
 

@@ -1,144 +1,154 @@
-# 프로젝트 공정표
+# 프로젝트 공정표 — 2026-08-17
 
-## 제품 마일스톤
+## 완료
 
-- [x] M1~M5: 계획·NestJS/Expo 초기화·최초 push·Prisma/PostgreSQL 기반
-- [x] M6 Auth: Google/Kakao, JWT access/refresh, bcrypt hash, logout, guard, `/auth/me`
-- [x] M7 Task CRUD: create/list/get/update/soft-delete/complete + service/controller tests
-- [x] M8 Category CRUD: user/default 경계, default read-only, foreign owner 숨김, duplicate 409
-- [x] M9 Refresh O(1): `<recordId>.<secret>`, PK lookup + 단일 bcrypt compare
-  - [ ] 선택 보류: revoked token 재사용 감지 hook
-- [x] M10 DailyScore: UTC day recompute, cap 900, 6 tiers, Task 연동
-  - [ ] 보류: UTC 자정 마감 Cron
+- [x] M1~M5: 계획·NestJS/Expo 초기화·Prisma/PostgreSQL 기반
+- [x] M6 Auth: Google/Kakao, JWT access/refresh, bcrypt, logout, guard, `/auth/me`
+- [x] M7 Task CRUD
+- [x] M8 Category CRUD + user/default/foreign-owner 경계
+- [x] M9 Refresh O(1): `<recordId>.<secret>`, PK lookup + 1 bcrypt compare
+- [x] M10 DailyScore: UTC recompute, cap 900, 6 tiers
 - [x] M11 Ranking: DAILY/WEEKLY/TOTAL, percentile, leaderboard, snapshot
-  - [ ] 보류: batch/Redis, WebSocket, 자동 snapshot Cron
-- [x] M12A 알림 기반: FCM token lifecycle, Task-`NotificationSchedule` 원자 동기화, module·tests
-- [/] M12B Firebase Admin + Cron
-  - [x] branch A + per-device `NotificationDelivery` schema·2 migrations
-  - [x] Docker persistent PostgreSQL 17 적용·zero drift·FK·index plan·restart persistence
-  - [x] ADC-only provider, 30초 Cron, lease/heartbeat, per-device finalize/retry
-  - [x] F-001~F-005·F-008~F-014 `RECHECKED`
-  - [x] F-004 durable send marker + terminal `UNKNOWN` at-most-once
-  - [x] F-010 cross-user token/FID transfer 409 + account-neutral payload
-  - [x] F-007 backend 완화 + 사용자 `ACCEPTED_RISK`
-  - [x] 전체 Jest 22 suites·198 tests, e2e 2, AppModule compile, TypeScript, lint·Prettier·Prisma·diff
-  - [ ] 12C authenticated current-state client gate
+- [x] M12A: FCM token lifecycle + Task-`NotificationSchedule` 원자 동기화
+- [x] M12B backend·local DB·change-gate
+  - [x] per-device delivery, ADC provider, Cron, lease/heartbeat, finalize/retry
+  - [x] durable send marker + terminal `UNKNOWN` at-most-once
+  - [x] cross-user token/FID 409 + account-neutral payload
+  - [x] F-007 완화 + 사용자 `ACCEPTED_RISK`; 나머지 findings `RECHECKED`
+- [x] Front secure session·REST client Task 1~33
+  - [x] onboarding/CORS/API validators/public·authenticated clients
+  - [x] Native SecureStore verified clear + Web memory store
+  - [x] session state/context/routing + login/onboarding/recovery/logout UI
+  - [x] refresh single-flight·generation/epoch fences·onboarding single-flight
+  - [x] refresh-token family + refresh/logout user-row lock
+  - [x] Web export 11 routes·responsive QA·auth change-gate
+- [x] 지원 체계: agent roles, context compiler, verification workflow, playbook, Docker local DB, Obsidian routing
+
+## 현재 진행 상태
+
+- [/] M12 notification
+  - [x] 12A 기반
+  - [x] 12B backend·local DB·change-gate
+  - [ ] Native actual device/provider-token evidence
+  - [ ] 12C authenticated current-state client
   - [ ] 실제 ADC·FCM sandbox/test device
+- [x] Front secure session·REST client 제품·Web QA·auth change-gate
+- [/] Android Google provider login
+  - [x] Tasks 1~7 local 구현·검증
+  - [x] Google OAuth consent/Web+Android client
+  - [x] EAS project·development env·signing·cloud APK `FINISHED`
+  - [x] Android Studio local 환경
+    - [x] host SDK/JDK/NDK·Gradle sync·debug APK
+    - [x] API 36 system image·`Medium_Phone` AVD 설치·연결
+  - [ ] backend `GOOGLE_CLIENT_ID` 동일 Web audience 영구 release provisioning
+  - [x] disposable local backend process에 동일 Web audience 연결(값 비출력·비영구)
+  - [x] current pure-RN debug APK emulator install·launch·Google 계정 인증 화면 진입
+  - [x] 사용자 Google 계정 UI 완료
+  - [x] provider smoke 실패 증거 확보: `[16] Account reauth failed`, backend/Keychain 이전
+  - [x] current debug package/SHA Android OAuth 불일치 확인·별도 matching client 생성·독립 recheck
+  - [x] emulator Google login→backend exchange→reload/refresh→verified logout actual session smoke
+  - [ ] Task 10 authentication change-gate·final sync
+- [ ] PR·merge·배포
 
-## 지원 작업
+## Android Google 완료 증거
 
-- [x] Sub-agent roles + exact allowlist + main integration 계약
-- [x] Context Compiler `Handoff Package v1`/`AgentEnvelope v1.1`
-- [x] 전체 read-only code review + 지정 품질 5건 수정
-- [x] `change-gate`/`release-audit` + JSONL finding schema
-- [x] 현재 프로젝트 architecture 문서
-- [x] frontend 15-screen requirements 문서
-- [x] design Phase 1 Expo prototype + Browser responsive QA
-- [x] Docker Desktop 4.82.0 + WSL 2.7.10 + persistent local DB
-- [x] 오류 해결 playbook 37 records; F-007만 `MITIGATION_ONLY`
-- [x] `.ai/memory` 압축·정리
-  - [x] 사용자 Anthropic 전송 승인·비밀값 scan
-  - [x] exact local backup: `plan`, `checklist`, `error-resolution-playbook`
-  - [x] Anthropic CLI timeout·Windows CP949 failure 확인, external 경로 중단
-  - [x] `context.md` 최신 SSOT 기반 UTF-8 복구·압축
-  - [x] `checklist.md` 상태 중심 압축
-  - [x] `plan.md` 현재 계획 중심 압축
-  - [x] structured conditional playbook 유지·default read 제외
-  - [x] memory `README.md`, backup/failed artifact ignore·system routing
-  - [x] size·hash·UTF-8·Markdown·핵심 invariant·diff 최종 검증
-- [x] Obsidian `AiWiki` Vault와 DSM junction 연결
-  - [x] 사용자 `DSM junction 연결 승인`
-  - [x] 일반 directory `C:\AiWiki\AiProject` 생성
-  - [x] `C:\AiWiki\AiProject\DSM` → `C:\DEV` junction 생성
-  - [x] Obsidian 1.12.7에서 `C:\AiWiki` Vault 등록
-  - [x] backend·front `node_modules` 제외 경로 저장
-  - [x] junction target·문서 접근·비순환 구조·Obsidian 설정 readback 검증
-- [x] Obsidian DSM 문서 큐레이션
-  - [x] 문서 41개 전수 목록화·Obsidian 실제 노출·현재 소스 대조
-  - [x] exact writable allowlist와 단계별 수정 계획 기록
-  - [x] 사용자 `DSM 문서 정리 승인`
-  - [x] `DSM-Current` → `.ai/docs` junction 생성·검증
-  - [x] AI 지침·starter README·agent history Obsidian 색인 제외
-  - [x] `DSM Overview.md` 생성과 문서 역할별 internal link 구성
-  - [x] v1.3 기획 문서 4개 상태 경고 추가
-  - [x] Overview 렌더링·internal link 9개·Git diff·memory 종료 검증
-  - [x] junction 아래 `node_modules` Quick Switcher hard isolation
-    - [x] exact path·정규식 제외와 Vault cache rebuild 재검증
-    - [x] 별도 승인 후 기존 `DSM` full-source junction을 일반 컨테이너로 교체
-- [x] Obsidian DSM 일반 컨테이너 전환
-  - [x] 현재 junction·target과 Current/Planning 문서 목록 재검증
-  - [x] exact 구조·단계·writable allowlist 기록
-  - [x] 사용자 `DSM 일반 컨테이너 전환 승인`
-  - [x] full-source junction 제거와 일반 `DSM` directory 생성
-  - [x] `Current`·`Planning` child junction 생성
-  - [x] Overview 이동·링크 및 기획 문서 architecture 링크 갱신
-  - [x] stale Obsidian 제외 필터 제거·cache rebuild
-    - [x] 앱 재실행과 2분 이상 대기로 cache 정체 재검증
-    - [x] Computer Use helper 회복 후 `Alt+F4`·닫기 버튼 정상 종료 실패 재검증
-    - [x] IndexedDB stale `node_modules` cache 확인·플레이북 일치 record 없음
-    - [x] Obsidian process 제한 강제 종료·exact backup 이동 기반 cache 복구 사용자 승인
-    - [x] 기존 cache 삭제 없이 `.pre-dsm-20260721` exact backup 이동·새 cache와 workspace 정상 로드
-    - [x] Settings UI 제외 필터 제거·cache rebuild
-      - [x] stale 제외 필터 11개 UI 삭제 action-time 사용자 확인
-      - [x] 사용자 입력 중단 후 나머지 10개 제거·저장
-      - [x] `app.json` readback `userIgnoreFilters: null`
-      - [x] 보관함 cache rebuild UI action-time 사용자 확인·실행
-  - [x] Quick Switcher·링크·junction·Git diff·memory 종료 검증
+- [x] application ID `com.dsm.dailyup`
+- [x] provider dependencies + React Native 0.83 Android compatibility
+- [x] blank-safe Web client-ID config boundary TDD
+- [x] native Google ID-token adapter TDD
+- [x] login UI → `SessionController.signIn('GOOGLE', token)` 연결 TDD
+- [x] Android package/autolinking/public env 계약
+- [x] EAS internal development APK profile
+- [x] Android-only local gate: Jest 18 suites/162 tests, TypeScript, lint 0 errors(warnings 18), Community CLI autolinking/Expo runtime leakage
+- [x] EAS signing SHA-1을 사용한 Android OAuth client 생성; 값 기록 금지 준수
+- [x] Web OAuth client를 EAS development env에 저장; 완전값 기록 금지 준수
+- [x] EAS Android development build archive 확인
+- [x] worktree `C:\DEV\fsr` 이동으로 Windows Ninja/CMake path 오류 해결
+- [x] Expo runtime/CLI/Router/SecureStore/dev-client 제거; React Navigation/Keychain/Config/Community CLI 전환
+- [x] Web/iOS target과 Expo 전용 source/assets/config 제거
+- [x] pure React Native `assembleDebug`: `BUILD SUCCESSFUL in 19m 1s`, 365 tasks
+- [x] Android Studio Gradle sync·`Run app` build/install·Metro `index.js`·로그인 화면 확인
+- [x] Android project Git 추적 경계: build/cache/local.properties/`*.keystore` 제외
+- [x] release의 debug signing 재사용 제거; final incremental `assembleDebug` 365 tasks 통과
+- [x] independent review P1/P2 조치: new-PC debug OAuth 등록 runbook, cold-start bootstrapping, exact Node/npm-ci 계약
+- [x] legacy `eas.json`·미사용 `dsmfront:` BROWSABLE scheme 제거
+- [x] local APK 231,200,412 bytes + SHA-256 검증
+- [x] Android Studio 호스트 SDK 설치·AVD 연결
+- [x] actual Google token exchange·Keychain reload·refresh rotation·verified logout evidence
+
+## 2026-08-17 full-project release audit
+
+- [x] Backend unit 214, e2e 2, build, ESLint, Prisma validate
+- [x] Frontend Jest 162, typecheck, ESLint, npm tree, Community CLI config
+- [x] disposable PostgreSQL 17 migration 4개·backend health
+- [x] fresh assembleDebug 365 tasks·signer/install/launch/Metro/login render
+- [x] 3개 free-exploration lens + 독립 validator 2명 + disagreement tie-break
+- [x] audit ledger 26행 JSON parse·ID/fingerprint/hash·static schema contract
+- [x] `F-025` external Android OAuth fix: independent validators 2명 `SURVIVED`, fix-recheck `RECHECKED`
+- [/] audit open: confirmed 23, unknown 2, rechecked 1; release-ready 아님
+- [ ] P1 5건 remediation + 독립 recheck
+- [ ] P2/UNKNOWN remediation·scope evidence
+- [ ] 서로 다른 2개 자유 탐색 round에서 신규 confirmed P0~P2 0건 연속
 
 ## 다음 실행 순서
 
-1. [/] Front secure session·API client 연결 계획
-   - [x] 범위·플랫폼 token 정책·온보딩·offline 정책 결정
-   - [x] 경량 `fetch` client + 명시적 session state machine 선택
-   - [x] 보안·동시성·Expo SDK 55 공식 문서 기준 전체 설계 재검토
-   - [x] 보완된 전체 설계 사용자 승인
-   - [x] 승인 설계 명세 작성·자체 검토
-   - [x] 설계 명세 사용자 검토와 Git commit
-   - [x] 상세 TDD 구현 계획 작성·자체 검토
-   - [x] 상세 계획 사용자 검토와 Git commit 승인
-   - [x] exact 1~2-file 제품 코드 구현·단계별 local commit·subagent-driven 실행 승인
-   - [/] 격리 workspace 확인 후 상세 TDD 계획 실행
-2. [ ] M12C permission + logout/account-switch Installation rotation + authenticated current-state sync/display
-3. [ ] 별도 Firebase test project/device ADC·FCM sandbox
-4. [ ] 검증 후 `FCM_DISPATCH_ENABLED` 활성 판단
-5. [ ] M13 WebSocket 실시간 ranking
-6. [ ] M14 Redis/batch caching
+1. [x] Google Cloud same-project의 current debug package/SHA Android OAuth 불일치 확인·matching client 생성
+2. [x] emulator Google account 인증·로그인 재시도
+3. [x] login→reload/bootstrap→profile→refresh rotation→logout verified-clear smoke
+4. [/] release-audit confirmed P1 5건 plan·승인·수정·recheck
+   - [/] `F-016` Android Git handoff
+     - [x] 설계·memory plan 작성 및 사용자 승인
+     - [x] 구현 계획 작성
+     - [x] dirty worktree provenance·commit 경계 검수
+     - [x] ignore·secret·diff boundary 검증
+     - [x] frontend Jest 18/162·typecheck·lint 0 errors·Community CLI gate
+     - [x] Android Studio JDK 17 Gradle build: 281 tasks, `BUILD SUCCESSFUL in 6m 10s`
+     - [ ] 의도별 staged diff 검수·commit
+     - [ ] current feature branch push·remote HEAD 일치
+     - [ ] clean checkout 재현 검증
+     - [ ] independent fix-recheck·audit/memory closure
+5. [ ] UNKNOWN 2건 readiness/notification scope 증거 확정
+6. [ ] 나머지 P2/P3 처리·release-audit 종료 조건 충족
+7. [ ] M12C
+   - [ ] notification permission
+   - [ ] logout/account-switch Firebase Installation/token rotation
+   - [ ] data-only signal 수신
+   - [ ] authenticated current-state fetch/display
+   - [ ] cancelled/completed/deleted Task 표시 금지
+8. [ ] Firebase test project/device ADC·FCM sandbox
+9. [ ] evidence 후 `FCM_DISPATCH_ENABLED` 활성 판단
+10. [ ] M13 WebSocket → M14 Redis/batch
 
 ## 계속 유지할 gate
 
-- [ ] 실제 FCM credential·message send는 sandbox 승인·12C 완료 전 금지
-- [ ] 원격/운영 DB migration·reset·drop은 별도 승인 전 금지
-- [ ] deploy와 Git stage·commit·push는 명시 승인 전 금지
-- [ ] `ACCEPTED_RISK`를 `RECHECKED`/해결 완료로 표시하지 않음
+- [x] Native device session smoke 전 M12C 진입 완료 표시 금지 — smoke 확보, M12C는 여전히 미시작
+- [ ] credential·token·SHA-1·client ID 완전값 출력·Git·memory 기록 금지
+- [ ] 실제 Firebase credential/message send는 별도 승인 전 금지
+- [ ] remote/prod DB migration·reset·drop 별도 승인 전 금지
+- [ ] Git stage·commit·push·PR·merge·deploy 명시 승인 전 금지
+- [ ] F-007 `ACCEPTED_RISK`/`MITIGATION_ONLY`를 `RECHECKED`·해결로 표시 금지
+- [ ] 고위험 변경은 `change-gate`; release 전 `release-audit`
 
-## Front secure session·REST client 체크포인트 — 2026-07-25
+## 보류·별도 triage
 
-- [x] Task 1~6 Backend onboarding contract와 strict CORS
-- [x] Task 7~9 Expo SDK 55 test/lint/SecureStore 설정 기반
-- [x] Task 10 strict API base URL policy
-- [x] Task 11 safe `ApiError`
-- [x] Task 12 runtime auth contract validators
-- [x] Task 13 one-attempt JSON HTTP transport
-- [x] Task 14 public auth API
-- [x] Front 전체 Jest 17 suites·136 tests
-- [x] Front `expo lint`
-- [x] Front TypeScript
-- [x] Tasks 7~19 로컬 커밋과 독립 검토
-- [x] Task 15 token-store coordinator 직렬화·epoch race
-- [x] Task 16 Native SecureStore adapter
-- [x] Task 17 Web module-memory token store — reload 시 빈 상태, 독립 검토 clean
-- [x] Task 18 authenticated client — single-flight·generation reuse·session ownership fence
-- [x] Task 19 session state machine — TDD, fix round 1, scoped re-review clean
-- [x] Task 20~28 session context/routing/UI/logout와 persistent onboarding migration
-- [x] Task 29~30 Web export·responsive Browser QA·Expo Router test-route boundary
-- [x] Task 31 전체 authentication change-gate — F-001~F-005 모두 `RECHECKED`
-- [x] F-001/F-003 stale profile·onboarding single-flight 보완 (`befac64`)
-- [x] F-002 delayed/in-flight/post-refresh 401 generation fence (`fa3af61`, `c61c7cc`, `cb49a13`)
-- [x] F-004 refresh-token family schema·user-row lock·family logout (`bd4354b`, `f99e28b`)
-- [x] Prisma onboarding + refresh-token session-family migrations를 exact local DB에 적용·4 migrations up-to-date·zero drift
-- [x] Task 32 오류 플레이북 갱신
-- [x] Task 33 context/checklist/plan 동기화
-- [ ] 실제 provider-token + iOS/Android SecureStore login/reload/refresh/logout device smoke
-- [ ] dependency audit 55건 별도 compatibility/security triage
-- [x] 2026-08-02 원격 branch push — Front Task 19 `82d03bf`, m12b checkpoint `960f02b`
-- [ ] PR·merge·배포 — 미승인/미실행
+- [ ] dependency audit 32건(critical 0; Backend 15, Frontend 17)
+- [ ] actual multi-connection PostgreSQL refresh/logout interleaving
+- [ ] Task parser hash/non-string 명시 test
+- [ ] Apple Sign In actual verification
+- [ ] revoked refresh-token reuse hook
+- [ ] UTC midnight score Cron
+- [ ] Redis/batch·WebSocket·automatic ranking snapshot
+
+## `.ai/memory` 압축·정리 — 2026-08-16
+
+- [x] active memory·Git·Android APK actual 상태 대조
+- [x] `caveman-compress` 안전 감사 — `ER-20260720-014` locale 손상 조건 재확인
+- [x] 기존 `*.original.md` 비접근·비덮어쓰기
+- [x] local-only 계획·exact 1~2-file stages 사용자 승인
+- [x] `plan.20260816.original.md` byte-exact backup + `plan.md` 압축·갱신
+- [x] `context.20260816.original.md` byte-exact backup + `context.md` 압축·갱신
+- [x] `checklist.20260816.original.md` byte-exact backup + `checklist.md` 압축·갱신
+- [x] `README.md` backup hash·크기·압축률·routing 갱신
+- [x] `error-resolution-playbook.md`의 `ER-20260720-014` 현재 소스 재검증 반영
+- [x] strict UTF-8·backup hash·Markdown·gate·secret·stale path·playbook 정합성
+- [x] exact allowlist·`git diff --check`·Git status 최종 확인

@@ -1,78 +1,111 @@
-# 현재 프로젝트 맥락
+# 현재 프로젝트 맥락 — 2026-08-17
 
-- **상태**: 마일스톤 12A·12B와 Front secure session/REST client Task 1~31 및 authentication change-gate 완료. 실제 FCM dispatch는 12C 전 비활성이고 Native SecureStore·실제 provider-token OAuth 기기 smoke는 후속 외부 gate다.
-- **검증 기준선(2026-08-11)**: Front Jest 17 suites·136 tests, TypeScript, Expo lint(0 errors·기존 warning 2), Web export 11 routes·artifact scan 통과. Backend Jest 23 suites·214 tests, e2e 1 suite·2 tests, Nest build, non-fixing lint, Prisma validate/generate 통과. local PostgreSQL 4 migrations up-to-date·zero drift.
-- **대상/stack**: `DSM_Back` NestJS + Prisma v6 + PostgreSQL UTC `timestamptz`; `DSM_Front` React Native + Expo Router SDK 55. Jest는 `tsconfig.spec.json` CommonJS. test에서 Prisma 실제 연결 차단.
-- **Auth**: `@nestjs/jwt`, bcrypt refresh hash, Google/Kakao. `GOOGLE_CLIENT_ID` 필수·audience 검증. refresh `<recordId>.<secret>`, conditional revoke 단일 승자 + replacement create 동일 transaction. refresh family `sessionId`를 rotation에서 보존하고 refresh/logout은 같은 user-row lock으로 직렬화하며 logout은 제시된 family의 active token만 revoke한다. Apple 검증은 계정 확보 후.
-- **Task/Category/Score**: Task mutation·schedule sync·score recompute 동일 Serializable transaction, Prisma `P2034` 최대 2회 재시도. actor 소유/default Category만 할당. UTC day score 10/20/30 × 1.5/1.3/1.0/0.7, cap 900, 6 tiers.
-- **Ranking**: DAILY/WEEKLY/TOTAL 실시간 계산, leaderboard·snapshot API. Redis/batch/WebSocket 미구현.
-- **알림 12A**: FCM token 등록·same-user 갱신·revoke. foreign-owner token/FID in-place 이전은 mutation 전 409. Task 상태와 `NotificationSchedule` 원자 동기화.
-- **알림 12B**: ADC-only provider, 30초 Cron, schedule 100·delivery 500, 5분 lease·60초 heartbeat, per-device 결과·최대 3회 명시적 failure retry. `sendStartedAt` 이후 모호 결과는 terminal `UNKNOWN`; 자동 재발송 금지. payload는 account-neutral data-only `REMINDER_SYNC`/version.
-- **finding**: F-004·F-010·F-014 포함 12건 `RECHECKED`; F-007 send recall 불가·client 표시 직후 취소 race만 사용자 `ACCEPTED_RISK`. 12C 전 `FCM_DISPATCH_ENABLED=false`.
-- **local DB**: Docker Desktop 4.82.0, Engine/CLI 29.6.1, Compose 5.3.0, WSL 2.7.10. PostgreSQL 17 Alpine, `127.0.0.1:5432/dsm`, UTC, healthy, `unless-stopped`, named volume `dsm-back-postgres-data`. `20260716_init`, `20260720_notification_delivery_outcome_policy`, `20260725_user_onboarding_completed_at`, `20260810_refresh_token_session_family` 적용·zero drift.
-- **front Phase 1 + secure session**: dark-first UI/Task prototype 위에 strict API config, runtime validators, one-attempt transport, public/authenticated clients, Native verified-clear SecureStore/Web memory store, session context/routing, OAuth login/onboarding/recovery/logout UI가 연결됐다. Web QA 909×540·390×844 및 11-route export 통과. 실제 provider token과 Native device smoke는 미실행.
-- **다음 작업**: 실제 provider-token 확보 + iOS/Android SecureStore 로그인·reload·refresh·logout smoke → 증거 통과 시 M12C permission + logout/account-switch Installation rotation + authenticated current-state sync/display → test project/device ADC·FCM sandbox → dispatch 활성 판단 → WebSocket → Redis/batch.
-- **운영**: `.ai/agents/README.md` 역할 계약; 제품 조사·구현·review는 적합한 역할 sub-agent, main은 계획·승인·memory·diff 통합. 고위험은 `change-gate`, release 전 `release-audit`; audit JSONL은 증거·상태 이력.
-- **오류 재사용**: 오류 작업 전 `error-resolution-playbook.md` 검색. 환경·root cause 일치 `VERIFIED`만 현재 범위에서 적용·재검증. `MITIGATION_ONLY`는 gate·잔여 위험 유지.
-- **memory backup**: `*.original.md`는 local 복구 snapshot, Git 제외·비활성. 2026-07-20 Anthropic compression script의 Windows CP949 bug로 기존 context pre-image가 손실돼 Git HEAD·plan·architecture·checklist에서 상세 snapshot을 재구성했다.
-- **Obsidian Vault 연결(2026-07-20)**: `C:\AiWiki`를 Obsidian 1.12.7의 단일 local Vault로 등록했다. `C:\AiWiki\AiProject`는 여러 프로젝트를 담는 일반 directory다.
-- **Obsidian DSM 문서 큐레이션·일반 컨테이너 전환(2026-07-22)**: `C:\AiWiki\AiProject\DSM`은 일반 directory이고, `Current` junction은 `C:\DEV\.ai\docs`, `Planning` junction은 `C:\DEV\Planing Document`를 가리킨다. `Overview.md`는 Current 4개와 Planning v1.3 4개를 연결하며 기획 문서 4개의 architecture 링크도 새 Current 경로를 사용한다. 원본 `C:\DEV`와 두 junction target은 보존됐다. 전환 전 IndexedDB cache는 삭제하지 않고 `.pre-dsm-20260721` exact backup으로 이동했으며 Obsidian workspace와 새 cache가 정상 생성됐다. 사용자 action-time 승인 후 stale 제외 필터 11개를 UI에서 제거하고 보관함 cache를 재구축했으며 `app.json` readback은 `userIgnoreFilters: null`이다. Quick Switcher에서 Overview·현재 architecture는 검색되고 `node_modules`·`AGENTS.md`·`superpowers`는 파일 결과가 없음을 확인했다. 복구 절차는 `ER-20260722-001`로 기록했다.
+- **상태**: M1~M12A 완료. M12B backend·local DB·change-gate 완료; M12C·실제 FCM sandbox 미완료라 parent `[/]`. Front secure session·REST client Task 1~33·Web QA·auth change-gate 완료.
+- **Android Google**: 현재 Android Studio debug signer용 OAuth client를 value-redacted 검증·사용자 승인 아래 추가했다. Google ID token→backend session→Keychain reload/refresh rotation→logout revoke→post-logout Login actual smoke가 통과했다.
+- **Release audit**: `20260817-release-audit-full-project`는 canonical 26건(confirmed 23, unknown 2, rechecked 1)으로 열려 있다. `F-025`는 독립 검증·fix-recheck 뒤 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
+- **다음 gate**: confirmed P1 5건을 별도 plan·승인·수정·독립 recheck → UNKNOWN `F-013`·`F-015` 확정 → P2/P3와 자유 탐색 종료 조건. M12C는 audit 종료 뒤 진행한다.
+- **실행 위치**: branch `codex/front-secure-session-rest-client`, worktree `C:\DEV\fsr`.
 
-# Front secure session·REST client 현재 맥락 — 2026-07-25
+## Stack·환경
 
-- 실행 브랜치/worktree: `codex/front-secure-session-rest-client`,
-  `C:\DEV\.worktrees\front-secure-session-rest-client`.
-- 상세 계획 33개 실행과 로컬 검증·문서 동기화 완료. Task 30의 Native 실제 기기/provider-token 증거만 외부 gate로 남는다.
-- Backend contract:
-  - `User.onboardingCompletedAt`과 `/auth/me`, `/auth/me/onboarding` 구현 완료.
-  - browser CORS는 명시 allowlist, credentials false, 정확한 methods/headers.
-  - onboarding 및 refresh-token session-family migrations를 persistent local DB에 적용했고 zero drift를 확인했다.
-- Front security boundary:
-  - refresh-token storage는 rejection-safe queue와 epoch guard로 직렬화 완료.
-  - Native SecureStore adapter는 versioned key, verified delete, tombstone fallback,
-    fixed storage error 정규화까지 완료.
-  - Web token store는 module memory만 사용한다. 같은 module 인스턴스는 상태를
-    공유하고 browser reload/module reload 뒤에는 빈 상태여서 다시 로그인한다.
-  - production API URL은 HTTPS, development HTTP는 local/private host만 허용.
-  - token/current-user 응답은 runtime validator 통과 후에만 사용.
-  - transport는 요청당 fetch 1회, 자동 retry 없음, timeout/network/HTTP/protocol
-    오류를 안전한 고정 메시지로 분류.
-  - public login/refresh는 access token을 보내지 않고 logout만 캡처한 token pair 사용.
-  - authenticated client는 현재 access token을 주입하고 최초 `401`만 refresh
-    single-flight에 참여시킨 뒤 원 JSON 요청을 최대 한 번 replay한다. replay `401`은
-    session 종료 callback으로 전달하고 network/timeout은 refresh하지 않는다.
-  - session controller는 bootstrap/sign-in/refresh/profile/onboarding/logout을
-    stable state와 transient action으로 분리하고, epoch fence·single-flight·verified
-    local cleanup·stale/malformed pair best-effort revoke를 적용한다.
-  - storage read failure는 verified clear 성공 후에만 unauthenticated, 실패 시
-    blocking `storage-error/clear`; direct refresh network/timeout은 token을 보존한
-    `offline/bootstrap`으로 안정화한다.
-  - profile operation epoch fence로 delegated replay `401`의 재진입 cleanup이
-    새 sign-in을 지우지 않으며 onboarding PATCH는 onboarding state에서만 허용한다.
-- 최신 Front 검증: Jest 17 suites/136 tests, Expo lint(0 errors·기존 warning 2), TypeScript, Web export 11 routes와 test artifact/token sentinel scan 모두 통과.
-- 환경 제약: managed sandbox의 Windows Jest Temp cache `EPERM`은
-  `ER-20260725-002` 절차로 동일 명령을 승인 환경에서 재실행한다.
-- 잔여 위험:
-  - dependency audit 55건(critical 1 포함) 별도 triage 필요.
-  - Task 4 parser의 hash/non-string 명시 테스트는 Minor deferred.
-  - SecureStore native config는 향후 native binary build에서 반영.
-  - 전체 authentication `change-gate`는 5 findings 모두 `RECHECKED`로 종료했다.
-  - Native SecureStore 실제 device smoke evidence는 후속 gate다.
-- 외부 변경: 2026-08-02 사용자 승인 후
-  `origin/codex/front-secure-session-rest-client`에 Task 19 제품·memory snapshot
-  `82d03bf`까지, `origin/codex/m12b-front-prototype-checkpoint`에 `960f02b`까지
-  push했다. root checkout의 미커밋 architecture 문서는 제외했다. 그 이후 보안 보완과 DB migration은 local branch/DB에만 적용했고 새 push, PR, merge, deploy는 미실행.
-- Task 15 로컬 commit `3a2b9cd` 독립 검토 clean. 비동기 queue race test의
-  microtask 선행 조건 해결은 `ER-20260726-001`에 기록.
-- Task 16 로컬 commits `f25125e`, `ce5b28c`; fix round 1 re-review clean.
-  native `ApiError` passthrough 해결은 `ER-20260726-002`에 기록.
-- Task 17 로컬 commit `6be9eaa`; 독립 검토 clean. Jest CommonJS에서 runtime
-  dynamic import가 올바른 RED를 가린 문제와 해결은 `ER-20260726-003`에 기록.
-- Task 18 로컬 commits `562d37b`, `60aeafb`, `617c890`; fix round 2 scoped
-  re-review clean. generic Jest mock `TS2322`, 지연 `401` 중복 refresh, 동기 throw
-  promise 오염, old-session completed-refresh replay 해결은
-  `ER-20260726-004`~`007`에 기록.
-- Task 19 로컬 commits `6c31ec9`, `09702d0`; fix round 1 scoped re-review
-  clean. storage read verified-clear, direct refresh action finalization,
-  replay-401 operation epoch fence, onboarding state precondition, malformed
-  profile revoke 해결은 `ER-20260726-008`~`012`에 기록.
+- Backend: NestJS, Prisma v6, PostgreSQL UTC `timestamptz`.
+- Front: Android-only React Native `0.83.10`, Community CLI `20.2.0`, React Navigation, `react-native-keychain@10.0.0`, `react-native-config@1.6.1`. Expo runtime/CLI/Router, Web/iOS target 제거.
+- Google native: `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`.
+- Test: Jest + `tsconfig.spec.json` CommonJS. unit test에서 Prisma actual connection 차단.
+- Local DB: PostgreSQL 17 Alpine, `127.0.0.1:5432/dsm`, UTC, healthy, `unless-stopped`, volume `dsm-back-postgres-data`.
+- Applied migrations: `20260716_init`, `20260720_notification_delivery_outcome_policy`, `20260725_user_onboarding_completed_at`, `20260810_refresh_token_session_family`; 4 up-to-date, zero drift.
+
+## Android local environment
+
+- Android Studio Quail 3 `2026.1.3 Patch 1`: `C:\Users\jemie\AppData\Local\Programs\AndroidStudioQuail\android-studio\bin\studio64.exe`.
+- Android SDK: `C:\Users\jemie\AppData\Local\Android\Sdk`; host Android Studio에서 실제 확인.
+- JDK 17: `C:\Users\jemie\.jdks\ms-17.0.20`.
+- NDK: `27.1.12297006`.
+- Android project: `C:\DEV\fsr\DSM_Front\android`; pure React Native Gradle project지만 현재 Git 전체 미추적(`F-016`)이다. commit/push 전 다른 PC checkout에는 전달되지 않는다. `org.gradle.parallel=false`, `org.gradle.tooling.parallel=false` 유지.
+- API 36 `Medium_Phone` AVD 연결. `assembleDebug`: `BUILD SUCCESSFUL in 19m 1s`, 365 tasks. Android Studio `Run app`: Gradle build·install 성공.
+- Gradle sync 후 project tree에는 app과 Community autolink native modules만 남고 Expo modules는 없다. Metro `index.js` bundle과 로그인 화면 렌더를 확인했다.
+- 이전 `build.ninja still dirty after 100 tries`는 긴 worktree path가 Nitro prefab CMake 입력을 Windows path 한계로 보이게 한 문제. worktree를 `C:\DEV\fsr`로 이동하고 generated build/CMake cache를 재생성해 해결.
+
+## Auth·session
+
+- Google/Kakao backend 구현; Apple actual verification 보류. Google `GOOGLE_CLIENT_ID` 필수·audience 검증.
+- access TTL 15분, refresh TTL 30일. refresh `<recordId>.<secret>`, PK lookup + 1 bcrypt compare.
+- conditional revoke single winner + replacement create 동일 transaction. refresh family `sessionId` rotation 보존.
+- refresh/logout은 같은 user-row `FOR UPDATE` lock으로 직렬화; logout은 제시 family active token만 revoke.
+- Front access token memory only. refresh token은 Android Keychain의 versioned service에 저장한다.
+- token store: serialized queue + epoch guard, Native verified delete + tombstone fallback, Web reload 뒤 empty.
+- authenticated client: 첫 `401` refresh single-flight, 최대 1회 replay, generation/epoch fences.
+- session controller: 최초 `bootstrapping/recovering`, stable state/action 분리, profile·onboarding epoch fence, offline bootstrap token 보존, refresh 401·protocol/storage failure fail-closed, offline logout local clear + best-effort revoke.
+- `User.onboardingCompletedAt`, `/auth/me`, 멱등 `/auth/me/onboarding`, strict API URL/runtime validators/sanitized errors/exact-origin CORS 완료.
+
+## Android Google integration
+
+- application ID `com.dsm.dailyup`.
+- adapter가 native ID token 획득·취소·sanitized failure만 소유; 기존 `SessionController.signIn('GOOGLE', token)`이 DSM exchange·SecureStore·routing 소유.
+- `GOOGLE_WEB_CLIENT_ID`와 backend `GOOGLE_CLIENT_ID`는 같은 Web OAuth client audience여야 한다. frontend client secret 금지.
+- ID token은 exchange 중 memory only; 저장·log·error serialization 금지.
+- Community CLI Android autolinking을 사용한다. Expo config plugin·prebuild·EAS는 현재 local 개발 경로에서 제거했고 legacy `eas.json`·custom scheme도 삭제했다.
+- Google OAuth consent External testing, Web+Android OAuth client, EAS development env/signing/cloud APK 완료. credential·SHA-1·client ID 완전값은 Git·memory·chat 기록 금지.
+- 현재 PC debug signer용 Android OAuth client는 같은 project에 별도 등록했고 `F-025` external fix가 `RECHECKED`다. 기존 clients는 변경하지 않았다. 새 PC·release/Play signer는 각자 별도 등록이 필요하다.
+- `DSM_Back/.env`는 계속 부재한다. 이번 smoke는 ignored frontend public client ID를 출력 없이 process env로만 backend `GOOGLE_CLIENT_ID`에 주입했으며 repository config로 영구 저장하지 않았다.
+- spec: `docs/superpowers/specs/2026-08-12-android-google-provider-login-design.md`.
+- implementation plan: `docs/superpowers/plans/2026-08-12-android-google-provider-login.md`.
+- Android Studio plan: `docs/superpowers/plans/2026-08-15-android-studio-local-development.md`.
+
+## Task·Ranking·Notification
+
+- Task mutation·schedule sync·score recompute 동일 Serializable transaction. Prisma `P2034`만 최대 2회 retry.
+- Category actor-owned/default only. UTC score 10/20/30 × 1.5/1.3/1.0/0.7, cap 900, 6 tiers.
+- DAILY/WEEKLY/TOTAL ranking·leaderboard·snapshot 완료. Redis/batch/WebSocket 미구현.
+- 12A: FCM token lifecycle + Task-`NotificationSchedule` 원자 동기화. foreign-owner token/FID는 mutation 전 409.
+- 12B: ADC only, Cron 30초, schedule 100, delivery 500, lease 5분, heartbeat 60초, per-device 최대 3회 failure retry.
+- `sendStartedAt` 뒤 모호 결과 terminal `UNKNOWN`; 자동 재발송 금지. payload는 account-neutral data-only `REMINDER_SYNC`/`version=1`.
+- 12C 전 `FCM_DISPATCH_ENABLED=false`. F-007 cancellation race는 사용자 `ACCEPTED_RISK` + `MITIGATION_ONLY`.
+
+## 검증 기준선
+
+- Front: Jest 18 suites/162 tests, TypeScript, ESLint 0 errors(style/no-void warnings 18), Community CLI config/autolinking과 Expo runtime leakage check 통과.
+- Backend: Jest 23 suites/214 tests, e2e 1 suite/2 tests, Nest build, non-fixing lint, Prisma validate/generate 통과.
+- Disposable PostgreSQL 17: 4 migrations 순차 적용, backend `/health` 응답 확인. permanent local volume은 기존 role 불일치 때문에 변경하지 않았다.
+- Android fresh `assembleDebug`: 365 tasks, `BUILD SUCCESSFUL in 2m 28s`; current debug signer install·launch·Metro 1029-module bundle·로그인 화면 확인. 기존 다른 signer APK는 emulator exact package만 제거 후 재설치했다.
+- Android actual auth/session: Google ID-token fetch와 `/auth/login` 성공, user/social/active refresh 생성, force-stop/relaunch Home 복구와 refresh rotation, logout 후 active refresh 0, post-logout relaunch Login 확인.
+- Backend Prettier check는 66 TS files에서 실패했다. dependency audit는 Backend 15건(critical 0/high 7/moderate 6/low 2), Frontend 17건(critical 0/high 11/moderate 5/low 1)이다.
+- Local DB: 4 migrations up-to-date, zero drift, `sessionId text NOT NULL`, `(userId, sessionId)` index, refresh-token NULL/total `0/0`.
+- Auth audit F-001~F-005 전부 `RECHECKED`; 미해결 P0/P1·`UNKNOWN`·`ACCEPTED_RISK` 없음.
+- Notification audit는 F-007만 `ACCEPTED_RISK`; 나머지 12건 `RECHECKED`.
+- EAS Android development build `FINISHED`; archive 존재 재검증.
+- Prisma generate는 Windows engine DLL rename `EPERM` 때문에 backend build/e2e와 직렬 실행.
+
+## Git·외부 경계
+
+- origin보다 36 commits ahead. 2026-08-02 이후 제품·DB migration·memory·Android login 작업은 local only.
+- Git stage·commit·push·PR·merge·deploy, remote/prod DB, Firebase send는 현재 승인 범위 밖.
+- 제품 단계 exact 1~2 files. main이 승인·memory·diff·audit ledger 소유.
+- 고위험 변경은 `change-gate`; release 전 `release-audit`.
+
+## 다음 작업·잔여 위험
+
+1. release-audit confirmed P1 5건부터 별도 plan·승인·TDD·독립 recheck한다.
+2. UNKNOWN `F-013`·`F-015`의 배포 readiness·notification release scope 증거를 확정한다.
+3. confirmed P2/P3를 처리하고 신규 자유 탐색 2회 zero-new-P0~P2 종료 조건을 충족한다.
+4. M12C → Firebase sandbox → dispatch 판단 → WebSocket → Redis/batch.
+
+- 현재 PC의 Native provider/Keychain/session lifecycle actual evidence는 확보했다. external OAuth client 삭제·변경 시 재발할 수 있고 production 환경은 미검증이다.
+- provider failure를 silent cancellation으로 삼키는 `F-026`은 `CONFIRMED P2`로 남아 있어 별도 제품 수정·검증이 필요하다.
+- release signing과 release `.env` provisioning은 미구성이다. debug signing 재사용은 제거했고 배포 signer/OAuth identity와 환경 계약은 별도 작업이다.
+- 핵심 Task/Score/Ranking frontend는 아직 prototype state·고정 data를 사용한다.
+- Expo runtime은 제거됐지만 Android launcher/splash bitmap과 app name은 Expo/template 값이 남아 있다.
+- new-PC debug signing은 PC별 기본 keystore의 SHA-1을 같은 Google Cloud project에 `com.dsm.dailyup` Android OAuth client로 등록해야 한다. 전체값 기록 금지; README/runbook에 절차가 있다.
+- Node `>=20.19.4 <21 || >=22.0.0`, clean clone은 `npm ci`가 재현 경로다.
+- `@expo/config-plugins`는 non-Expo library의 transitive compatibility metadata로만 lock에 남고 runtime/autolinking에는 없다.
+- actual PostgreSQL multi-connection refresh/logout interleaving 미실행.
+- dependency audit 32건(critical 0): Backend 15, Frontend 17. direct runtime/backend와 tooling/frontend를 분리 triage해야 한다.
+- Task parser hash/non-string test, Apple verification, revoked-token reuse hook, UTC midnight score Cron 보류.
+
+## Memory·지원 환경
+
+- 오류 작업 전 `error-resolution-playbook.md` 검색; 환경·root cause 일치 `VERIFIED`만 현재 checkout에서 재검증. `MITIGATION_ONLY` gate 유지.
+- `*.original.md`는 local recovery snapshot; Git·일반 검색·handoff·재압축 제외.
+- 2026-08-16 새 날짜 backup을 byte-exact 보존하고 active 3문서를 current-state 중심 local-only 압축.
+- `caveman-compress`는 `ER-20260720-014` Windows locale 손상 조건이 현재 소스에도 남아 직접 실행 금지. 외부 업로드 없음.
+- Obsidian 1.12.7: `C:\AiWiki\AiProject\DSM`, `Current`→`C:\DEV\.ai\docs`, `Planning`→`C:\DEV\Planing Document`; stale IndexedDB 복구는 `ER-20260722-001`.

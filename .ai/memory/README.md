@@ -4,35 +4,56 @@
 
 | File | 역할 | 읽기 시점 | update owner |
 |---|---|---|---|
-| `plan.md` | 현재 목표·기술 계약·승인·다음 계획 | 모든 작업 시작/종료 | main |
-| `context.md` | 현재 구현·환경·위험 snapshot | 모든 작업 시작/종료 | main |
+| `plan.md` | 목표·계약·승인·다음 계획 | 모든 작업 시작/종료 | main |
+| `context.md` | 구현·환경·검증·위험 snapshot | 모든 작업 시작/종료 | main |
 | `checklist.md` | `[ ]|[/]|[x]` 공정 상태 | 모든 작업 시작/종료 | main |
 | `error-resolution-playbook.md` | 검증된 오류 해결 지식 | 오류 발견·진단·수정 전 | main; sub-agent는 match 보고 |
 
+Current release audit: [`20260817-release-audit-full-project`](../audits/20260817-release-audit-full-project/README.md). Confirmed/unknown 상태와 독립 validation의 canonical source는 해당 `findings.jsonl`이다.
+
 ## Recovery files
 
-- `*.original.md`: local recovery snapshot. Git ignored. 일반 검색·handoff·context compiler·재압축 금지.
-- `plan.original.md`, `checklist.original.md`, `error-resolution-playbook.original.md`: 2026-07-20 byte-exact pre-compression backup.
-- `context.original.md`: CP949 compression failure 뒤 Git HEAD·plan·architecture·checklist로 재구성한 semantic snapshot; byte-exact 아님.
-- `context.original.failed-cp949.bin`: 실패 script가 만든 손상 artifact. Git/active memory 제외; 원문 복구에 사용 금지.
-- backup 읽기·복원·삭제·rename은 명시적 복구/감사 목적과 사용자 승인 필요.
+- `*.original.md`: local recovery snapshot. Git ignored. 일반 검색·handoff·context compiler·재압축 제외.
+- `*.failed-*`: 실패한 압축 산출물. active SSOT·복구 원본 아님.
+- backup 읽기·복원·삭제·덮어쓰기·rename은 명시적 복구/감사 목적과 사용자 승인 필요.
+
+### 2026-08-16 byte-exact pre-image
+
+| File | Bytes | SHA-256 |
+|---|---:|---|
+| `plan.20260816.original.md` | 26,170 | `75427FF0FB5F8A377414449F3C86EAFCE413CE7675768CABB1A81BB79C091D12` |
+| `context.20260816.original.md` | 9,908 | `457C40D585CAAF7CC93152033EF2A97C7D8E3DB19438E4CF674A78E68FA11A7B` |
+| `checklist.20260816.original.md` | 7,875 | `DDE17CBA870396816578EE9F0C3AB659B83BDB85578D2B28D6CBD2477C6E268F` |
+
+### Older retained pre-image — 2026-08-11
+
+- `plan.original.md`: 49,819 bytes, SHA-256 `a5274ba42568446bdafa5ec7ee49c3d55cb65e0386827b10d29ec47f5420c909`
+- `context.original.md`: 9,946 bytes, SHA-256 `238f1da76e2201282de0b2155a67bed77193159ebedb66c3819f93a254b91bf4`
+- `checklist.original.md`: 9,411 bytes, SHA-256 `772bd2c2f6cd80abb2e8bc7b8a5aaaad13fe8aad1e69f50e6f1a4559e549946f`
 
 ## Read/update flow
 
 1. Start: `plan.md` + `context.md` + `checklist.md`.
-2. Error task: `error-resolution-playbook.md` search; applicability 확인.
-3. Compare memory with actual source/test/Git diff.
-4. Plan + exact writable allowlist + user approval.
-5. Implement/verify.
-6. End: active memory update. 검증된 새 오류 해결이면 playbook index/body 동시 갱신.
+2. Error task: `error-resolution-playbook.md` 검색; environment/version/root cause 적용성 확인.
+3. Actual source/test/Git diff와 memory 대조.
+4. Plan + exact 1~2-file writable allowlist + user approval.
+5. Implement·verify.
+6. End: active memory update. 새 해결이면 playbook index/body 동시 갱신.
 
-## Compression result — 2026-07-20
+## Current compression snapshot — 2026-08-17
 
-| File | Before bytes | Active bytes | 판정 |
-|---|---:|---:|---|
-| `plan.md` | 121,943 | 14,419 | current-plan 중심 압축; exact backup |
-| `context.md` | 12,141 | 3,506 | current snapshot 재구성·압축 |
-| `checklist.md` | 14,513 | 3,564 | 상태 중심 압축; exact backup |
-| `error-resolution-playbook.md` | 34,495 | 37,124 | structured conditional knowledge 유지 + 복구 record |
+| File | Pre-image bytes | Active bytes | 감소 | Active SHA-256 |
+|---|---:|---:|---:|---|
+| `plan.md` | 26,170 | 13,645 | 47.9% | `D4DE94B5C8EC476EFD1D582E3CB160365C8DDC7AA1D3B8598C747F472D8AD597` |
+| `context.md` | 9,908 | 11,143 | -12.5% | `C8CD279071C3A147BF93208E6022F68FB3F8EAD9803A0F11CB65C0F9353817F9` |
+| `checklist.md` | 7,875 | 7,966 | -1.2% | `A5442EE7E62CED40D8FD1B3CF65EBC3434F42C0632E9FA077F86C4D492BDC23D` |
+| **active 3 total** | **43,953** | **32,754** | **25.5%** | — |
 
-Default 3-file read는 148,597→21,489 bytes(85.5% 감소). Playbook은 오류 작업에서만 읽는다.
+- active 3문서는 2026-08-17 full-project release-audit와 current-PC Google auth/session smoke 완료 상태로 갱신했다. 2026-08-16 recovery pre-image는 그대로 보존한다.
+- `caveman-compress` current source는 `read_text(errors="ignore")`와 인코딩 미지정 `write_text()`를 유지해 `ER-20260720-014` 조건과 일치한다. 직접 실행·외부 Claude 전송 없음.
+- 새 backup 3개는 pre-image와 SHA-256 일치, `.gitignore`의 `.ai/memory/*.original.md` 적용 확인.
+- active/recovery Markdown은 strict UTF-8. credential/private-key/JWT/Bearer token 형식 scan과 Markdown/Git 검증은 checklist 완료 상태를 따른다.
+- `error-resolution-playbook.md`: actual record index 52개; `VERIFIED` 51 + `MITIGATION_ONLY` 1. template heading/placeholder는 record count에서 제외한다. `ER-20260817-001`에 current Android Studio debug signer OAuth 누락과 `[16]` 해결·검증 절차를 값 비출력 계약으로 추가했다.
+- Front는 Android-only React Native Community CLI로 전환했다. Expo runtime/CLI/Router와 Web/iOS target을 제거했고 Android Studio sync/build/install/run을 검증했다.
+- Audit `20260817-release-audit-full-project`는 confirmed 23·unknown 2·rechecked 1로 열려 있으며 release-ready가 아니다. `F-025` external OAuth fix는 독립 검증·fix-recheck 뒤 `RECHECKED`다.
+- Disposable DB와 local backend/Metro로 Google login·session rotation·logout smoke를 마친 뒤 모두 종료했고 `--rm` 임시 DB만 제거했다. remote DB, Firebase, Git stage·commit·push·PR·merge·deploy 변경 없음.
