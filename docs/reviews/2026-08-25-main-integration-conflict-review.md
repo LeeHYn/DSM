@@ -201,7 +201,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 4 canonical merge | Merge `a639ac2`, exact canonical second parent, conflicts `4/4`, canonical-identical product tree, offline intersection `0`, independent review with no findings | PASS |
 | Task 5 canonical baseline | Initial Prisma `P1012` stopped safely; approved amendment `68557d7`; retry backend 23 suites/214 tests and frontend 18 suites/162 tests, typecheck/lint, Android 365-task build all exit `0`; product canonical-identical | PASS |
 | Canonical product suite | Runs after the canonical merge | PENDING |
-| Offline branch suite | Runs after isolated branch creation | PENDING |
+| Offline branch suite | `codex/offline-learning-site` at `2cbb088`; one commit beyond `43145b6`; 4-path memory allowlist; Node 66/66; full verifier `PASS`, 28 sources; independent review clean | PASS |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
 | Final independent review | Task 14 | PENDING |
 
@@ -233,6 +233,31 @@ The full Task 5 retry then passed:
 
 Initial independent review found one P2 documentation finding: retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. Fix round 1 added the result but its command rows were too abbreviated and left one stale residual-risk sentence. Fix round 2 expanded product commands and corrected the residual-risk boundary but abbreviated two post-check commands. Fix round 3 added the two exact post-check rows. Scoped re-review marked the original P2 `ADDRESSED`, found no new breakage, and returned `APPROVED`; no product command was rerun.
 
+## Task 6 isolated offline branch
+
+Created linked worktree `C:\dsm-offline-learning-site` on local branch `codex/offline-learning-site` from exact base `43145b6e0407c3c539ca66deb1813ddbc2e97ec8`. The base commit remains the offline product/site snapshot and was not merged into the integration branch.
+
+Only the approved memory source `fb54b5d07d9b03d42ae70890a954454027002b0d` was used. The extracted units were the two approved plan ranges, the offline context range, the offline checklist range, and playbook index/full records `ER-20260809-001` through `003`. Source comparison was exact; literal leading patch markers were `0`; `396fc0a` contributed no content.
+
+Commit `2cbb088326044b9c44115741a761778f725da153` (`docs(memory): preserve offline learning records`) is exactly one commit beyond the base (`git rev-list --left-right --count ...` = `0 1`) and changes only:
+
+- `.ai/memory/checklist.md`
+- `.ai/memory/context.md`
+- `.ai/memory/error-resolution-playbook.md`
+- `.ai/memory/plan.md`
+
+The first Node run exposed an environment-only baseline gap: clean Git worktrees omit ignored `DSM_Front/expo-env.d.ts`, so the corpus was `123 files / 13,165 lines` instead of `124 / 13,168`. Restoring the exact three-line Expo-generated ignored declaration returned the focused baseline tests to green. The global Windows `core.autocrlf=true` setting also materialized source and source-page HTML as CRLF while the committed verifier metadata is LF; the exact 28 source blobs and paired HTML blobs were re-materialized as LF. Neither preparation changed branch content, staged files, or the four-path commit allowlist.
+
+Fresh final evidence:
+
+- `node --test "tools/learning-site/tests/*.test.mjs"`: exit `0`; tests `66`, pass `66`, fail `0`.
+- `node tools/learning-site/verify.mjs --root C:\dsm-offline-learning-site --out C:\dsm-offline-learning-site\learning-site --batch batch-b --full --report C:\dsm-offline-learning-site\learning-site\verification-report.json`: exit `0`; status `PASS`, sources `28`.
+- `git diff --check 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD`: exit `0`.
+- `git status --short`: empty; staged and working diffs empty.
+- `main` and `origin/main`: unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`; integration branch remained `3daa28441fcf610b1ff89fb8eea8dac870e45881` during the offline review.
+
+Independent reviewer `/root/task6_reviewer`, mode `discovery-review`, exact writable allowlist `none`, verified all extraction units, refs, ancestry, four-path allowlist, ignored environment file, report and clean status. Findings: none. Verdict: `APPROVED`.
+
 ## Deferred items
 
 - Whether each Foundation-only Redis, realtime, user, ranking, score-finalization, notification-mode, or active-schedule-index capability is truly absent and compatible is deferred to Task 8.
@@ -244,7 +269,8 @@ Initial independent review found one P2 documentation finding: retry evidence ha
 - Path-level overlap can undercount semantic overlap through renamed or independently reimplemented behavior.
 - The exact Node runtime is user-scoped; every validation shell must prepend `NODEJS_HOME` because system-wide Node remains `v24.13.0` after UAC cancellation.
 - Existing container `dsm-back-dev-db-1` is out of scope and must not be stopped, removed, reused, or connected to.
-- Task 5 canonical product and Android baseline validation is complete. Offline-branch validation, disposable migration validation, selective-port checks and the final full validation matrix remain pending their later task gates.
+- Task 5 canonical product/Android baseline and Task 6 offline-branch validation are complete. Disposable migration validation, selective-port checks and the final full validation matrix remain pending their later task gates.
+- Reproducing the offline verifier in a new Windows worktree requires the ignored three-line Expo declaration and LF materialization for the 28 source/page pairs because the global Git checkout policy is `core.autocrlf=true`; these are environment prerequisites, not branch deltas.
 
 ## Review verdict
 

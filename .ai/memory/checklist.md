@@ -17,7 +17,10 @@
   - [x] process-scoped parse-only `DATABASE_URL` plan amendment 사용자 승인
   - [x] 승인된 plan amendment 반영·검증·commit `68557d7` (16 tasks·71 checks, URL 1회, 정리 2회)
   - [x] 독립 review P2 SSOT closure finding — fix rounds 1~3, 원 finding `ADDRESSED`, 신규 breakage 없음, `APPROVED`
-- [ ] 별도 `codex/offline-learning-site` branch/worktree 생성·memory extraction·검증
+- [x] 별도 `codex/offline-learning-site` branch/worktree 생성·memory extraction·검증
+  - [x] base `43145b6` → commit `2cbb088`, ancestry `0 1`, 정확한 memory 4-path allowlist
+  - [x] ignored `expo-env.d.ts` 환경 복원·LF verifier materialization 후 Node 66/66·28-source `PASS`
+  - [x] independent discovery review — findings 없음, `APPROVED`
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
 
