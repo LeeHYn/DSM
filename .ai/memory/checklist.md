@@ -26,6 +26,12 @@
   - [x] Docker Desktop 기동 및 client/server `29.6.1`, exact migration container 이름 부재 확인
   - [x] prepared PATH에서 Task 0 exact runtime/executor gate 재검증 PASS
 - [ ] 승인 뒤 tracked SDD ignore preflight와 integration 실행
+  - [x] Task 1 six refs·worktree identity·local commit classes·approved spec blob PASS
+  - [x] Task 2 standalone SDD ignore commit `d4f2474`와 ignored ledger 생성
+  - [x] Task 3 branch/overlap/checkpoint inventory commit `58aa47a`, fix commit `d773c4c`, scoped re-review 승인
+  - [x] Task 4 read-only merge precheck에서 memory 3개 + root `.gitignore` conflict marker 검출
+  - [x] real merge 미시작·HEAD `d773c4c`·clean status 유지
+  - [ ] `.gitignore` fourth-conflict 처리 plan amendment 사용자 승인
 - [ ] offline branch와 main integration branch 검증
 - [ ] 별도 승인 후 push·PR 또는 local merge 결정
 - [x] 마일스톤 2: `DSM_Back` (NestJS) 초기 세팅
