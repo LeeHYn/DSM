@@ -199,10 +199,20 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 2 SDD ignore | Standalone commit `d4f2474`; root rule matches ledger path | PASS |
 | Task 3 topology | Exact merge bases, counts, unique commit lists, path classifications | PASS |
 | Task 4 canonical merge | Merge `a639ac2`, exact canonical second parent, conflicts `4/4`, canonical-identical product tree, offline intersection `0`, independent review with no findings | PASS |
+| Task 5 canonical baseline | Backend `npm ci` exit `0`; `npm run prisma:validate` exit `1` with Prisma `P1012` because clean worktree has no `DATABASE_URL`; later backend and all frontend/Android commands stopped | BLOCKED |
 | Canonical product suite | Runs after the canonical merge | PENDING |
 | Offline branch suite | Runs after isolated branch creation | PENDING |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
 | Final independent review | Task 14 | PENDING |
+
+## Task 5 baseline blocker
+
+The first backend command installed the canonical lockfile successfully (`npm ci --no-audit --no-fund`, 882 packages, exit `0`). The next exact command failed before any DB connection: `npm run prisma:validate` returned Prisma `P1012` because `DATABASE_URL` is absent in a clean worktree. No tracked file changed.
+
+The required-check stop condition prevented Prisma generate, backend build/test/lint, and all frontend/Android commands. No existing/shared/remote database or secret file was accessed. The error-resolution playbook has no exact matching record.
+
+- Ruling: stop Task 5 after the first required command failure and do not inject an unplanned database URL — the approved plan says required failures are `BLOCKED` and existing/shared/remote DB access is forbidden — cost if wrong: an improvised environment could conceal a non-reproducible baseline or accidentally target an existing database.
+- Proposed reviewed amendment: set `DATABASE_URL=postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public` only in the current process for `prisma:validate` and `prisma:generate`, then remove it before later commands. Loopback port `1` makes any unexpected connection fail closed. Do not apply this amendment before user approval.
 
 ## Deferred items
 
