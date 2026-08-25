@@ -34,12 +34,16 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - 실행은 Task 0 environment gate에서 시작한다. exact Node/npm, Docker daemon, Java/Android SDK가 모두 PASS하기 전에는 SDD `.gitignore` preflight, ledger 생성, ref fetch, offline branch 생성, canonical merge 또는 subagent dispatch를 하지 않는다.
 - **Task 0 실행 결과 — BLOCKED (2026-08-25)**: `node --version`은 `v24.13.0`; 기본 `npm --version`은 user-global `npm-cli.js` `MODULE_NOT_FOUND`로 exit 1; `docker version`과 `docker ps -a`는 `docker_engine` pipe 부재로 exit 1; `java`는 command not found; `ANDROID_HOME`·`ANDROID_SDK_ROOT`는 모두 `False`였다. 계획이 요구한 exact runtime/executor gate를 통과하지 못해 Task 1 전에 중단했다.
 - Task 0 실패 뒤 repository product, root `.gitignore`, SDD workspace/ledger, remote-tracking refs, offline path/ref, merge 상태는 변경하지 않았다. 환경을 사용자가 준비한 뒤 같은 Task 0부터 재개한다.
+- **환경 준비 승인 및 복구 (2026-08-25)**: 사용자가 `시스템 설치및 환경 준비 진행해`로 Task 0 blocker 해소를 위한 시스템·사용자 환경 변경을 승인했다. 공식 배포물의 SHA-256을 검증한 뒤 UAC가 두 차례 취소되어 system-wide Node/JDK MSI 설치는 중단했고, 관리자 권한이 필요 없는 administrative extraction으로 Node.js `v24.19.0`/npm `11.19.0`과 Microsoft OpenJDK `21.0.12.1`을 사용자 전용 경로에 설치했다. 기존 Android SDK의 `platforms;android-36`, `build-tools;36.0.0`, `ndk;27.1.12297006`, `platform-tools` 및 기존 license를 보존하고 공식 command-line tools만 추가했다. 기존 Docker Desktop을 시작해 server `29.6.1` 응답을 확인했다.
+- exact user toolchain paths는 `NODEJS_HOME=C:\Users\jemie\AppData\Local\Programs\NodeJS-24.19.0\PFiles64\nodejs`, `JAVA_HOME=C:\Users\jemie\AppData\Local\Programs\MicrosoftJDK-21.0.12.1\PFiles64\Microsoft\jdk-21.0.12.101-hotspot`, `ANDROID_HOME=ANDROID_SDK_ROOT=C:\Users\jemie\AppData\Local\Android\Sdk`이며 user environment와 user PATH에 영구 등록했다. system-wide `C:\Program Files\nodejs`는 UAC 취소로 `v24.13.0`을 유지하므로 계획 검증 PowerShell은 `NODEJS_HOME`을 PATH 선두에 명시적으로 적용한다.
+- **Task 0 재검증 — PASS (2026-08-25)**: 준비된 PowerShell 환경에서 exact `node --version`=`v24.19.0`, `npm --version`=`11.19.0`; Docker client/server `29.6.1`; exact migration container 두 이름 부재; Java/Javac `21.0.12.1`; Android env 두 개 존재; adb `37.0.1`; required Android four packages 설치를 모두 exit 0으로 확인했다. Task 1과 tracked SDD ignore preflight를 재개할 수 있으며 push, PR, `main` 변경 금지는 유지한다.
 - 승인된 implementation-plan commit class는 local commit `587e934` `docs: add main integration plan`이며 exact allowlist는 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
 - 이어지는 closure commit class의 exact allowlist는 subject `docs(memory): record plan approval gate`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - post-commit runtime evidence closure의 exact allowlist는 subject `docs(memory): record runtime blocker`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - executor evidence 정정 closure의 exact allowlist는 subject `docs(memory): confirm executor blockers`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - execution approval 기록 commit의 exact allowlist는 subject `docs(memory): record execution approval`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - Task 0 closure commit의 exact allowlist는 subject `docs(memory): record execution preflight block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- environment recovery closure commit의 exact allowlist는 subject `docs(memory): record environment recovery`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # 완료된 마일스톤
 1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기
