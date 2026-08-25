@@ -199,20 +199,29 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 2 SDD ignore | Standalone commit `d4f2474`; root rule matches ledger path | PASS |
 | Task 3 topology | Exact merge bases, counts, unique commit lists, path classifications | PASS |
 | Task 4 canonical merge | Merge `a639ac2`, exact canonical second parent, conflicts `4/4`, canonical-identical product tree, offline intersection `0`, independent review with no findings | PASS |
-| Task 5 canonical baseline | Backend `npm ci` exit `0`; `npm run prisma:validate` exit `1` with Prisma `P1012` because clean worktree has no `DATABASE_URL`; later backend and all frontend/Android commands stopped | BLOCKED |
+| Task 5 canonical baseline | Initial Prisma `P1012` stopped safely; approved amendment `68557d7`; retry backend 23 suites/214 tests and frontend 18 suites/162 tests, typecheck/lint, Android 365-task build all exit `0`; product canonical-identical | PASS |
 | Canonical product suite | Runs after the canonical merge | PENDING |
 | Offline branch suite | Runs after isolated branch creation | PENDING |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
 | Final independent review | Task 14 | PENDING |
 
-## Task 5 baseline blocker
+## Task 5 baseline blocker and amended retry
 
 The first backend command installed the canonical lockfile successfully (`npm ci --no-audit --no-fund`, 882 packages, exit `0`). The next exact command failed before any DB connection: `npm run prisma:validate` returned Prisma `P1012` because `DATABASE_URL` is absent in a clean worktree. No tracked file changed.
 
 The required-check stop condition prevented Prisma generate, backend build/test/lint, and all frontend/Android commands. No existing/shared/remote database or secret file was accessed. The error-resolution playbook has no exact matching record.
 
 - Ruling: stop Task 5 after the first required command failure and do not inject an unplanned database URL — the approved plan says required failures are `BLOCKED` and existing/shared/remote DB access is forbidden — cost if wrong: an improvised environment could conceal a non-reproducible baseline or accidentally target an existing database.
-- Proposed reviewed amendment: set `DATABASE_URL=postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public` only in the current process for `prisma:validate` and `prisma:generate`, then remove it before later commands. Loopback port `1` makes any unexpected connection fail closed. Do not apply this amendment before user approval.
+- The user approved the reviewed amendment on `2026-08-26`. Approval closure `9e6ba3b`, plan amendment `68557d7`, and memory closure `995bdcf` set `DATABASE_URL=postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public` only for `prisma:validate` and `prisma:generate`, remove it on failure or immediately after generate, and forbid DB connection commands. Loopback port `1` makes any unexpected connection fail closed.
+
+The full Task 5 retry then passed:
+
+- Backend: `npm ci` 882 packages; Prisma validate and generate exit `0`; process URL removed (`False`); build exit `0`; 23 suites/214 tests; non-fixing ESLint exit `0`.
+- Frontend: `npm ci` 988 packages; 18 suites/162 tests; typecheck exit `0`; lint exit `0` with 0 errors/18 warnings.
+- Android: `assembleDebug --no-daemon` exit `0`; `BUILD SUCCESSFUL in 17m 38s`; 365 actionable tasks; ignored APK 143,247,539 bytes.
+- Post-check: tracked dirty count `0`, `git diff --check` exit `0`, canonical product diff exit `0`, `DATABASE_URL` absent, and `main`/`origin/main` unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
+
+Initial independent review found one P2 documentation finding: this retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. This section and active memory are the scoped fix; no product command needs rerun. Re-review is pending at this record.
 
 ## Deferred items
 
