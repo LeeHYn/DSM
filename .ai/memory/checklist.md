@@ -110,3 +110,136 @@
 - [ ] 원격/운영 DB migration·reset·drop은 별도 승인 전 금지
 - [ ] deploy와 Git stage·commit·push는 명시 승인 전 금지
 - [ ] `ACCEPTED_RISK`를 `RECHECKED`/해결 완료로 표시하지 않음
+
+## 오프라인 학습 사이트
+
+- [x] 첨부 요구사항 UTF-8 복원·분석
+- [x] 기본 checkout 전체 file inventory와 directory 구조 조사
+- [x] stack·entrypoint·module·기능·핵심/반복 file 후보 분류
+- [x] file별 line count와 application corpus 124 files·13,168 lines 산정
+- [x] `.git`·worktree·dependency·build/cache·media·binary·lock·sensitive 제외 분류
+- [x] 알려진 token/private-key pattern 비노출 scan
+- [x] 정적 generator·verifier 권장안과 2개 대안 비교
+- [x] pilot A/B/C file 묶음 제안
+- [x] 분석 보고서와 memory plan 기록
+- [x] source checkout 선택: root `960f02b`
+- [x] pilot 선택: A, Task 변경 → 점수 재계산 + 알림 예약 상태 동기화 15 files
+- [x] visual concept와 diagram language 설계·사용자 승인
+  - [x] pilot source 실제 호출 관계 재확인
+  - [x] NotificationsService 직접 호출·FCM send가 pilot 흐름 밖임을 정정
+  - [x] project map desktop concept 생성·정정
+  - [x] Task architecture desktop concept 생성·조건부 관계 정정
+  - [x] source file desktop concept 생성
+  - [x] source file mobile concept 생성
+  - [x] 4개 정정 concept 원본 크기 검토
+  - [x] 사용자 디자인 승인
+  - [x] 승인 concept workspace 복사·design spec 고정
+  - [x] asset SHA-256·명세 링크·필수 사실·금지 placeholder·whitespace 자체 검토
+- [x] 서면 design spec 사용자 승인
+- [x] Pilot A TDD 상세 구현 계획 작성·자체 검토
+- [x] 상세 구현 계획·Subagent-Driven 실행 방식 사용자 승인
+- [x] 실행 preflight 제한 해결
+  - [x] current checkout이 linked worktree가 아님을 확인
+  - [x] tooling/site 쓰기 가능 local sub-agent 역할 부재 확인
+  - [x] Git worktree·branch·task commit 미승인 확인
+  - [x] 사용자 `2`로 current root inline/no-Git 전환 승인
+- [x] generator/verifier 구현
+- [x] common offline template와 site skeleton
+- [x] pilot 생성·source 일치 검증·사용자 승인
+  - [x] Pilot A 15 source pages + 6 overview pages + 3 local assets 생성
+  - [x] 전체 48 tests와 15 source fidelity·510 local link·offline verifier PASS
+  - [x] 승인된 localhost server에서 1440×900·390×844 browser QA
+    - [x] home·search·theme/read persistence·file 62:38·설명 탭
+    - [x] mobile code/explanation·contents sheets·하단 navigation
+    - [x] diagram zoom/reset·keyboard pan·pointer drag
+    - [x] architecture 금지 노드·한국어 제목 줄바꿈·mobile home 여백
+  - [x] QA 임시 localhost server 종료·127.0.0.1:4173 CLOSED 확인
+  - [x] 2026-08-09 사용자 `Pilot A 승인`
+- [/] 남은 files batch 처리
+  - [x] 다음 10~20-file 기능 묶음 후보 비교·사용자 선택: B `Social Auth와 refresh rotation`
+  - [x] Batch B 신규 후보 13개·883줄과 Pilot A 중복 없음 확인
+  - [x] Batch B 설명 가중치·정보 구조 설계
+    - [x] 설명 가중치 선택: 균형형
+    - [x] 설계 1절 승인: stage-aware 누적 생성·5개 overview 정보 구조
+    - [x] 설계 2절 승인: Auth 데이터 흐름·설명 경계·오류 표시 규칙
+    - [x] 설계 3절 승인: 변경 범위·검증·완료 기준
+  - [x] Batch B written design spec·상세 구현 계획 승인
+    - [x] written design spec 작성·자체 검토
+    - [x] 사용자 written design spec 검토·승인
+    - [x] writing-plans 상세 구현 계획 작성·자체 검토
+    - [x] 사용자 상세 구현 계획 검토·승인
+  - [x] Batch B 생성·검증·사용자 승인
+    - [x] Task 1 stage-aware source registry TDD: RED 확인·4 tests PASS
+    - [x] Tasks 2~6 Auth content·model·pages·generator·verifier TDD
+      - [x] exact reviewed exposure allowlist·reviewRequired symbol 비노출
+      - [x] visible fixture token 검사에서 filename 오탐 제거
+    - [x] Tasks 7~11 회귀·28 source·5 overview·report 생성
+      - [x] HTML 39·source 28·asset 3, links 903
+      - [x] processed 28·remaining 96·missing 0·excluded 9
+      - [x] 전체 66 tests·full verifier PASS
+    - [x] Task 12 desktop/mobile Browser QA·server 종료
+      - [x] 1440×900 home·검색·source·overview·diagram·exercise
+      - [x] 390×844 exercise·source code/explanation·contents sheet
+      - [x] exercise path·SHA-256 가로 넘침 TDD 수정 및 document overflow 0
+      - [x] 임시 localhost server 종료·127.0.0.1:4173 CLOSED 확인
+    - [x] Tasks 13~14 scope 검증·memory closure
+      - [x] `DSM_Back/**`·`DSM_Front/**` diff empty
+      - [x] `.env` output 없음·내용 미조회
+      - [x] QA report·plan·context·checklist·error-resolution playbook 갱신
+    - [x] 2026-08-09 사용자 `Batch B 승인`
+- [x] search/navigation/read-state/dark/diagram zoom 통합
+  - [x] runtime unit contract와 정적 selector/output 검증
+  - [x] 실제 browser interaction·persistence·responsive 관찰
+- [x] Pilot A source 일치 검증 보고서
+- [ ] full corpus final source 일치 검증 보고서
+
+### 학습 사이트 승인 gate
+
+- [x] checkout·pilot 선택 전 HTML/CSS/JavaScript/SVG를 생성하지 않음
+- [x] visual design 승인 전 implementation 금지 준수
+- [x] 서면 design spec 승인 전 implementation 금지 준수
+- [x] 상세 구현 계획·실행 방식 승인 전 implementation 금지 준수
+- [x] 실행 preflight 제한을 inline/no-Git 승인으로 해소한 뒤 구현
+- [x] `DSM_Back/.env` 내용 조회·노출 금지 준수
+- [x] 기존 application source와 dirty architecture document 수정 금지 준수
+- [x] dependency 설치·network fetch·Git write 금지 준수
+
+## 외부 PC setup·handoff 문서
+
+- [x] 현재 branch·원격 ref·ahead/behind와 최신 개발 진행 기준 조사
+- [x] 외부 PC setup·Git 비전달 항목·환경변수·DB·검증·승인 Gate 계약 조사
+- [x] root 단일 handoff 문서 접근과 설계 사용자 승인
+- [x] 설계 명세 작성·자체 검토
+- [x] 상세 구현 계획 작성·자체 검토와 inline 실행 승인
+- [x] root `EXTERNAL_PC_SETUP_AND_HANDOFF.md` 작성
+- [x] 번호 섹션 1~16, 필수 기준값, 명령·package·env·Compose·migration 계약 검증
+- [x] 내부 링크, UTF-8, trailing whitespace, secret-like pattern과 Git 상태 검증
+- [x] 즉시 다음 Task 20, Task 31 change-gate와 이후 M12C 순서 명시
+- [x] 기존 dirty·동시 작업 변경 보존, `.env` 비조회와 Git write·service 실행 금지 유지
+
+## AI CONTROL SYSTEM v5.1 프로젝트 통합
+
+- [x] 첨부 v5.1·현재 `.ai/system_prompt.md`·memory 구조·Git 상태 비교
+- [x] 통합 방식 선택: 기존 프로젝트 규칙 보존 + 호환 규칙 선별 통합
+- [x] 대화형 통합 설계 사용자 승인
+- [x] written design spec 작성·자체 검토
+- [x] written design spec 사용자 검토·승인
+- [x] 상세 구현 계획 작성·자체 검토
+- [x] 상세 구현 계획 사용자 검토·주 에이전트 inline/no-Git 실행 승인
+- [x] `.ai/system_prompt.md` 외과적 통합
+- [x] 중복·충돌·경로·Markdown·strict UTF-8·BOM·`git diff --check` 검증
+- [x] 제품 소스 무변경과 기존 dirty 변경 보존 확인
+- [x] memory 종료 동기화 및 결과 보고
+- [x] Git stage·commit·push 미실행
+
+## Git branch publish·동기화 — 2026-08-25
+
+- [x] 현재 branch·upstream·dirty working tree 사전 확인
+- [x] root 6 tracked·89 untracked와 `fsr` clean ahead-1 확인
+- [x] 3개 commit 그룹·기존 변경 보존·`--ff-only` 동기화 계획 기록
+- [x] 사용자 실행 승인
+- [x] full fetch와 branch divergence 재확인
+- [x] learning 66 tests·28-source verifier, backend unit 198·e2e 2·build, front TypeScript, diff 검증
+- [x] root content/docs 2 commits와 `fsr` ahead-1 commit push
+- [x] root·fsr·main `0/0` 확인; fast-forward pull 불필요
+- [/] memory closure commit·push와 최종 working tree 검증

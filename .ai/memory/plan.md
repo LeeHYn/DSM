@@ -613,3 +613,367 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - Docker Engine은 현재 비가동이므로 실제 local DB·FCM runtime은 이번 publish에서 재검증하지 않았다. 기존 12C·sandbox gate를 유지한다.
 - Windows PowerShell `npm.ps1` 차단과 managed sandbox Jest Temp `EPERM` 해결은 `ER-20260725-001`, `ER-20260725-002`로 기록했다.
 - **상태**: 승인·범위 검토·검증 완료. `codex/m12b-front-prototype-checkpoint` branch에 checkpoint commit `743fb2b`를 생성해 `origin` push 완료. PR·merge는 요청 범위가 아니므로 미실행.
+
+# 오프라인 학습 사이트 계획 — 2026-08-08
+
+## 목표와 현재 상태
+
+- 저장소 원본을 생략·리팩터링하지 않고 개발 1년 차가 학습할 수 있는 offline multi-page HTML 사이트를 만든다.
+- 조사, root·pilot 선택, 시각 디자인·서면 명세 승인과 Pilot A 상세 구현 계획 작성까지 완료했다. HTML, generator, verifier, CSS, JavaScript와 diagram은 생성하지 않았다.
+- 전체 조사 보고서: `.ai/docs/2026-08-08-offline-learning-site-project-analysis.md`.
+- 기본 조사 checkout은 `C:\DEV`, branch `codex/m12b-front-prototype-checkpoint`, HEAD `960f02b`다.
+- 별도 clean worktree `C:\DEV\.worktrees\front-secure-session-rest-client`, branch `codex/front-secure-session-rest-client`, HEAD `bb712ba`는 corpus에서 제외하며, 사용자는 root `960f02b`를 원본 기준으로 선택했다.
+
+## 조사 기준선
+
+- 기본 제외 directory: `.git` 299 files, `.worktrees` 84,857, 현재 두 `node_modules` 69,536, `DSM_Back/dist` 151, `DSM_Front/.expo` 5.
+- 기본 제외 뒤 211 files.
+- application text 후보: 124 files, 13,168 lines.
+  - `DSM_Back`: 88 files, 8,787 lines.
+  - `DSM_Front`: 36 files, 4,381 lines.
+- repository support: 55 files, 14,652 lines. 현재 문서는 설명 근거로만 사용하고 agent/audit/backup/과거 plan은 원본 code page에서 제외한다.
+- generated lock: 2 files, 21,306 lines.
+- media/binary: 29 files.
+- sensitive: `DSM_Back/.env` 1 file. 내용·값 비노출, HTML 제외.
+- 알려진 provider token 형식과 private-key block 0. credential-assignment heuristic은 5 files·6 matches이며 실제 `.env` 외 문서·test·example 후보는 포함 전 재검토한다.
+- 기존 working tree 변경 `.ai/docs/2026-07-15-current-project-architecture.md`는 보존하고 수정하지 않는다.
+
+## 권장 architecture
+
+- 접근 A인 Node.js built-in 기반 정적 generator + verifier를 권장한다.
+- output: `learning-site/index.html`, `architecture.html`, `concepts/`, `features/`, `files/`, `exercises/`, `diagrams/`, `assets/`.
+- tooling: `tools/learning-site/`의 manifest/generator/verifier.
+- remote CDN, remote fetch와 runtime server dependency를 금지한다. `file://`에서 열려야 한다.
+- original code와 AI explanation은 별도 DOM region·색·label로 구분한다.
+- diagram은 inline pure SVG를 기본으로 하고 confirmed edge=solid, inferred edge=dashed, unknown=`확인 필요` label로 구분한다.
+- code display는 HTML escape 외 원문을 바꾸지 않는다. syntax token text를 재결합한 값, logical lines, original bytes SHA-256와 line-ending metadata를 검증한다.
+- search data는 local JavaScript로 제공하고 read state·theme은 localStorage만 사용한다.
+
+## 대안
+
+1. 수동 multi-page 작성: 초기 진입은 빠르지만 124 files에서 누락·escape·link·code drift 위험이 높아 비권장.
+2. offline SPA bundle: search/state는 쉽지만 `file://` deep-link와 multi-page 요구, 초기 bundle 크기 때문에 2순위.
+
+## 권장 pilot 묶음
+
+- A 승인: Task 변경 → 점수 재계산 + 알림 예약 상태 동기화 15 files.
+- B: Social Auth와 refresh rotation 13 files.
+- C: Expo 제품 prototype 13 files.
+- exact file 목록과 선택 근거는 조사 보고서 11절을 따른다.
+
+## 마일스톤
+
+1. [x] M0 root checkout 전체 file inventory, line count, stack, entrypoint, module, sensitive/generated/excluded 분류.
+2. [x] M1 source checkout과 pilot 10~20 files 사용자 선택.
+3. [x] M2 정보 구조·visual concept·diagram language 설계 제안, 사용자 승인, workspace asset·서면 명세 고정.
+4. [ ] M3 generator/verifier와 source manifest 최소 기반. implementation source는 1~2 files씩 수정·검증한다.
+5. [ ] M4 common offline template, CSS/JS와 index/architecture skeleton.
+6. [ ] M5 승인된 pilot batch 생성. content batch는 사용자 요구에 따라 10~20 source files로 제한한다.
+7. [ ] M6 pilot source↔HTML lines/SHA/link/search/mobile/dark/diagram 검증과 사용자 승인.
+8. [ ] M7 나머지 files를 10~20개씩 생성하고 각 batch 뒤 processed/remaining/missing을 보고한다.
+9. [ ] M8 전체 navigation/search/read-state/diagram zoom 통합.
+10. [ ] M9 전체 source 일치 verifier와 final verification report 생성.
+
+## 다음 단계 exact writable allowlist
+
+승인된 design과 상세 구현 계획을 기록한 단계의 writable allowlist다.
+
+- `C:\DEV\docs\superpowers\specs\2026-08-08-offline-learning-site-design.md`
+- `C:\DEV\docs\superpowers\specs\assets\offline-learning-site\01-project-map.png`
+- `C:\DEV\docs\superpowers\specs\assets\offline-learning-site\02-task-architecture.png`
+- `C:\DEV\docs\superpowers\specs\assets\offline-learning-site\03-file-study-desktop.png`
+- `C:\DEV\docs\superpowers\specs\assets\offline-learning-site\04-file-study-mobile.png`
+- `C:\DEV\docs\superpowers\plans\2026-08-08-offline-learning-site-pilot-a.md`
+- `.ai/memory/plan.md`, `context.md`, `checklist.md` 상태 갱신
+
+## 승인 전 안전 경계
+
+- `learning-site/`, `tools/learning-site/`와 HTML/CSS/JavaScript/SVG 생성 금지.
+- 원본 application source, test, config 수정 금지.
+- `.env` 내용 조회·노출 금지.
+- `.worktrees`를 원본으로 포함하거나 중복 처리 금지.
+- 기존 dirty architecture document 수정 금지.
+- dependency 설치, network fetch, Git stage·commit·push 금지.
+
+## 승인 gate
+
+- source checkout과 pilot 묶음 선택, visual design 제안·승인은 완료했다.
+- 2026-08-08 사용자 `명세 승인`으로 서면 디자인 명세 검토 gate를 통과했다.
+- 상세 구현 계획은 `docs/superpowers/plans/2026-08-08-offline-learning-site-pilot-a.md`에 27 tasks로 작성했다.
+- 사용자가 실행 방식과 계획을 승인하기 전에는 HTML/generator/verifier를 구현하지 않는다. Git write는 실행 승인과 별도의 명시 승인이 필요하다.
+
+# 외부 PC setup·handoff 문서 계획 — 2026-08-08
+
+## 목표와 승인
+
+- 외부 PC에서 clone 직후 올바른 branch를 선택하고 로컬 환경을 재구성한 뒤, 실제 Git·memory 기준으로 현재 진척도와 다음 작업을 확인해 안전하게 재개할 수 있는 단일 문서를 만든다.
+- 최종 산출물은 root `EXTERNAL_PC_SETUP_AND_HANDOFF.md`다.
+- 2026-08-08 사용자 `ㄱ`을 root 문서 접근과 설계 명세 진행 승인으로 기록한다.
+- 설계 명세: `docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md`.
+
+## 설계 계약
+
+- 문서는 확인일 기준 branch·commit snapshot과 외부 PC에서 다시 계산하는 Git·memory 명령을 함께 제공한다.
+- `main`이 최신 개발 상태가 아님을 명시하고 기본 재개 branch를 `origin/codex/front-secure-session-rest-client`로 안내한다.
+- setup, 환경변수 이름, DB migration, 검증, 현재 완료·진행·미구현 상태, 다음 작업, 승인 gate, Git으로 복원되지 않는 항목과 Windows 복구 절차를 한 파일에 포함한다.
+- 실제 secret·credential·token·private key와 `.env` 내용은 조회·기록하지 않는다.
+- product source·test·config, 기존 offline learning-site 작업, dirty architecture 문서는 수정하지 않는다.
+- Git stage·commit·push와 실제 dependency·Docker·DB·Firebase 실행은 수행하지 않는다.
+
+## 단계와 exact writable allowlist
+
+1. [x] 접근 선택과 설계 승인.
+2. [x] 설계 명세 작성·자체 검토.
+   - `C:\DEV\docs\superpowers\specs\2026-08-08-external-pc-setup-and-handoff-design.md`
+   - `C:\DEV\.ai\memory\plan.md`
+3. [x] 사용자 설계 명세 검토.
+4. [x] 상세 구현 계획 작성·자체 검토.
+   - `C:\DEV\docs\superpowers\plans\2026-08-08-external-pc-setup-and-handoff.md`
+5. [x] 최종 root handoff 문서 작성·검증.
+   - `C:\DEV\EXTERNAL_PC_SETUP_AND_HANDOFF.md`
+6. [x] memory 종료 갱신과 기존 변경 보존 재검증.
+
+## 완료 결과
+
+- 2026-08-08 사용자 선택 `2`로 상세 계획의 현재 session inline 실행을 승인받았다.
+- root 문서는 외부 PC setup, Git으로 복원되지 않는 항목, branch·commit snapshot, 검증 명령, 완료·미완료 상태와 승인 Gate를 16개 번호 섹션으로 통합했다.
+- 원격 재검증: `origin/main=2e25d98`, checkpoint `960f02b`, 최신 개발 branch `bb712ba`, `origin/main...feature=0/59`, 상세 계획 33 tasks.
+- 즉시 다음 작업은 Front **Task 20 React session context**이며 Task 31 change-gate 뒤에 M12C로 진행한다.
+- package scripts·환경변수 이름·Compose·migration·내부 링크, trailing whitespace와 secret-like pattern 검사를 통과했다.
+- `.env`·credential은 조회하지 않았고 dependency·Docker·DB·Firebase 실행과 Git stage·commit·push는 수행하지 않았다.
+- 기존 dirty architecture·offline learning-site·memory 변경은 되돌리거나 덮어쓰지 않았다.
+
+## 실행 중 유지한 경계
+
+- root 문서는 사용자 설계 승인과 inline 실행 승인 뒤에만 생성했다.
+- 기존 memory·analysis·architecture 변경을 되돌리거나 덮어쓰지 않는다.
+- `.env`, ADC, OAuth token, signing key 접근 금지.
+- branch checkout·Git write·dependency install·service 실행·migration 적용 금지.
+- **선택 승인 기록**: 2026-08-08 사용자 `A ㄱ`을 직전 제시한 권장 기본값인 `C:\DEV` root checkout + pilot A 15 files 승인으로 기록한다. source 확인 뒤 pilot의 사실 기반 명칭은 “Task 변경 → 점수 재계산 + 알림 예약 상태 동기화”로 정정했다.
+- **과거 gate 해소**: source·pilot·visual design·서면 명세·상세 구현 계획 승인 뒤 사용자 `2`로 current root inline/no-Git 실행을 승인해 HTML/generator/verifier 구현 금지를 해소했다.
+
+## Pilot A source 확인에 따른 사실 정정 — 2026-08-08
+
+- `TasksService`는 `NotificationsService`를 호출하지 않는다.
+- `create/update/remove/complete`는 `Prisma.$transaction`을 Serializable isolation으로 실행한다.
+- transaction 안에서 `Task`, `NotificationSchedule`, `NotificationDelivery`를 Prisma client로 직접 변경하고 `ScoresService.recompute()`를 같은 client와 함께 호출한다.
+- 알림 schedule/delivery 변경은 mutation 종류와 일정 관련 변경 여부에 따른 조건부 side effect다.
+- `NotificationsService`는 FCM token register/revoke 경계이며 Task mutation의 직접 호출 경로가 아니다.
+- 따라서 pilot A 문서와 diagram은 실제 FCM 발송을 다루지 않고, Task mutation과 점수·알림 예약 상태의 원자 동기화까지만 다룬다.
+
+## 디자인·서면 명세 승인과 상세 구현 계획 — Pilot A 승인 완료
+
+- visual direction: technical field notebook + code evidence map.
+- true white learning surface, deep ink navigation/code, lime confirmed relationship, amber inferred/confirmation-needed, cool gray border.
+- original code는 dark panel의 `원본 코드 · 변경 없음`, AI content는 white panel의 `AI 설명 · 원본 밖`으로 분리한다.
+- desktop file page는 62/38 split, mobile은 code/explanation mode switch + bottom explanation sheet다.
+- 사용자 `ㄱ`으로 project map, Task architecture, desktop file study, mobile file study의 네 정정 concept을 승인했다.
+- 승인본은 `docs/superpowers/specs/assets/offline-learning-site/`의 `01-project-map.png`~`04-file-study-mobile.png`로 복사했다.
+- 서면 명세는 `docs/superpowers/specs/2026-08-08-offline-learning-site-design.md`다.
+- 사용자 `명세 승인`으로 서면 명세를 승인했다.
+- source-like colored bars와 image-generated line-number artifacts는 layout placeholder일 뿐 code/fact spec이 아니다. 실제 구현은 generator가 root source를 읽어 line number와 text를 만든다.
+- 홈 학습 경로는 Task 변경에서 점수 재계산과 알림 예약 상태 동기화로 분기한다.
+- architecture diagram은 conditional NotificationSchedule/NotificationDelivery 관계를 label하고 NotificationsService·FCM send를 포함하지 않는다.
+- `superpowers:writing-plans`로 Pilot A 구현 계획 `docs/superpowers/plans/2026-08-08-offline-learning-site-pilot-a.md`를 작성했다. Node built-in tooling 12 tasks, 1~2-file output checkpoints, full verifier·Browser QA와 memory closure를 포함한 총 27 tasks다.
+- 2026-08-08 사용자 `1 ㄱ`으로 Subagent-Driven 실행 방식을 승인했으나 Git write는 승인하지 않았다.
+- 실행 preflight에서 현재 `C:\DEV`가 linked worktree가 아닌 일반 checkout이고, Subagent-Driven이 요구하는 격리 worktree·task commit은 Git write 승인 없이는 만들 수 없음을 확인했다.
+- `.ai/agents/README.md`가 열거하는 역할 중 `tools/learning-site/**`, `learning-site/**`를 수정할 수 있는 역할이 없으며 `tooling-developer.md`도 존재하지 않는다. 역할 계약상 backend/frontend 역할로 범위를 확장할 수 없어 implementer spawn을 시작하지 않았다.
+- 사용자 `2`로 current root inline/no-Git 실행을 승인했다. Git stage·commit·push·branch/worktree는 실행하지 않았다.
+- Node built-in generator/verifier, source tokenizer·symbol index, 정적 page renderer, local CSS/JS runtime과 Pilot A 15개 원본 페이지를 구현했다. `learning-site/`는 21 HTML pages + 3 assets + `verification-report.json` + `qa-report.md`로 구성된다.
+- 전체 Node test 48개가 통과했다. verifier는 15개 source의 text/SHA-256/bytes/logical lines/line ending, 510 local links/fragments, offline dependency, search/progress와 금지 관계를 PASS로 기록했다. processed=15, remaining=109, missing=0, public exclusion metadata=9다.
+- `DSM_Back`·`DSM_Front` Git diff는 비어 있고 `.env` 내용은 조회하지 않았다.
+- 사용자 승인으로 `C:\DEV\learning-site`만 제공하는 임시 localhost 서버를 열어 1440×900·390×844 인앱 Chromium QA를 완료했다. 검색·theme/read persistence·설명 탭·mobile sheets·diagram zoom/reset/keyboard/pointer drag·architecture 금지 노드를 확인했다.
+- Browser QA에서 hidden notice, desktop 읽음 제어, 검색 metadata 간격, mobile bottom sheets, 한국어 제목 줄바꿈, mobile home 여백 결함을 찾아 테스트를 먼저 추가한 뒤 수정했다. 상세 결과는 `learning-site/qa-report.md`다.
+- Pilot A 구현·정적 검증·브라우저 QA를 완료했고, 2026-08-09 사용자 `Pilot A 승인`으로 시범 결과 검토 gate를 통과했다.
+- 남은 109 files는 한 번에 생성하지 않는다. 다음 묶음은 10~20개 파일의 독립 기능 단위로 범위를 선택하고, 별도 design spec·상세 계획·사용자 승인 뒤 생성한다.
+- 다음 범위 후보는 B `Social Auth와 refresh rotation` 13개와 C `Expo 제품 prototype` 13개다. 현재는 후보 비교·사용자 선택 단계이며 어떤 페이지도 추가 생성하지 않는다.
+
+## 오프라인 학습 사이트 Batch B 설계 탐색 — 2026-08-09
+
+- 사용자 `B ㄱ`으로 다음 묶음을 `Social Auth와 refresh rotation`으로 선택했다. 이 승인은 범위 설계 진행 승인이지 HTML 생성 승인이 아니다.
+- 실제 root source 기준 신규 처리 후보는 아래 13개·883줄이며 Pilot A와 중복되지 않는다.
+  1. `DSM_Back/src/main.ts` — 11줄
+  2. `DSM_Back/src/app.bootstrap.ts` — 58줄
+  3. `DSM_Back/src/auth/auth.module.ts` — 13줄
+  4. `DSM_Back/src/auth/auth.controller.ts` — 50줄
+  5. `DSM_Back/src/auth/auth.service.ts` — 254줄
+  6. `DSM_Back/src/auth/guards/jwt-auth.guard.ts` — 49줄
+  7. `DSM_Back/src/auth/dto/social-login.dto.ts` — 13줄
+  8. `DSM_Back/src/auth/dto/refresh-token.dto.ts` — 7줄
+  9. `DSM_Back/src/auth/dto/token-response.dto.ts` — 4줄
+  10. `DSM_Back/src/auth/types/jwt-payload.type.ts` — 4줄
+  11. `DSM_Back/src/auth/types/social-profile.type.ts` — 6줄
+  12. `DSM_Back/src/auth/auth.controller.spec.ts` — 67줄
+  13. `DSM_Back/src/auth/auth.service.spec.ts` — 347줄
+- 기존 Pilot A의 `app.module.ts`, `schema.prisma`, `prisma.service.ts`는 새 처리 수에 중복 산입하지 않고 관계 근거 링크로 재사용한다.
+- 확인된 흐름은 `main.ts → configureApp() → AuthController → AuthService/JwtAuthGuard`다. social login은 Google/Kakao token 검증 뒤 social account 조회·user 생성·token 발급으로 이어지고, Apple은 현재 `ConflictException`으로 명시적 미구현이다.
+- refresh는 `<recordId>.<secret>` 파싱, PK `findUnique`, bcrypt 비교, transaction 안 conditional `updateMany` 단일 승자, replacement token 생성 순서다. logout은 access guard 뒤 사용자 소유 refresh token만 revoke하며 malformed/missing/mismatch는 no-op이다.
+- `/auth/me`는 현재 checkout에서 `userId`만 반환한다. global bootstrap은 `ValidationPipe`, `HttpExceptionFilter`, `origin: true`·`credentials: true` CORS를 설정하므로 현재 사실과 위험을 그대로 설명한다.
+- 다음 단계는 같은 13개 안에서 균형형·refresh 심화형·social login 심화형 중 설명 가중치를 정하고, design spec과 상세 계획을 별도 승인받는 것이다. 승인 전에는 manifest/content/page/output을 수정하지 않는다.
+
+### Batch B 설명 가중치·생성 구조 제안
+
+- 2026-08-09 사용자 선택 `1`로 균형형을 선택했다. Social login, JWT guard, refresh rotation, logout을 고르게 설명하되 `auth.service.ts`와 `auth.service.spec.ts`는 복잡도에 따라 가장 깊게 다룬다.
+- 누적 생성 방식은 다음 세 대안을 비교한다.
+  1. **stage-aware 누적 batch registry — 권장**: `pilot-a`와 `batch-b`를 별도 정의하고 Batch B 모델은 A∪B를 처리 상태로 계산한다. Pilot A만 재생성하는 경로와 누적 28-file 경로를 모두 재현할 수 있다.
+  2. **단일 processed 28-file 목록**: 구현은 단순하지만 Pilot A 기준선 15/109를 독립 재현할 수 없다.
+  3. **Batch B output overlay**: 기존 산출물 위에 13개만 수동 추가해 변경량은 작지만 progress/search/verifier가 서로 다른 source of truth를 갖게 되어 비권장이다.
+- 권장 정보 구조는 신규 source pages 13개와 overview pages 5개다.
+  - `features/social-login.html`
+  - `features/refresh-rotation.html`
+  - `concepts/jwt-session.html`
+  - `diagrams/auth-session-flow.html`
+  - `exercises/auth-session.html`
+- `index.html`에는 Pilot B 학습 경로를 추가하고, `architecture.html`의 기존 Task 근거 지도는 보존한 채 Auth 요약 카드와 새 diagram 링크만 추가한다.
+- Batch B 생성 뒤 예상 누적 상태는 HTML 39개(기존 21 + source 13 + overview 5), processed 28, remaining 96, missing 0이다. 최종 수치는 생성·verifier 출력으로 다시 확정한다.
+- 2026-08-09 사용자 `ㄱ`으로 위 stage-aware 누적 registry와 신규 overview 5개 정보 구조를 설계 1절로 승인했다. 이 승인은 구현 승인이 아니며, 나머지 설계 절과 written spec·상세 계획 승인 전에는 tooling이나 output을 수정하지 않는다.
+
+### Batch B 설계 2절 제안 — 데이터 흐름·설명 경계·오류 표시
+
+- **Social login 흐름**: `POST /auth/login` → global `ValidationPipe`와 DTO → controller → provider 검증 → `socialAccount` 조회 → 기존 사용자 재사용 또는 사용자·계정 생성 → access/refresh token 발급으로 설명한다. Google은 configured audience로 `verifyIdToken`, Kakao는 `/v2/user/me`, Apple은 현재 명시적 `ConflictException` 409다.
+- **JWT guard 흐름**: Bearer token 추출 → JWT secret으로 검증 → `type === 'access'` 확인 → `request.user` 부착이다. 추출·검증·type 불일치는 모두 401 경계로 표시한다.
+- **Refresh rotation 흐름**: `<recordId>.<secret>` 파싱 → PK `findUnique` → revoked/expiry/bcrypt 검증 → transaction 안 conditional `updateMany`로 단일 승자 결정 → replacement refresh 생성과 새 access token 서명 순서다. 동시 요청의 패자는 401이고, replacement 생성 실패는 transaction 전체 실패·rollback 근거를 spec test와 함께 제시한다. transaction을 Serializable로 설명하지 않는다.
+- **Logout 흐름**: access guard가 사용자 identity를 확정한 뒤, 전달된 refresh token이 형식·소유권·secret 검증을 모두 만족할 때만 revoke한다. malformed/missing/mismatch는 현재 구현의 no-op으로 표시한다.
+- **설명 층위**: 12세 비유는 access token을 짧은 출입증, refresh token을 공개 record id와 비밀 조각이 결합된 갱신 영수증으로 설명하고 DB에는 평문 secret 대신 hash가 저장됨을 밝힌다. junior 층위는 DTO validation, DI/module, provider verification, DB read/write, transaction/concurrency, guard를 정확한 용어로 연결한다. 원본 코드는 그대로 두고 AI 설명·line reference는 코드 바깥에 둔다.
+- **사실 표시 규칙**: 확인된 실제 call/write는 solid, provider 분기·기존/신규 사용자·refresh 유효성·race 승패는 conditional, 실제 provider 계정 동작·배포 secret 설정·live provider 가용성은 `확인 필요`로 구분한다. raw secret/token 값은 diagram·search index·site data에 넣지 않는다.
+- **명시할 위험·한계**: permissive CORS(`origin: true`, `credentials: true`), JWT secret의 `get` 사용, 첫 social login/user/nickname uniqueness 경합 가능성, Apple 미구현, Google/Kakao live 미검증, mock 기반 service spec의 통합 테스트 한계를 표시한다.
+- 2026-08-09 사용자 `ㄱ`으로 위 Auth 데이터 흐름·설명 경계·오류 표시 규칙을 설계 2절로 승인했다. 구현 승인은 아니다.
+
+### Batch B 설계 3절 제안 — 변경 범위·검증·완료 기준
+
+- **Tooling 경계**: `manifest.mjs`는 `pilot-a`와 `batch-b` stage registry 및 누적 path 계산만 담당하고, Batch B 학습 문구·file guide·flow·exercise는 새 `content/batch-b.mjs`에 둔다. `generate.mjs`·`verify.mjs`·`lib/pages.mjs`는 선택된 stage model과 output registry를 소비하도록 확장하되 기존 Pilot A 재생성 계약을 보존한다. 새 표현에 필요한 최소 CSS/JS만 기존 asset source에 추가한다.
+- **Output 경계**: 신규 source page 13개와 overview 5개를 생성하고 `index.html`, `architecture.html`, `assets/site-data.js`, verifier report를 Batch B 누적 상태로 재생성한다. 기존 Pilot A page는 같은 source에서 결정적으로 재생성하며 `DSM_Back/**`·`DSM_Front/**`는 수정하지 않는다.
+- **TDD 순서**: 먼저 stage membership·15/109 및 28/96 재현·중복 거부 test, 13개 guide 완전성·금지 주장·raw secret 비노출 test, exact output registry·page copy test, Batch B verifier test를 실패 상태로 추가한다. 최소 구현 뒤 전체 test를 실행하고 실제 output은 test와 temporary-directory 생성이 통과한 뒤 갱신한다.
+- **정적 검증**: corpus 124 files·13,168 lines 기준선을 유지하고 Batch B는 source fidelity 28개(text, SHA-256, bytes, logical lines, line ending), HTML 39개, processed 28, remaining 96, missing 0을 확인한다. 모든 local link/fragment, offline dependency, search/progress membership, source code의 runtime-data 비복제, 민감 경로·값 비노출을 fail-closed로 검사한다. 최종 숫자는 verifier 실제 출력으로 확정한다.
+- **회귀 검증**: 기존 48 tests를 포함한 전체 suite와 새 Batch B tests가 모두 통과해야 하며, Pilot A 전용 생성·검증도 별도로 다시 통과해야 한다. `DSM_Back`·`DSM_Front` diff는 비어 있어야 하고 `.env`는 읽지 않는다.
+- **Browser QA**: `C:\DEV\learning-site`만 제공하는 임시 localhost server에서 1440×900과 390×844로 home의 Batch B 경로, Auth 검색·필터, 대표 source page, social/refresh overview, diagram zoom·keyboard/pointer, exercise answer, theme/read persistence와 overflow를 확인한다. QA 후 server를 종료하고 port closed를 확인한다.
+- **완료 보고**: 실제 source/page/test/link/progress 수치, known limitation, source diff·server 종료 상태를 batch report에 기록하고 사용자 Batch B 승인을 받는다. 그 승인 전에는 다음 batch를 시작하지 않는다.
+- 2026-08-09 사용자 `ㄱ`으로 위 변경 범위·검증·완료 기준을 설계 3절로 승인했다. 이로써 대화형 설계 1~3절이 모두 승인됐다.
+- 승인 내용을 `docs/superpowers/specs/2026-08-09-offline-learning-site-batch-b-design.md`에 written design spec으로 작성했다. placeholder, 수치·경로 일관성, 금지 주장, 범위 모호성을 자체 검토했고 controller spec과 refresh rollback의 test 근거 범위를 정확히 한정했다. `git diff --check`와 application source diff empty를 확인했다.
+- 2026-08-09 사용자 `ㄱ`으로 written design spec을 승인했고 문서 상태를 상세 구현 계획 승인 대기로 갱신했다.
+- `superpowers:writing-plans`로 `docs/superpowers/plans/2026-08-09-offline-learning-site-batch-b.md`를 작성했다. 14 tasks가 stage registry, Auth content, cumulative model, 5개 page, output registry, stage verifier, 전체 회귀, 최대 2-file source/output checkpoints, full report, Browser QA, scope 검증과 memory closure를 고정한다.
+- 계획 자체 검토에서 spec coverage, placeholder, interface·renderer·test name·CLI option 일관성을 확인하고 `renderBatchBPath(model, outputPath)`와 Pilot/Batch별 full-verifier test name을 정정했다. `git diff --check`는 통과했고 application source diff는 비어 있다.
+- 2026-08-09 사용자 `ㄱ`으로 Batch B 상세 구현 계획을 승인했다. current root inline/no-Git 실행 gate가 열렸으며 `superpowers:executing-plans`와 TDD로 14 tasks를 순서대로 수행한다.
+- 실행 workspace는 사용자가 이미 선택한 일반 checkout `C:\DEV`다. 별도 worktree와 subagent는 사용하지 않고, 첫 구현 단계는 Task 1 stage registry의 failing test다.
+- Git write는 별도 승인 전 수행하지 않는다. `DSM_Back/**`, `DSM_Front/**`, `.env`, dependency, network, DB·Docker·Firebase와 제품 service 금지는 유지한다.
+
+### Batch B 구현·QA 완료 — 2026-08-09
+
+- `pilot-a` 독립 재현과 `batch-b` 누적 A∪B membership을 지원하는 stage registry, 13개 Auth guide, 5개 Auth overview renderer, stage-aware generator/verifier와 fail-closed exposure 검사를 TDD로 구현했다.
+- 실제 산출물은 HTML 39개, source page 28개, local asset 3개다. progress는 processed 28, remaining 96, missing 0, excluded metadata 9다.
+- full verifier는 source fidelity, offline dependency, search/progress와 local link·fragment 903개를 모두 PASS로 기록했다. 전체 Node test는 66개, failure 0이다.
+- exact source path·reason 조합만 허용하는 reviewed exposure gate를 추가했고 검토 record의 `reviewRequired`와 빈 symbol 목록은 유지했다. fixture token 검사는 filename substring과 독립된 visible literal을 분리한다.
+- 인앱 Chromium 1440×900·390×844 QA에서 home Batch B, Auth 검색, source 학습 탭·읽음·theme, social/refresh/JWT overview, diagram 확대·방향키·reset, 6개 exercise와 mobile 설명·목차를 확인했다. console warning/error와 framework overlay는 없다.
+- QA에서 exercise source link의 데스크톱 가로 넘침과 source SHA-256의 모바일 가로 넘침을 재현하고 각각 failing CSS contract test 뒤 최소 수정했다. 최종 document width는 exercise 1425/1440, mobile exercise 375/390, mobile source 375/390이다.
+- `learning-site/qa-report.md`와 `verification-report.json`을 Batch B 실제 결과로 갱신했다. `DSM_Back/**`·`DSM_Front/**` diff는 비어 있고 `.env` output은 없으며 내용도 읽지 않았다. 임시 localhost server는 종료하고 port closed를 확인했다.
+- Git stage·commit·push·branch/worktree는 실행하지 않았다. 2026-08-09 사용자 `Batch B 승인`으로 구현·검증·Browser QA 결과 gate를 통과했다. 다음 batch는 별도 범위 선택·명세·계획 승인 전 시작하지 않는다.
+
+# AI CONTROL SYSTEM v5.1 프로젝트 통합 — 2026-08-15
+
+## 목표
+
+- 첨부된 `AI CONTROL SYSTEM v5.1 (Strict Architecture Edition)`의 개선 규칙을 현재 `.ai/system_prompt.md`에 프로젝트 맞춤형으로 선별 통합한다.
+- 현재 프로젝트의 오류 해결 플레이북, memory backup 경계, 역할 기반 서브에이전트 계약과 적대적 검증 워크플로를 보존한다.
+- 상충하거나 중복되는 규칙은 병렬로 남기지 않고 현재 SSOT 구조에 맞는 단일 규칙으로 정리한다.
+
+## 사용자 승인과 현재 gate
+
+- 사용자는 2026-08-15 `ㄱ`으로 **기존 v3.0 프로젝트 규칙 보존 + v5.1 호환 규칙 선별 통합** 방식을 선택했다.
+- 사용자는 이어서 `ㄱ`으로 대화형 통합 설계를 승인했다.
+- 사용자는 written design spec, 상세 구현 계획과 주 에이전트 inline/no-Git 실행을 순서대로 `ㄱ`으로 승인했다.
+- Git stage·commit·push는 별도 승인 전 실행하지 않는다.
+
+## 승인 설계
+
+- `.ai/system_prompt.md`를 프로젝트 맞춤형 v5.1로 승격한다.
+- 기본 memory는 `plan.md`, `context.md`, `checklist.md` 3개를 유지하고 오류 작업에서만 `error-resolution-playbook.md`를 추가로 읽는다. 첨부 원문의 `memory.md`는 새로 만들지 않는다.
+- 한국어 응답, 보고 전 memory 동기화, 검증 가능한 목표, 단순성, 설계 선협의, 회귀 테스트·형제 경로 점검, 컨텍스트 복구, 커밋 메시지 품질과 checklist 기반 다음 작업 제안을 보강한다.
+- 서브에이전트 규칙은 기존 역할 문서·exact writable allowlist·감사 독립성 계약을 유지하고, 실제 지원 모델 확인과 lowest sufficient profile 제안만 추가한다. 런타임 상위 지침과 사용자 승인 없이 서브에이전트를 생성하지 않는다.
+- Windows/Docker와 긴 명령 규칙은 현재 DSM 환경에 적용되는 조건부 규칙으로 작성한다.
+- memory 압축은 기존 `.ai/memory/README.md`와 `*.original.md` 복구 경계를 우선하며, 첨부 원문의 `.ai/archive/` 방식을 강제로 도입하지 않는다.
+
+## 단계별 exact writable allowlist
+
+1. 계획 기록: `.ai/memory/plan.md`, `.ai/memory/checklist.md`
+2. written design spec: `docs/superpowers/specs/2026-08-15-ai-control-system-v5-1-integration-design.md`
+3. 상세 구현 계획: `docs/superpowers/plans/2026-08-15-ai-control-system-v5-1-integration.md`
+4. 구현: `.ai/system_prompt.md`
+5. 종료 동기화: `.ai/memory/plan.md`, `.ai/memory/checklist.md`
+6. 현재 운영 맥락이 바뀐 경우에만 별도 단계로 `.ai/memory/context.md`
+
+## 성공 기준
+
+- 기존 프로젝트 전용 안전 규칙이 삭제되거나 약화되지 않는다.
+- v5.1에서 채택한 규칙은 현재 memory 파일명·역할·승인 gate와 모순되지 않는다.
+- `memory.md`나 불필요한 `.ai/archive/` 구조를 새로 만들지 않는다.
+- Markdown 구조, 내부 경로, 중복·상충 표현, placeholder, UTF-8과 `git diff --check`를 검증한다.
+- 기존 dirty 변경과 제품 소스는 수정하지 않는다.
+
+## Written design spec 상태
+
+- `docs/superpowers/specs/2026-08-15-ai-control-system-v5-1-integration-design.md`를 작성했다.
+- placeholder, 필수 절, 경로 존재, 충돌 용어 문맥, whitespace와 `git diff --check`를 자체 검토했다.
+- 사용자는 2026-08-15 `ㄱ`으로 written design spec을 승인했다.
+- `superpowers:writing-plans`로 `docs/superpowers/plans/2026-08-15-ai-control-system-v5-1-integration.md`를 작성했다. 상단 계약, 실행·서브에이전트 계약, 하단 품질·복구 계약, 전체 정적 검증, memory 종료 동기화의 5 tasks로 구성한다.
+- 사용자는 상세 구현 계획과 주 에이전트 inline 실행을 승인했다. 역할 계약에 맞는 시스템 프롬프트 편집 서브에이전트가 없어 서브에이전트는 생성하지 않았다.
+
+## 구현·검증 결과
+
+- `.ai/system_prompt.md`를 `AI CONTROL SYSTEM v5.1 (DSM Project Adapted Edition)`으로 통합했다.
+- 한국어·보고 전 memory 동기화, 검증 가능한 milestone, 구조적 설계 선승인, lowest-sufficient 서브에이전트 프로파일, memory 위생, 단순성·회귀 방지, 완료 보고·다음 작업, 커밋 메시지와 컨텍스트 복구 규칙을 추가했다.
+- 기존 오류 해결 플레이북, backup 경계, exact writable allowlist, Context Compiler, 적대적 검증과 `ACCEPTED_RISK` 계약을 보존했다.
+- `.ai/memory/memory.md`와 `.ai/archive/`는 생성하지 않았다. `context.md`의 제품·환경 snapshot은 바뀌지 않아 이번 종료 동기화에서 수정하지 않았다.
+- 첫 patch는 기존 UTF-8 BOM 때문에 문맥 불일치로 변경 없이 중단됐다. BOM 존재를 확인한 뒤 BOM-aware 최소 patch로 제목을 갱신했고 최종 파일의 strict UTF-8과 BOM 보존을 검증했다.
+- 필수 heading·계약 문자열, 부정 경계, Markdown 구조, strict UTF-8, `git diff --check`와 `DSM_Back/**`·`DSM_Front/**` diff empty를 확인했다.
+- 기존 dirty 변경은 되돌리거나 덮어쓰지 않았고 dependency·network·DB·Docker·Firebase와 Git stage·commit·push는 실행하지 않았다.
+
+# Git branch publish·동기화 계획 — 2026-08-25
+
+## 목표와 현재 상태
+
+- root branch `codex/m12b-front-prototype-checkpoint`의 tracked 수정 6개·untracked 89개를 검토해 `fsr/` worktree를 제외하고 의미별 커밋으로 publish한다.
+- 별도 clean worktree `C:\DEV\fsr`의 `codex/front-secure-session-rest-client`는 원격보다 1 commit 앞선 상태이므로 해당 commit을 publish한다.
+- `main`과 두 feature branch의 remote ref를 fetch하고, checkout된 worktree가 behind일 때만 fast-forward pull한다.
+- 사용자는 2026-08-25 `진행해`로 직전 제안한 fetch → branch별 push → 필요한 `--ff-only` pull 순서를 승인했다.
+
+## 커밋 그룹
+
+1. `feat(learning-site): add offline study batches`
+   - `.ai/docs/2026-08-08-offline-learning-site-project-analysis.md`
+   - offline learning-site의 2 plans, 2 specs, 승인 PNG 4개
+   - 사전 inventory에서 확인한 `learning-site/` 44 files와 `tools/learning-site/` 30 files
+2. `docs(project): add handoff and AI workflow`
+   - `EXTERNAL_PC_SETUP_AND_HANDOFF.md`
+   - external-PC plan/spec, AI-control-system plan/spec
+   - `.ai/system_prompt.md`, `.ai/docs/2026-07-15-current-project-architecture.md`
+3. `docs(memory): sync project state`
+   - `.ai/memory/plan.md`, `context.md`, `checklist.md`, `error-resolution-playbook.md`
+
+## 실행·검증 계획
+
+1. full remote fetch 뒤 branch별 ahead/behind를 재확인한다.
+2. `C:\DEV\fsr`의 clean ahead-1 commit을 push한다.
+3. root에서 learning-site Node tests·full verifier, backend unit/e2e/build, front TypeScript와 `git diff --check`를 실행한다.
+4. 위 세 그룹을 명시적 pathspec으로만 stage·commit하고 각 staged diff를 확인한다.
+5. root branch를 push한다.
+6. checkout된 worktree가 behind일 때만 `git pull --ff-only`를 실행하고 최종 HEAD·upstream·status를 확인한다.
+
+## 수정 경계와 승인 gate
+
+- 실행 주체: 주 에이전트 직접 실행. 서브에이전트 없음.
+- `C:\DEV\fsr` worktree directory 자체를 root commit에 포함하지 않는다.
+- stash, reset, clean, force-push, merge, PR, branch/worktree 삭제와 checkout 전환은 금지한다.
+- 원격 divergence, 테스트 실패, staged 범위 불일치가 있으면 자동 수정·rebase 없이 중단한다.
+- 승인 상태: 사용자 실행 승인 완료.
+
+## 실행·검증 결과
+
+- `git fetch --all --prune` 완료. 새 remote branch `origin/codex/integration-main-review`를 확인했으며 기존 대상 branch divergence는 없었다.
+- learning-site Node tests 66개와 full verifier 28 sources가 PASS했다.
+- backend unit 22 suites·198 tests와 e2e 1 suite·2 tests는 sandbox Temp cache `EPERM` 뒤 `ER-20260725-002` 절차로 동일 명령을 sandbox 밖에서 재실행해 exit 0을 확인했다.
+- backend Nest build와 front TypeScript `--noEmit --incremental false`, staged `git diff --check`가 통과했다.
+- root commit `43145b6` `feat(learning-site): add offline study batches`와 `c79a042` `docs(project): add handoff and AI workflow`를 생성해 `origin/codex/m12b-front-prototype-checkpoint`에 push했다.
+- `C:\DEV\fsr`의 commit `2a4e991`을 `origin/codex/front-secure-session-rest-client`에 push했다.
+- root, `fsr`, `main`의 최종 ahead/behind는 모두 `0/0`이므로 pull은 실행하지 않았다.
+- `fsr/` worktree는 root commit에서 제외했고 stash, reset, clean, force-push, merge, PR, branch/worktree 삭제와 checkout 전환은 수행하지 않았다.
+- 이 memory 동기화는 승인된 publish 작업의 마지막 closure commit으로 기록한다.
