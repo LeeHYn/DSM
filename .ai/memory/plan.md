@@ -9,7 +9,8 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - 제품 canonical branch는 `codex/front-secure-session-rest-client` `2a4e991`이다.
 - `codex/m12b-front-prototype-checkpoint` `396fc0a`는 whole-branch merge input으로 사용하지 않는다.
 - 오프라인 학습 사이트는 source snapshot `960f02b` 위의 content commit `43145b6`를 기준으로 별도 `codex/offline-learning-site` branch에 유지한다.
-- offline branch에는 `plan.md`, `context.md`, `checklist.md`의 offline-site section과 `ER-20260809-001`~`003`만 section-scoped extraction으로 포함한다. `fb54b5d`·`396fc0a` 전체 memory commit은 cherry-pick하지 않는다.
+- offline branch에는 `fb54b5d`의 `plan.md`, `context.md`, `checklist.md`에서 명시적으로 열거한 offline-site block과 `ER-20260809-001`~`003`만 section-scoped extraction으로 포함한다. `396fc0a`는 publish closure만 변경하므로 extraction source에서 제외하고, 두 combined memory commit은 cherry-pick하지 않는다.
+- offline branch 전용 격리 worktree는 `C:\dsm-offline-learning-site`로 고정한다. 비어 있지만 ignore되지 않은 `C:\DEV\.worktrees`와 기존 `main`·integration worktree는 사용하지 않는다.
 - `c79a042`의 external-PC handoff·AI workflow 문서는 main integration에서 file-by-file 검토해 선택적으로 port한다.
 
 ## 현재 상태와 gate
@@ -17,8 +18,12 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - 사용자가 위 branch/memory 분리를 대화에서 승인했다.
 - 격리 worktree `C:\dsm-integration-review`와 local branch `codex/integration-main-review`를 remote `6fa66eb`에서 생성했다.
 - revised written spec `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`를 commit `24bb810`으로 기록했다.
+- read-only 명세 검증에서 offline worktree 미정, offline validation matrix 누락, `396fc0a` source 오류, ref precondition 모호성의 네 findings를 확인했다.
+- 사용자가 네 review finding을 모두 선택하고 `진행해`로 명세·memory 수정 범위를 승인했다. 수정 후 revised written spec의 최종 사용자 승인 gate를 다시 거친다.
+- 네 findings를 spec에 반영해 local commit `19dde6d` `docs: resolve integration design review`로 기록했다. exact remote ref table, `C:\dsm-offline-learning-site` 생성·중단 조건, `fb54b5d` exact source map과 `396fc0a` exclusion, offline 7-row validation matrix를 추가했다.
+- `git diff --check`, exact ref/SHA 대조, `fb54b5d` source anchor 검사, stale wording 부재, offline path·ref 미존재 검증이 PASS했다. 제품 test·offline verifier는 branch 생성 전 design review 단계이므로 실행하지 않았다.
 - Node.js `24.13.0`, npm `11.6.2`는 spec 요구 `24.19.0`/`11.19.0`과 달라 implementation preflight blocker다.
-- 다음 단계는 written spec 사용자 검토·승인이다. 승인 전 implementation plan, offline branch 생성, product merge, push, PR, main 수정은 금지한다.
+- 다음 단계는 수정된 written spec의 최종 사용자 검토·승인이다. 승인 전 implementation plan, offline branch 생성, product merge, push, PR, main 수정은 금지한다.
 
 # 완료된 마일스톤
 1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기

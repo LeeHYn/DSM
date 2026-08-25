@@ -7,7 +7,12 @@
 - [x] front product canonical + offline-site dedicated branch 구조 사용자 승인
 - [x] `C:\dsm-integration-review` worktree 생성
 - [x] revised written spec 자체 검토·local commit `24bb810`
-- [ ] written spec 사용자 검토·승인
+- [x] read-only 명세 검증과 네 review finding 식별
+- [x] 사용자 review finding 4건 선택·수정 진행 승인
+- [x] offline worktree·validation matrix·memory source·ref precondition 명세 반영
+- [x] exact ref·source anchor·stale wording·offline path/ref·`git diff --check` 검증
+- [x] revised spec local commit `19dde6d`
+- [ ] 수정된 written spec 최종 사용자 검토·승인
 - [ ] 상세 implementation plan 작성·검토·승인
 - [ ] exact runtime·SDD preflight 뒤 integration 실행
 - [ ] offline branch와 main integration branch 검증
