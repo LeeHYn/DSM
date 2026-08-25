@@ -12,6 +12,7 @@
 - [x] offline worktree·validation matrix·memory source·ref precondition 명세 반영
 - [x] exact ref·source anchor·stale wording·offline path/ref·`git diff --check` 검증
 - [x] revised spec local commit `19dde6d`
+- [x] local HEAD commit-classification 보완 commit `225b710`
 - [ ] 수정된 written spec 최종 사용자 검토·승인
 - [ ] 상세 implementation plan 작성·검토·승인
 - [ ] exact runtime·SDD preflight 뒤 integration 실행

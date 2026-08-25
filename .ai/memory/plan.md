@@ -21,6 +21,7 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - read-only 명세 검증에서 offline worktree 미정, offline validation matrix 누락, `396fc0a` source 오류, ref precondition 모호성의 네 findings를 확인했다.
 - 사용자가 네 review finding을 모두 선택하고 `진행해`로 명세·memory 수정 범위를 승인했다. 수정 후 revised written spec의 최종 사용자 승인 gate를 다시 거친다.
 - 네 findings를 spec에 반영해 local commit `19dde6d` `docs: resolve integration design review`로 기록했다. exact remote ref table, `C:\dsm-offline-learning-site` 생성·중단 조건, `fb54b5d` exact source map과 `396fc0a` exclusion, offline 7-row validation matrix를 추가했다.
+- memory closure commit의 자기 SHA 기록이 불가능한 점을 local HEAD precondition에 대입해 재검토하고, spec commit `225b710` `docs: tighten integration head checks`로 승인된 spec commit, exact-path `docs(memory):` commit, 승인된 plan/preflight commit의 세 분류를 고정했다.
 - `git diff --check`, exact ref/SHA 대조, `fb54b5d` source anchor 검사, stale wording 부재, offline path·ref 미존재 검증이 PASS했다. 제품 test·offline verifier는 branch 생성 전 design review 단계이므로 실행하지 않았다.
 - Node.js `24.13.0`, npm `11.6.2`는 spec 요구 `24.19.0`/`11.19.0`과 달라 implementation preflight blocker다.
 - 다음 단계는 수정된 written spec의 최종 사용자 검토·승인이다. 승인 전 implementation plan, offline branch 생성, product merge, push, PR, main 수정은 금지한다.
