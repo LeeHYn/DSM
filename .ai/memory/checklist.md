@@ -31,7 +31,8 @@
   - [x] Task 3 branch/overlap/checkpoint inventory commit `58aa47a`, fix commit `d773c4c`, scoped re-review 승인
   - [x] Task 4 read-only merge precheck에서 memory 3개 + root `.gitignore` conflict marker 검출
   - [x] real merge 미시작·HEAD `d773c4c`·clean status 유지
-  - [ ] `.gitignore` fourth-conflict 처리 plan amendment 사용자 승인
+  - [x] 2026-08-26 사용자 `ㄱ`으로 `.gitignore` fourth-conflict 처리 plan amendment 승인
+  - [ ] Task 4 plan amendment 문서 반영·검증·commit
 - [ ] offline branch와 main integration branch 검증
 - [ ] 별도 승인 후 push·PR 또는 local merge 결정
 - [x] 마일스톤 2: `DSM_Back` (NestJS) 초기 세팅
