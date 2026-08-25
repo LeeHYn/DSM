@@ -2,39 +2,48 @@
 
 ## Purpose
 
-Prepare a local integration branch that reconciles work from the active DSM feature branches without changing or pushing `main`. The result must make branch ancestry, conflict decisions, validation evidence, and residual risks explicit before any pull request or merge into `main` is considered.
+Prepare a local integration branch that reconciles product work from the active DSM feature branches without changing or pushing `main`, while preserving the offline learning site on its own dedicated branch. The result must make branch ancestry, conflict decisions, validation evidence, and residual risks explicit before any pull request or merge into `main` is considered.
 
 ## Current Branch Topology
 
 - Baseline: `main` at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
-- Canonical whole-tree candidate: `codex/front-secure-session-rest-client` at `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`. It is 99 commits ahead of `main` and contains `codex/m12b-front-prototype-checkpoint` in full.
-- `codex/m12b-front-prototype-checkpoint` is therefore an intermediate checkpoint and is not an independent merge input.
-- The checkpoint ref is fixed at `960f02bc9f24c8a5d578c64fb7b734cdb8530506`; exactly 93 later commits lead from it to the canonical whole-tree candidate.
+- Canonical product candidate: `codex/front-secure-session-rest-client` at `2a4e9916765b505037e1c533735d84cd9f251ccf`. It is 100 commits ahead of `main` and contains the product checkpoint `960f02bc9f24c8a5d578c64fb7b734cdb8530506` plus 94 later commits.
+- `codex/m12b-front-prototype-checkpoint` now points to `396fc0a89327795646e89e128d7204b55b7fc00b`. It and the canonical product branch share merge base `960f02bc9f24c8a5d578c64fb7b734cdb8530506`, then diverge by four checkpoint-side commits and 94 product-side commits.
+- The four checkpoint-side commits are `43145b6` offline learning site content, `c79a042` handoff and AI workflow documents, `fb54b5d` combined project memory, and `396fc0a` publish-closure memory. The checkpoint branch is not a whole-branch merge input.
+- The offline learning site must remain on dedicated branch `codex/offline-learning-site`. Its content baseline is commit `43145b6`, whose parent is the selected source snapshot `960f02b`. The dedicated branch also receives only the offline-site sections of active memory and `ER-20260809-001` through `ER-20260809-003`; it does not receive unrelated branch-publish or product-integration memory.
 - `codex/dsm-back-foundation-prisma` at `2a6ba73adfca52398cc2299d91c3f6dff7788af3` diverged before the current `main`; it is four commits ahead and one commit behind `main`. Its four unique commits cover notification/realtime backend work, backend stabilization, a front integration foundation, and backend milestone closure.
 - `codex/dsm-milestone-12a-notifications` at `362aabeb713c2f5c0b73f599216b8cf92ea1b97a` is one commit ahead of the current `main` and overlaps the notification and task synchronization areas already changed by the other branches.
 - No pull request currently represents these branches.
 
 ### Start Preconditions and Stop Conditions
 
-Before implementation, re-fetching is allowed only as a read/update of remote-tracking refs. After fetch, all five refs above must still equal the exact SHAs recorded here. If a ref moved, stop and update this specification through review before integrating the new state.
+Before implementation, re-fetching is allowed only as a read/update of remote-tracking refs. After fetch, `origin/main`, the four existing source branches above, and both current feature refs must still equal the exact SHAs recorded here. If a ref moved, stop and update this specification through review before integrating the new state.
 
-The approved workspace is the existing `C:\dsm-integration-review` worktree on `codex/integration-main-review`. Reuse is allowed only when `git status --short` is empty, `git branch --show-current` returns that exact branch, and its history contains the approved specification commit. If the path is absent, attached to another branch, dirty, or contains unexplained commits, stop. Never force-reset, overwrite/recreate the branch, reuse another worktree, or discard uncommitted files to satisfy these checks.
+The approved workspace is `C:\dsm-integration-review` on local branch `codex/integration-main-review`, tracking `origin/codex/integration-main-review`. It was created from remote commit `6fa66eb5998c140bb6db995cc48c1a51f7a3089f` after the user approved the revised isolation design. Reuse is allowed only when `git status --short` is empty, `git branch --show-current` returns that exact branch, and its history contains the approved specification commit. If the path is attached to another branch, dirty, or contains unexplained commits, stop. Never force-reset, overwrite/recreate the branch, reuse another worktree, or discard uncommitted files to satisfy these checks.
 
 ## Chosen Integration Strategy
 
-Use selective integration rather than merging all four branches wholesale.
+Use selective integration rather than merging all branches wholesale.
 
 1. Start from `origin/main` on the isolated local branch `codex/integration-main-review` in `C:\dsm-integration-review`.
-2. Preserve the approved specification commit, then merge `origin/codex/front-secure-session-rest-client` with a regular non-squash merge. A fast-forward is no longer possible after the specification commit; the merge must retain both the specification and the complete canonical branch history. This automatically includes `codex/m12b-front-prototype-checkpoint`.
-3. Treat `origin/codex/dsm-back-foundation-prisma` as a source of candidate backend capabilities, not as a whole-branch merge. Review its four unique commits and port only changes that remain absent and compatible after step 2.
-4. Classify `origin/codex/dsm-milestone-12a-notifications` as superseded for its FCM token API and Task-to-Schedule implementation. It may supply no product code unless a named, independently testable capability is absent from the canonical branch and satisfies the acceptance rules below.
-5. Reconcile generated metadata, package manifests, lockfiles, Prisma schema/migrations, and `.ai` memory documents after product-code decisions are complete.
+2. Preserve the approved specification commit, then merge `origin/codex/front-secure-session-rest-client` with a regular non-squash merge. A fast-forward is no longer possible after the specification commit; the merge must retain both the specification and the complete canonical product history through `2a4e991`.
+3. Do not merge `origin/codex/m12b-front-prototype-checkpoint`. Review `c79a042` file by file and selectively port the external-PC handoff, AI workflow specification/plan, and compatible agent/system guidance. Reconcile its architecture document against the canonical product tree instead of accepting stale statements. Do not port `43145b6`, `fb54b5d`, or `396fc0a` into the main integration branch.
+4. Create `codex/offline-learning-site` from `43145b6` only after the implementation plan is approved. Add one focused memory commit that extracts the offline-site sections from `fb54b5d` and the corresponding completion status from `396fc0a`; exclude unrelated product, branch-publish, Obsidian, and AI-control history. Validate the dedicated branch with all 66 learning-site tests and the 28-source full verifier before push is considered.
+5. Treat `origin/codex/dsm-back-foundation-prisma` as a source of candidate backend capabilities, not as a whole-branch merge. Review its four unique commits and port only changes that remain absent and compatible after step 2.
+6. Classify `origin/codex/dsm-milestone-12a-notifications` as superseded for its FCM token API and Task-to-Schedule implementation. It may supply no product code unless a named, independently testable capability is absent from the canonical branch and satisfies the acceptance rules below.
+7. Reconcile generated metadata, package manifests, lockfiles, Prisma schema/migrations, and main-integration `.ai` memory documents after product-code decisions are complete. Main-integration memory must not claim that the excluded offline site exists in the integrated product tree.
+
+### Considered Alternatives
+
+- **Selected — canonical product merge plus dedicated offline branch:** preserves the full product history, keeps source-faithful learning artifacts available, and prevents product memory from claiming an excluded site.
+- **Rejected — merge the current checkpoint wholesale:** would mix offline artifacts and publish-closure memory into the product integration branch and reintroduce avoidable `.ai/memory` conflicts.
+- **Rejected — copy the offline site into the main integration branch:** would violate the user's explicit branch boundary and make future product releases carry a large generated learning artifact set.
 
 ## Canonical Source Rules
 
 ### Frontend
 
-`codex/front-secure-session-rest-client` is canonical for frontend runtime, Android configuration, authentication/session behavior, API clients, screens, tests, and frontend documentation because it contains the checkpoint branch and 93 later commits. Older frontend files from `codex/dsm-back-foundation-prisma` must not overwrite it.
+`codex/front-secure-session-rest-client` at `2a4e991` is canonical for frontend runtime, Android configuration, authentication/session behavior, API clients, screens, tests, and frontend documentation because it contains the product checkpoint `960f02b` and 94 later commits. Older frontend files from `codex/dsm-back-foundation-prisma` must not overwrite it.
 
 ### Backend
 
@@ -65,12 +74,12 @@ Backend behavior is selected per subsystem rather than by branch date alone:
 - Before creation, `docker ps -a --format "{{.Names}}"` must show neither name. If either exists, report `BLOCKED`; do not stop, remove, or reuse it.
 - Start each with `docker run --rm -d --name <exact-name> -e POSTGRES_USER=dsm_integration -e POSTGRES_PASSWORD=dsm_integration_password -e POSTGRES_DB=dsm_integration -p 127.0.0.1:<exact-port>:5432 postgres:17-alpine`, substituting only the exact name/port pair above, and wait for `pg_isready` to succeed.
 - For the empty-chain check, set `DATABASE_URL=postgresql://dsm_integration:dsm_integration_password@127.0.0.1:55432/dsm_integration?schema=public`, run the final tree's `npx prisma migrate deploy`, then `npx prisma migrate status`.
-- For the upgrade check, extract `DSM_Back/prisma` from canonical ref `d9ff792f1b1f8161547e7ef7a63d50f636e615aa` into this plan's git-ignored SDD workspace. Set `DATABASE_URL=postgresql://dsm_integration:dsm_integration_password@127.0.0.1:55433/dsm_integration?schema=public`, deploy the extracted canonical chain, then run the final tree's `npx prisma migrate deploy` and `npx prisma migrate status` against the same database.
+- For the upgrade check, extract `DSM_Back/prisma` from canonical ref `2a4e9916765b505037e1c533735d84cd9f251ccf` into this plan's git-ignored SDD workspace. Set `DATABASE_URL=postgresql://dsm_integration:dsm_integration_password@127.0.0.1:55433/dsm_integration?schema=public`, deploy the extracted canonical chain, then run the final tree's `npx prisma migrate deploy` and `npx prisma migrate status` against the same database.
 - Stop only the two container IDs returned by this run. Because `--rm` is required and no volume is mounted, their databases are destroyed with those containers. Record creation, health, migration, status, and cleanup results in the ledger.
 
 ### Configuration and Dependencies
 
-- The integration runtime is Node.js `24.19.0` and npm `11.19.0`. Record `node --version` and `npm --version`; any other version is `BLOCKED`, not an implicit substitute.
+- The integration runtime is Node.js `24.19.0` and npm `11.19.0`. The design-review host currently reports Node.js `24.13.0` and npm `11.6.2`; implementation remains `BLOCKED` until an approved setup step provides the exact required versions. Record `node --version` and `npm --version`; any other version is `BLOCKED`, not an implicit substitute.
 - The canonical manifests and lockfiles come from `codex/front-secure-session-rest-client`. Add only exact dependencies required by accepted backend deltas, using the exact versions already resolved in the candidate branch; do not carry unused branch dependencies.
 - Never resolve lockfile conflict markers by hand. After the runtime version check has established npm `11.19.0`, when a selected manifest changes run `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`, followed by `npm ci --no-audit --no-fund`, in that project. When a manifest does not change, retain its canonical lockfile byte-for-byte and run `npm ci --no-audit --no-fund`.
 - After installation, parse `package.json` and `package-lock.json` and assert that every root dependency/devDependency name and version range equals `package-lock.json`'s root `packages[""]` entry; extra or missing root entries fail validation.
@@ -81,7 +90,8 @@ Backend behavior is selected per subsystem rather than by branch date alone:
 ### Project Memory and Agent Rules
 
 - Preserve the agent contracts and `.ai/memory/*` documents from `codex/front-secure-session-rest-client` as the baseline.
-- Reconcile `.ai/memory/plan.md`, `context.md`, and `checklist.md` only after product decisions are final. Add only capabilities actually ported and validated on the integrated tree. Do not copy approval/completion claims, Expo-era state, or milestone status from a discarded branch; cite those only as provenance in the conflict report.
+- Reconcile main-integration `.ai/memory/plan.md`, `context.md`, and `checklist.md` only after product decisions are final. Add only capabilities actually ported and validated on the integrated tree. Do not copy offline-site completion state, branch-publish bookkeeping, Expo-era state, or milestone status from an excluded branch; cite those only as provenance in the conflict report.
+- On `codex/offline-learning-site`, preserve the offline sections of `.ai/memory/plan.md`, `context.md`, and `checklist.md` from `fb54b5d`/`396fc0a`, plus the `ER-20260809-001`, `ER-20260809-002`, and `ER-20260809-003` index rows and full records in `error-resolution-playbook.md`. The extraction must be section-scoped and reviewed; do not cherry-pick either combined memory commit wholesale.
 - After the implementation plan is written and explicitly approved, but before SDD begins, the main controller owns one standalone process-setup change with exact writable allowlist `.gitignore`: add the exact repository-root rule `/.superpowers/sdd/` and commit only that file with message `chore: ignore SDD execution workspace`. This is controller-owned integration metadata, not a subagent product/config task; no repository subagent role is authorized to make it. Without explicit plan approval, this preflight is `BLOCKED` and no ledger may be created. Do not use a global ignore file, `.git/info/exclude`, or user-specific Git configuration. After that commit and before creating the ledger, `git check-ignore -q .superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md` must exit 0 and `git status --short` must be empty.
 - The SDD workspace is `.superpowers/sdd/2026-08-25-main-branch-integration-review/`, and its ledger is `.superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md`.
 - The ledger's first line must be `# SDD ledger — plan: docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`. It must record each task base/head, test command and result, reviewer verdict, deferred minor, fix round, and every `Ruling:` with the cost if wrong.
@@ -91,10 +101,11 @@ Backend behavior is selected per subsystem rather than by branch date alone:
 
 1. Produce a branch and commit inventory with exact SHAs and ancestry relationships.
 2. Produce a file-overlap matrix for the candidate branches, grouped into frontend, backend subsystem, Prisma/migrations, dependency metadata, and project memory.
-3. For each overlapping subsystem, compare public interfaces, data models, tests, error handling, and operational assumptions before selecting a side.
-4. Resolve product conflicts in small subsystem-scoped commits. Do not mix frontend, backend, Prisma, and memory conflict resolution in one commit.
-5. After every subsystem commit, run its targeted tests and a type/build check appropriate to that subsystem.
-6. Run a final whole-branch review after all subsystem tasks complete.
+3. Produce a second inventory for `43145b6`, `c79a042`, `fb54b5d`, and `396fc0a`, classifying every changed file as offline-branch content, main-integration document candidate, offline-memory extraction source, or excluded publish bookkeeping.
+4. For each overlapping subsystem, compare public interfaces, data models, tests, error handling, and operational assumptions before selecting a side.
+5. Resolve product conflicts in small subsystem-scoped commits. Do not mix frontend, backend, Prisma, offline-branch extraction, and main-integration memory conflict resolution in one commit.
+6. After every subsystem commit, run its targeted tests and a type/build check appropriate to that subsystem.
+7. Run a final whole-branch review after all subsystem tasks complete.
 
 ## Roles and Work Ownership
 
@@ -147,6 +158,7 @@ Missing credentials, external services, Docker, PostgreSQL, Android SDK componen
 ## Deliverables
 
 - Local branch `codex/integration-main-review` in `C:\dsm-integration-review`.
+- Local branch `codex/offline-learning-site` based on `43145b6`, containing one reviewed offline-memory extraction commit and no product-integration commits.
 - Root `.gitignore` containing the tracked portable rule `/.superpowers/sdd/` before execution artifacts are created.
 - A reviewed series of subsystem-scoped integration commits.
 - `docs/reviews/2026-08-25-main-integration-conflict-review.md` containing branch inventory, conflict decisions, test evidence, deferred items, and residual risks.
@@ -158,7 +170,8 @@ Missing credentials, external services, Docker, PostgreSQL, Android SDK componen
 The integration review is complete when:
 
 1. Every non-`main` branch is classified as included, selectively ported, superseded, or intentionally deferred with evidence.
-2. Every overlapping product subsystem has a recorded canonical implementation and conflict ruling.
-3. Every required row in the validation matrix is recorded `PASS`; no required row is `BLOCKED`, omitted, or nonzero.
-4. `main` and all remote branches remain unchanged.
-5. The user receives the branch name, commit summary, validation evidence, remaining risks, and the explicit next-step choice for a future pull request or merge.
+2. `codex/offline-learning-site` contains the offline artifacts and only their related memory/playbook records, while the main integration branch contains neither.
+3. Every overlapping product subsystem has a recorded canonical implementation and conflict ruling.
+4. Every required row in the validation matrix is recorded `PASS`; no required row is `BLOCKED`, omitted, or nonzero.
+5. `main` and all remote branches remain unchanged during local integration review.
+6. The user receives both local branch names, commit summaries, validation evidence, remaining risks, and explicit next-step choices for future pushes, pull requests, or merges.
