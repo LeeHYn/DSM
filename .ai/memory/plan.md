@@ -41,6 +41,7 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - **Task 4 precheck — BLOCKED (2026-08-25)**: real merge를 시작하기 전 `git merge-tree` conflict-marker 검사에서 계획된 active memory 세 파일 외 root `.gitignore`가 네 번째 conflict로 검출됐다. Task 4가 다른 unmerged path를 임의 해결하지 말고 `BLOCKED`로 중단하도록 명시하므로 merge는 시작하지 않았고 HEAD `d773c4c`와 clean status를 유지했다.
 - 필요한 reviewed amendment 후보는 Task 4 predicted/actual conflict allowlist를 active memory 세 파일과 root `.gitignore`의 네 경로로 정정하고, `.gitignore`는 canonical branch 내용을 baseline으로 유지하면서 Task 2의 exact `/.superpowers/sdd/` rule만 재적용한 뒤 canonical ignore rules와 SDD ignore behavior를 함께 검증하도록 plan을 수정하는 것이다. 사용자의 amendment 승인 전 plan 수정과 real merge를 진행하지 않는다.
 - **Task 4 amendment 승인 (2026-08-26)**: 직전 응답에서 요청한 exact `amendment 승인`에 대해 사용자가 `ㄱ`으로 진행을 승인했다. 승인 범위는 implementation plan의 Task 4 expected conflict set을 active memory 세 파일과 root `.gitignore`의 네 경로로 정정하고, canonical `.gitignore`를 baseline으로 보존한 뒤 exact `/.superpowers/sdd/` rule만 재적용·검증하며 Task 4부터 승인된 local SDD 실행을 재개하는 것이다. push, PR, `main` 변경, shared DB 접근 금지는 유지한다.
+- **Task 4 amendment 반영 완료 (2026-08-26)**: implementation plan을 16 tasks·71 checks로 보정하고, predicted/actual conflict allowlist를 active memory 세 파일과 root `.gitignore`의 네 경로로 고정했다. `git diff --check`, old wording 부재, 실제 `merge-tree` 예측 `4/4`, difference `0`을 검증한 뒤 local commit `aaef828` `docs: amend canonical merge conflict plan`으로 기록했다. 실제 merge는 이 기록을 닫은 뒤 Task 4에서 시작한다.
 - 승인된 implementation-plan commit class는 local commit `587e934` `docs: add main integration plan`이며 exact allowlist는 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
 - 이어지는 closure commit class의 exact allowlist는 subject `docs(memory): record plan approval gate`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - post-commit runtime evidence closure의 exact allowlist는 subject `docs(memory): record runtime blocker`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
@@ -51,6 +52,7 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - Task 4 precheck blocker closure commit의 exact allowlist는 subject `docs(memory): record merge precheck block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - Task 4 amendment approval closure commit의 exact allowlist는 subject `docs(memory): approve merge plan amendment`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - approved Task 4 plan-amendment commit의 exact allowlist는 subject `docs: amend canonical merge conflict plan`, path `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
+- Task 4 plan-amendment closure commit의 exact allowlist는 subject `docs(memory): record merge plan amendment`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # 완료된 마일스톤
 1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기
