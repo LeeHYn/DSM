@@ -184,7 +184,11 @@ The original plan permitted exactly the three active memory conflicts and requir
 
 - Ruling: do not start Task 4's real merge until a reviewed plan amendment explicitly handles the predicted `.gitignore` conflict — Task 2's required SDD rule and the canonical branch both modify root `.gitignore`, while Task 4 authorizes only three memory resolutions — cost if wrong: proceeding could silently discard either canonical ignore rules or the portable SDD ignore contract and would violate the explicit stop condition.
 
-The user approved that amendment on `2026-08-26`. Approval closure `e9e265a`, reviewed plan amendment `aaef828`, and memory closure `fa2fc88` now authorize exactly four conflict paths. The amended `git merge-tree` precheck returned `4/4` with difference `0`; Task 4 is resumed, while the real merge remains pending at this record.
+The user approved that amendment on `2026-08-26`. Approval closure `e9e265a`, reviewed plan amendment `aaef828`, and memory closure `fa2fc88` authorized exactly four conflict paths. The amended `git merge-tree` precheck returned `4/4` with difference `0`.
+
+Task 4 then created merge commit `a639ac2508a01bab83af3a4d233755bbbbcad3b8` with first parent `5079b0e96232448342a464819c406c7746d4c0b2` and exact canonical second parent `2a4e9916765b505037e1c533735d84cd9f251ccf`. Actual conflicts matched the four-path allowlist. The resolved product tree is byte-identical to canonical under `DSM_Back` and `DSM_Front`; tracked offline intersection is zero; canonical `.gitignore` content/order is preserved with exactly one portable SDD rule.
+
+Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`, found no findings, and approved Task 4. The reviewer confirmed combined merge diff contains only the four approved resolution paths, canonical ancestry and subtree hashes match, conflict markers are absent, `main` refs are unchanged, and the start/end worktree is clean. Product behavior suites remain Task 5 and are not claimed by this verdict.
 
 ## Validation matrix
 
@@ -194,7 +198,7 @@ The user approved that amendment on `2026-08-26`. Approval closure `e9e265a`, re
 | Task 1 immutable refs | Six exact refs, linked clean integration worktree, approved spec blob `5a4dff47179c816963d5d2513e383f7e583b072a` | PASS |
 | Task 2 SDD ignore | Standalone commit `d4f2474`; root rule matches ledger path | PASS |
 | Task 3 topology | Exact merge bases, counts, unique commit lists, path classifications | PASS |
-| Task 4 canonical merge precheck | Approved exact conflict allowlist contains three active memory files plus root `.gitignore`; amended precheck `4/4`, difference `0`; no merge started yet | PASS |
+| Task 4 canonical merge | Merge `a639ac2`, exact canonical second parent, conflicts `4/4`, canonical-identical product tree, offline intersection `0`, independent review with no findings | PASS |
 | Canonical product suite | Runs after the canonical merge | PENDING |
 | Offline branch suite | Runs after isolated branch creation | PENDING |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
