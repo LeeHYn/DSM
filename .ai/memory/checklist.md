@@ -10,11 +10,13 @@
 - [x] Task 4 canonical `2a4e9916765b505037e1c533735d84cd9f251ccf` local non-squash merge `a639ac2`·독립 review clean·closure `0141b9f`
 - [/] Task 5 canonical baseline validation
   - [x] backend `npm ci --no-audit --no-fund` exit `0` (882 packages)
-  - [ ] backend `prisma:validate` — `DATABASE_URL` 누락 Prisma `P1012`, exit `1`, BLOCKED
-  - [ ] backend generate/build/test/non-fixing lint — stop condition으로 미실행
-  - [ ] frontend npm/test/typecheck/lint·Android build — stop condition으로 미실행
+  - [x] 최초 backend `prisma:validate` — `DATABASE_URL` 누락 Prisma `P1012`, exit `1`, 안전 중단 이력
+  - [x] 승인 보정 뒤 backend validate/generate·URL 제거·build·23 suites/214 tests·non-fixing lint PASS
+  - [x] frontend 18 suites/162 tests·typecheck·lint 0 errors/18 warnings·Android 365-task build PASS
+  - [x] tracked dirty 0·canonical 제품 diff 0·URL absent·main refs 불변
   - [x] process-scoped parse-only `DATABASE_URL` plan amendment 사용자 승인
   - [x] 승인된 plan amendment 반영·검증·commit `68557d7` (16 tasks·71 checks, URL 1회, 정리 2회)
+  - [/] 독립 review P2 SSOT closure finding fix round 1·scoped re-review pending
 - [ ] 별도 `codex/offline-learning-site` branch/worktree 생성·memory extraction·검증
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
