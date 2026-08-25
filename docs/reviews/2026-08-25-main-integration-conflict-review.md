@@ -22,8 +22,12 @@ Record reproducible branch topology, path-level overlap, checkpoint source class
 - `git rev-list --left-right --count origin/main...origin/codex/front-secure-session-rest-client` → `0 100`.
 - `git rev-list --left-right --count origin/codex/front-secure-session-rest-client...origin/codex/m12b-front-prototype-checkpoint` → `94 4`.
 - `git log --left-right --cherry-pick` confirmed canonical/checkpoint `94 4`, canonical/foundation `101 4`, and canonical/M12A `100 1` unique commit counts.
-- Foundation unique commits, in order: `d977633`, `62772f6`, `81495a3`, `2a6ba73`.
-- M12A unique commit: `362aabe`.
+- Foundation unique commits, in command order:
+  1. `d977633887113f7b4ddc3c35137a984de00ee4c0 feat: add notification and realtime backend`
+  2. `62772f603aa60d10ecf2b0e0a0c683bf8409c226 feat: stabilize DSM back milestone 13`
+  3. `81495a3844058c63c79567ee414284866e1017a7 feat: establish DSM front integration foundation`
+  4. `2a6ba73adfca52398cc2299d91c3f6dff7788af3 feat: close DSM back milestone 15`
+- M12A unique commit: `362aabeb713c2f5c0b73f599216b8cf92ea1b97a feat(back): add notification foundation`.
 
 ## Overlap matrix
 
@@ -39,14 +43,113 @@ Path overlap alone does not prove behavioral equivalence. Foundation capability 
 
 ## Checkpoint file classification
 
-| Commit | Observed paths | Exclusive category | Decision |
-|---|---:|---|---|
-| `43145b6e0407c3c539ca66deb1813ddbc2e97ec8` | 83 added: five offline docs, four offline assets, 44 `learning-site/**`, 30 `tools/learning-site/**` | Offline branch content | Offline branch baseline only; never port into product integration. |
-| `c79a042b3c1e115fc0b092a8bddcd3e6723439d6` | Seven documents/policies | Main-integration document candidate | Review file-by-file in Tasks 7 and 10. |
-| `fb54b5d07d9b03d42ae70890a954454027002b0d` | Four modified active memory files | Offline-memory source | Read only through the exact section map; never cherry-pick wholesale. |
-| `396fc0a89327795646e89e128d7204b55b7fc00b` | `.ai/memory/checklist.md`, `.ai/memory/plan.md` | Excluded publish bookkeeping | Contributes nothing to either integration content or offline extraction. |
+### `43145b6` — offline branch content (83 paths)
 
-The seven `c79a042` candidates are `.ai/docs/2026-07-15-current-project-architecture.md`, `.ai/system_prompt.md`, `EXTERNAL_PC_SETUP_AND_HANDOFF.md`, the two 2026-08-08 external-PC spec/plan files, and the two 2026-08-15 AI-control spec/plan files.
+- `.ai/docs/2026-08-08-offline-learning-site-project-analysis.md` — offline branch content.
+- `docs/superpowers/plans/2026-08-08-offline-learning-site-pilot-a.md` — offline branch content.
+- `docs/superpowers/plans/2026-08-09-offline-learning-site-batch-b.md` — offline branch content.
+- `docs/superpowers/specs/2026-08-08-offline-learning-site-design.md` — offline branch content.
+- `docs/superpowers/specs/2026-08-09-offline-learning-site-batch-b-design.md` — offline branch content.
+- `docs/superpowers/specs/assets/offline-learning-site/01-project-map.png` — offline branch content.
+- `docs/superpowers/specs/assets/offline-learning-site/02-task-architecture.png` — offline branch content.
+- `docs/superpowers/specs/assets/offline-learning-site/03-file-study-desktop.png` — offline branch content.
+- `docs/superpowers/specs/assets/offline-learning-site/04-file-study-mobile.png` — offline branch content.
+- `learning-site/architecture.html` — offline branch content.
+- `learning-site/assets/site-data.js` — offline branch content.
+- `learning-site/assets/site.css` — offline branch content.
+- `learning-site/assets/site.js` — offline branch content.
+- `learning-site/concepts/jwt-session.html` — offline branch content.
+- `learning-site/concepts/serializable-transaction.html` — offline branch content.
+- `learning-site/diagrams/auth-session-flow.html` — offline branch content.
+- `learning-site/diagrams/task-update-flow.html` — offline branch content.
+- `learning-site/exercises/auth-session.html` — offline branch content.
+- `learning-site/exercises/task-flow.html` — offline branch content.
+- `learning-site/features/refresh-rotation.html` — offline branch content.
+- `learning-site/features/social-login.html` — offline branch content.
+- `learning-site/features/task-score-schedule.html` — offline branch content.
+- `learning-site/files/DSM_Back/prisma/schema.prisma.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/app.bootstrap.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/app.module.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/auth.controller.spec.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/auth.controller.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/auth.module.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/auth.service.spec.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/auth.service.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/dto/refresh-token.dto.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/dto/social-login.dto.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/dto/token-response.dto.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/guards/jwt-auth.guard.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/types/jwt-payload.type.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/auth/types/social-profile.type.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/main.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/notifications/notification-schedule.constants.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/notifications/notifications.service.spec.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/notifications/notifications.service.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/prisma/prisma.service.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/scores/scores.policy.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/scores/scores.service.spec.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/scores/scores.service.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/tasks/dto/create-task.dto.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/tasks/dto/update-task.dto.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/tasks/tasks.controller.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/tasks/tasks.service.spec.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/src/tasks/tasks.service.ts.html` — offline branch content.
+- `learning-site/files/DSM_Back/test/app.e2e-spec.ts.html` — offline branch content.
+- `learning-site/index.html` — offline branch content.
+- `learning-site/qa-report.md` — offline branch content.
+- `learning-site/verification-report.json` — offline branch content.
+- `tools/learning-site/assets/site.css` — offline branch content.
+- `tools/learning-site/assets/site.js` — offline branch content.
+- `tools/learning-site/content/batch-b.mjs` — offline branch content.
+- `tools/learning-site/content/pilot-a.mjs` — offline branch content.
+- `tools/learning-site/generate.mjs` — offline branch content.
+- `tools/learning-site/lib/pages.mjs` — offline branch content.
+- `tools/learning-site/lib/paths.mjs` — offline branch content.
+- `tools/learning-site/lib/render.mjs` — offline branch content.
+- `tools/learning-site/lib/source.mjs` — offline branch content.
+- `tools/learning-site/lib/symbols.mjs` — offline branch content.
+- `tools/learning-site/lib/syntax.mjs` — offline branch content.
+- `tools/learning-site/manifest.mjs` — offline branch content.
+- `tools/learning-site/tests/batch-b-content.test.mjs` — offline branch content.
+- `tools/learning-site/tests/batch-b-generate.test.mjs` — offline branch content.
+- `tools/learning-site/tests/batch-b-pages.test.mjs` — offline branch content.
+- `tools/learning-site/tests/batch-b-verify.test.mjs` — offline branch content.
+- `tools/learning-site/tests/batches.test.mjs` — offline branch content.
+- `tools/learning-site/tests/content.test.mjs` — offline branch content.
+- `tools/learning-site/tests/generate.test.mjs` — offline branch content.
+- `tools/learning-site/tests/manifest.test.mjs` — offline branch content.
+- `tools/learning-site/tests/pages.test.mjs` — offline branch content.
+- `tools/learning-site/tests/paths.test.mjs` — offline branch content.
+- `tools/learning-site/tests/render.test.mjs` — offline branch content.
+- `tools/learning-site/tests/runtime.test.mjs` — offline branch content.
+- `tools/learning-site/tests/source.test.mjs` — offline branch content.
+- `tools/learning-site/tests/style.test.mjs` — offline branch content.
+- `tools/learning-site/tests/symbols.test.mjs` — offline branch content.
+- `tools/learning-site/tests/syntax.test.mjs` — offline branch content.
+- `tools/learning-site/tests/verify.test.mjs` — offline branch content.
+- `tools/learning-site/verify.mjs` — offline branch content.
+
+### `c79a042` — main-integration document candidate (7 paths)
+
+- `.ai/docs/2026-07-15-current-project-architecture.md` — main-integration document candidate.
+- `.ai/system_prompt.md` — main-integration document candidate.
+- `EXTERNAL_PC_SETUP_AND_HANDOFF.md` — main-integration document candidate.
+- `docs/superpowers/plans/2026-08-08-external-pc-setup-and-handoff.md` — main-integration document candidate.
+- `docs/superpowers/plans/2026-08-15-ai-control-system-v5-1-integration.md` — main-integration document candidate.
+- `docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md` — main-integration document candidate.
+- `docs/superpowers/specs/2026-08-15-ai-control-system-v5-1-integration-design.md` — main-integration document candidate.
+
+### `fb54b5d` — offline-memory extraction source (4 paths)
+
+- `.ai/memory/checklist.md` — offline-memory extraction source.
+- `.ai/memory/context.md` — offline-memory extraction source.
+- `.ai/memory/error-resolution-playbook.md` — offline-memory extraction source.
+- `.ai/memory/plan.md` — offline-memory extraction source.
+
+### `396fc0a` — excluded publish bookkeeping (2 paths)
+
+- `.ai/memory/checklist.md` — excluded publish bookkeeping.
+- `.ai/memory/plan.md` — excluded publish bookkeeping.
 
 ## Initial rulings
 
