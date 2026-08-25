@@ -436,14 +436,24 @@ Run in `DSM_Back`:
 
 ```powershell
 npm ci --no-audit --no-fund
+$validationDatabaseUrl = 'postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public'
+$env:DATABASE_URL = $validationDatabaseUrl
 npm run prisma:validate
+if ($LASTEXITCODE -ne 0) {
+  $validateExit = $LASTEXITCODE
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  exit $validateExit
+}
 npm run prisma:generate
+$generateExit = $LASTEXITCODE
+Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+if ($generateExit -ne 0) { exit $generateExit }
 npm run build
 npm test -- --runInBand --no-cache
 npx eslint "{src,apps,libs,test}/**/*.ts"
 ```
 
-Expected: all exit 0. Do not use the repository lint script because it includes `--fix`.
+Expected: all exit 0 and `Test-Path Env:DATABASE_URL` is `False` after generate. The process-scoped URL exists only so Prisma can parse the canonical schema in a clean worktree; loopback port `1` makes any unexpected connection fail closed. Do not replace these commands with `prisma migrate`, `db push`, `migrate status`, or any command that connects to a database. A connection attempt is `BLOCKED`. Do not use the repository lint script because it includes `--fix`.
 
 - [ ] **Step 2: Install and validate frontend baseline**
 
