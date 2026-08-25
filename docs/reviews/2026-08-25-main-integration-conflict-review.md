@@ -170,6 +170,19 @@ Path overlap alone does not prove behavioral equivalence. Foundation capability 
 - Ruling: plan-specific repository roles override the generic SDD assumption that every implementer edits and commits — investigators/reviewers stay read-only, product/document writers use exact role allowlists, and the main controller alone commits and owns Git, the ledger, active memory, and conflict report — cost if wrong: controller-owned artifacts receive task review after controller commits rather than being authored by a generic implementer.
 - Ruling: Task 14's independent whole-branch review is the SDD final mutation review; Task 15 is read-only handoff and cannot add review surface — cost if wrong: no second redundant whole-branch review runs after a task that changes no files.
 
+## Task 4 precheck blocker
+
+The canonical merge was not started. A read-only three-way `git merge-tree` precheck used merge base `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81` and detected conflict markers in four paths:
+
+1. `.ai/memory/checklist.md`
+2. `.ai/memory/context.md`
+3. `.ai/memory/plan.md`
+4. `.gitignore`
+
+The plan permits exactly the three active memory conflicts and requires `BLOCKED` rather than an improvised resolution when another path appears. Root `.gitignore` changed locally in required Task 2 commit `d4f2474` and also changed on the canonical branch, producing the fourth conflict.
+
+- Ruling: do not start Task 4's real merge until a reviewed plan amendment explicitly handles the predicted `.gitignore` conflict — Task 2's required SDD rule and the canonical branch both modify root `.gitignore`, while Task 4 authorizes only three memory resolutions — cost if wrong: proceeding could silently discard either canonical ignore rules or the portable SDD ignore contract and would violate the explicit stop condition.
+
 ## Validation matrix
 
 | Gate | Evidence | Status |
@@ -178,6 +191,7 @@ Path overlap alone does not prove behavioral equivalence. Foundation capability 
 | Task 1 immutable refs | Six exact refs, linked clean integration worktree, approved spec blob `5a4dff47179c816963d5d2513e383f7e583b072a` | PASS |
 | Task 2 SDD ignore | Standalone commit `d4f2474`; root rule matches ledger path | PASS |
 | Task 3 topology | Exact merge bases, counts, unique commit lists, path classifications | PASS |
+| Task 4 canonical merge precheck | Conflict markers in three active memory files plus unexpected root `.gitignore`; no merge started | BLOCKED |
 | Canonical product suite | Runs after the canonical merge | PENDING |
 | Offline branch suite | Runs after isolated branch creation | PENDING |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
