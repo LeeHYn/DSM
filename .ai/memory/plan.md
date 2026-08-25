@@ -32,11 +32,14 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - 현재 단계는 implementation plan 작성·자체 검증 완료와 별도 실행 승인 대기다. 승인 전 offline branch 생성, product merge, SDD preflight, push, PR, main 수정은 금지한다.
 - **실행 승인 기록**: 2026-08-25 사용자가 정확히 `1번으로 실행 승인`을 지시해 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`의 Subagent-Driven 실행을 승인했다. 이 승인은 계획 내부의 local worktree/merge/검증 범위만 허용하며 push, PR, `main` 변경은 계속 금지한다.
 - 실행은 Task 0 environment gate에서 시작한다. exact Node/npm, Docker daemon, Java/Android SDK가 모두 PASS하기 전에는 SDD `.gitignore` preflight, ledger 생성, ref fetch, offline branch 생성, canonical merge 또는 subagent dispatch를 하지 않는다.
+- **Task 0 실행 결과 — BLOCKED (2026-08-25)**: `node --version`은 `v24.13.0`; 기본 `npm --version`은 user-global `npm-cli.js` `MODULE_NOT_FOUND`로 exit 1; `docker version`과 `docker ps -a`는 `docker_engine` pipe 부재로 exit 1; `java`는 command not found; `ANDROID_HOME`·`ANDROID_SDK_ROOT`는 모두 `False`였다. 계획이 요구한 exact runtime/executor gate를 통과하지 못해 Task 1 전에 중단했다.
+- Task 0 실패 뒤 repository product, root `.gitignore`, SDD workspace/ledger, remote-tracking refs, offline path/ref, merge 상태는 변경하지 않았다. 환경을 사용자가 준비한 뒤 같은 Task 0부터 재개한다.
 - 승인된 implementation-plan commit class는 local commit `587e934` `docs: add main integration plan`이며 exact allowlist는 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
 - 이어지는 closure commit class의 exact allowlist는 subject `docs(memory): record plan approval gate`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - post-commit runtime evidence closure의 exact allowlist는 subject `docs(memory): record runtime blocker`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - executor evidence 정정 closure의 exact allowlist는 subject `docs(memory): confirm executor blockers`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - execution approval 기록 commit의 exact allowlist는 subject `docs(memory): record execution approval`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- Task 0 closure commit의 exact allowlist는 subject `docs(memory): record execution preflight block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # 완료된 마일스톤
 1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기

@@ -19,6 +19,7 @@
 - [ ] exact Node `24.19.0`·npm `11.19.0`, Docker daemon, Java/Android SDK gate 통과
   - [x] 현재 blocker 재현: Node `v24.13.0`; 기본 `npm`은 user-global `npm-cli.js` 접근 실패; system `npm.cmd`도 `11.6.2`
   - [x] executor blocker 재현: Docker client `29.6.1`/daemon 연결 실패; Java 없음; `ANDROID_HOME`·`ANDROID_SDK_ROOT` 없음
+  - [x] 승인 후 Task 0 재실행 결과 `BLOCKED`; Task 1·SDD ledger·merge·offline branch 미실행
 - [ ] 승인 뒤 tracked SDD ignore preflight와 integration 실행
 - [ ] offline branch와 main integration branch 검증
 - [ ] 별도 승인 후 push·PR 또는 local merge 결정
