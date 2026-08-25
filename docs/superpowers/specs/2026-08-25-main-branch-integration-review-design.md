@@ -82,6 +82,7 @@ Backend behavior is selected per subsystem rather than by branch date alone:
 
 - Preserve the agent contracts and `.ai/memory/*` documents from `codex/front-secure-session-rest-client` as the baseline.
 - Reconcile `.ai/memory/plan.md`, `context.md`, and `checklist.md` only after product decisions are final. Add only capabilities actually ported and validated on the integrated tree. Do not copy approval/completion claims, Expo-era state, or milestone status from a discarded branch; cite those only as provenance in the conflict report.
+- Before SDD begins, the implementation-plan commit must add the exact repository-root `.gitignore` rule `/.superpowers/sdd/`. Do not use a global ignore file, `.git/info/exclude`, or user-specific Git configuration. After that commit and before creating the ledger, `git check-ignore -q .superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md` must exit 0 and `git status --short` must be empty.
 - The SDD workspace is `.superpowers/sdd/2026-08-25-main-branch-integration-review/`, and its ledger is `.superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md`.
 - The ledger's first line must be `# SDD ledger — plan: docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`. It must record each task base/head, test command and result, reviewer verdict, deferred minor, fix round, and every `Ruling:` with the cost if wrong.
 - Record every non-obvious conflict ruling in both the integration report and SDD ledger.
@@ -127,6 +128,7 @@ Every row below must be recorded as `PASS`, `BLOCKED`, or `NOT_APPLICABLE`. `NOT
 | Clean migration chain | Deploy and inspect the final chain against the named disposable PostgreSQL 17 empty database; `npx prisma migrate deploy` then `npx prisma migrate status` | `PASS` |
 | Baseline upgrade | Deploy the four canonical migrations to the second named disposable PostgreSQL 17 database, then deploy the integration delta with the final tree; both `npx prisma migrate deploy` and final `npx prisma migrate status` | `PASS` when an integration migration exists; otherwise `NOT_APPLICABLE` |
 | Lockfile roots | Parse both manifest/lockfile pairs and assert exact root dependency/devDependency agreement | `PASS` |
+| SDD ignore contract | `git check-ignore -q .superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md` after the tracked root `.gitignore` update | `PASS` before ledger creation |
 | Git integrity | `git diff --check`, reviewed `git diff --stat origin/main...HEAD`, and `git status --short` containing no unexplained changes | `PASS` |
 
 Missing credentials, external services, Docker, PostgreSQL, Android SDK components, or network policy are reported as `BLOCKED`, never bypassed or converted to `NOT_APPLICABLE`.
@@ -145,6 +147,7 @@ Missing credentials, external services, Docker, PostgreSQL, Android SDK componen
 ## Deliverables
 
 - Local branch `codex/integration-main-review` in `C:\dsm-integration-review`.
+- Root `.gitignore` containing the tracked portable rule `/.superpowers/sdd/` before execution artifacts are created.
 - A reviewed series of subsystem-scoped integration commits.
 - `docs/reviews/2026-08-25-main-integration-conflict-review.md` containing branch inventory, conflict decisions, test evidence, deferred items, and residual risks.
 - `.superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md` as the git-ignored execution ledger.
