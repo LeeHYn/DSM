@@ -231,7 +231,7 @@ The full Task 5 retry then passed:
 - Post-check `git diff --quiet 2a4e9916765b505037e1c533735d84cd9f251ccf -- DSM_Back DSM_Front`: exit `0` (canonical product equality).
 - Post-check `git diff --check`: exit `0`; `DATABASE_URL` absent; `main` and `origin/main` unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
 
-Initial independent review found one P2 documentation finding: retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. Fix round 1 added the result but its command rows were too abbreviated and left one stale residual-risk sentence. Fix round 2 expanded product commands and corrected the residual-risk boundary but abbreviated two post-check commands. The exact post-check rows above are fix round 3; no product command needs rerun. Re-review is pending at this record.
+Initial independent review found one P2 documentation finding: retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. Fix round 1 added the result but its command rows were too abbreviated and left one stale residual-risk sentence. Fix round 2 expanded product commands and corrected the residual-risk boundary but abbreviated two post-check commands. Fix round 3 added the two exact post-check rows. Scoped re-review marked the original P2 `ADDRESSED`, found no new breakage, and returned `APPROVED`; no product command was rerun.
 
 ## Deferred items
 
