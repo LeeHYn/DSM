@@ -216,12 +216,20 @@ The required-check stop condition prevented Prisma generate, backend build/test/
 
 The full Task 5 retry then passed:
 
-- Backend: `npm ci` 882 packages; Prisma validate and generate exit `0`; process URL removed (`False`); build exit `0`; 23 suites/214 tests; non-fixing ESLint exit `0`.
-- Frontend: `npm ci` 988 packages; 18 suites/162 tests; typecheck exit `0`; lint exit `0` with 0 errors/18 warnings.
-- Android: `assembleDebug --no-daemon` exit `0`; `BUILD SUCCESSFUL in 17m 38s`; 365 actionable tasks; ignored APK 143,247,539 bytes.
+- Backend `npm ci --no-audit --no-fund`: exit `0`, 882 packages.
+- Backend `npm run prisma:validate`: exit `0`; canonical schema valid.
+- Backend `npm run prisma:generate`: exit `0`; Prisma Client v6.19.3 generated under ignored `node_modules`; subsequent `Test-Path Env:DATABASE_URL` was `False`.
+- Backend `npm run build`: exit `0`.
+- Backend `npm test -- --runInBand --no-cache`: exit `0`; 23 suites, 214 tests, 0 snapshots.
+- Backend `npx eslint "{src,apps,libs,test}/**/*.ts"`: exit `0`.
+- Frontend `npm ci --no-audit --no-fund`: exit `0`, 988 packages.
+- Frontend `npm test -- --no-cache`: exit `0`; 18 suites, 162 tests, 0 snapshots.
+- Frontend `npm run typecheck`: exit `0`.
+- Frontend `npm run lint`: exit `0`; 0 errors, 18 warnings.
+- Android `.\gradlew.bat assembleDebug --no-daemon`: exit `0`; `BUILD SUCCESSFUL in 17m 38s`; 365 actionable tasks; ignored APK 143,247,539 bytes.
 - Post-check: tracked dirty count `0`, `git diff --check` exit `0`, canonical product diff exit `0`, `DATABASE_URL` absent, and `main`/`origin/main` unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
 
-Initial independent review found one P2 documentation finding: this retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. This section and active memory are the scoped fix; no product command needs rerun. Re-review is pending at this record.
+Initial independent review found one P2 documentation finding: retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. Fix round 1 added the result but its command rows were too abbreviated and left one stale residual-risk sentence. The exact command rows above and corrected residual-risk boundary below are fix round 2; no product command needs rerun. Re-review is pending at this record.
 
 ## Deferred items
 
@@ -234,7 +242,7 @@ Initial independent review found one P2 documentation finding: this retry eviden
 - Path-level overlap can undercount semantic overlap through renamed or independently reimplemented behavior.
 - The exact Node runtime is user-scoped; every validation shell must prepend `NODEJS_HOME` because system-wide Node remains `v24.13.0` after UAC cancellation.
 - Existing container `dsm-back-dev-db-1` is out of scope and must not be stopped, removed, reused, or connected to.
-- No product, offline, Android, or database validation has run at this inventory stage.
+- Task 5 canonical product and Android baseline validation is complete. Offline-branch validation, disposable migration validation, selective-port checks and the final full validation matrix remain pending their later task gates.
 
 ## Review verdict
 
