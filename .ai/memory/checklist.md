@@ -15,7 +15,7 @@
 - [x] local HEAD commit-classification 보완 commit `225b710`
 - [x] 사용자 `r`로 수정된 written spec 최종 승인
 - [x] 상세 implementation plan 작성·자체 검토·local commit `587e934` (16 tasks·70 checks, 필수 계약 22개, placeholder 없음, 제품 diff 없음)
-- [ ] 상세 implementation plan 사용자 검토·실행 승인
+- [x] 사용자 `1번으로 실행 승인` — Subagent-Driven 방식 선택
 - [ ] exact Node `24.19.0`·npm `11.19.0`, Docker daemon, Java/Android SDK gate 통과
   - [x] 현재 blocker 재현: Node `v24.13.0`; 기본 `npm`은 user-global `npm-cli.js` 접근 실패; system `npm.cmd`도 `11.6.2`
   - [x] executor blocker 재현: Docker client `29.6.1`/daemon 연결 실패; Java 없음; `ANDROID_HOME`·`ANDROID_SDK_ROOT` 없음
