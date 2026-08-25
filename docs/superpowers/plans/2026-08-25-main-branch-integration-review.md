@@ -313,6 +313,7 @@ Expected: one report file committed and clean status.
 - Resolve: `.ai/memory/plan.md`
 - Resolve: `.ai/memory/context.md`
 - Resolve: `.ai/memory/checklist.md`
+- Resolve: `.gitignore`
 
 **Interfaces:**
 - Consumes: canonical product ref and approved local review history
@@ -324,10 +325,28 @@ Run:
 
 ```powershell
 git status --short
-git merge-tree $(git merge-base HEAD origin/codex/front-secure-session-rest-client) HEAD origin/codex/front-secure-session-rest-client
+$canonical = 'origin/codex/front-secure-session-rest-client'
+$mergeBase = (git merge-base HEAD $canonical).Trim()
+$mergeTree = @(git merge-tree $mergeBase HEAD $canonical)
+$currentPath = $null
+$predictedConflicts = @()
+foreach ($line in $mergeTree) {
+  if ($line -match '^  our\s+\d+\s+\S+\s+(.+)$') { $currentPath = $Matches[1] }
+  if ($line -match '^\+<<<<<<<' -and $currentPath) { $predictedConflicts += $currentPath }
+}
+$predictedConflicts = @($predictedConflicts | Sort-Object -Unique)
+$expectedConflicts = @(
+  '.ai/memory/checklist.md',
+  '.ai/memory/context.md',
+  '.ai/memory/plan.md',
+  '.gitignore'
+)
+$difference = @(Compare-Object $expectedConflicts $predictedConflicts)
+if ($difference.Count -ne 0) { $difference; throw 'unexpected predicted merge conflict set' }
+$predictedConflicts
 ```
 
-Expected: clean status. Predicted content conflicts are limited to the three active memory files. If another unmerged path appears during the real merge, abort with `git merge --abort`, record `BLOCKED`, and do not improvise a resolution.
+Expected: clean status and exactly the three active memory files plus root `.gitignore`. The fourth conflict is expected because Task 2 added the portable SDD rule while the canonical branch independently changed root ignore rules. Any different path set is `BLOCKED`; do not start the real merge.
 
 - [ ] **Step 2: Start the regular merge without committing**
 
@@ -338,21 +357,31 @@ git merge --no-ff --no-commit origin/codex/front-secure-session-rest-client
 git diff --name-only --diff-filter=U
 ```
 
-Expected: exactly `.ai/memory/checklist.md`, `.ai/memory/context.md`, and `.ai/memory/plan.md` are unmerged.
+Expected: exactly `.ai/memory/checklist.md`, `.ai/memory/context.md`, `.ai/memory/plan.md`, and `.gitignore` are unmerged. If any other path appears, run `git merge --abort`, record `BLOCKED`, and do not improvise a resolution.
 
-- [ ] **Step 3: Resolve memory from the canonical baseline**
+- [ ] **Step 3: Resolve plan and context from the canonical baseline**
 
-Read the three canonical files with these exact commands:
+Read the two canonical files with these exact commands:
 
 ```powershell
 git show 2a4e9916765b505037e1c533735d84cd9f251ccf:.ai/memory/plan.md
 git show 2a4e9916765b505037e1c533735d84cd9f251ccf:.ai/memory/context.md
-git show 2a4e9916765b505037e1c533735d84cd9f251ccf:.ai/memory/checklist.md
 ```
 
-Use `apply_patch` to remove conflict markers and retain the canonical content as baseline, then reapply only the active integration-review approval, pinned-ref, plan-path, and no-push gate entries from the pre-merge local versions. Do not reapply offline completion state, branch-publish bookkeeping, excluded Expo milestones, or unverified product claims.
+Use one `apply_patch` action touching only `.ai/memory/plan.md` and `.ai/memory/context.md` to remove conflict markers and retain the canonical content as baseline, then reapply only the active integration-review approval, pinned-ref, plan-path, and no-push gate entries from the pre-merge local versions. Do not reapply offline completion state, branch-publish bookkeeping, excluded Expo milestones, or unverified product claims.
 
-- [ ] **Step 4: Verify the staged merge tree**
+- [ ] **Step 4: Resolve checklist and root ignore contracts**
+
+Read the remaining canonical files with these exact commands:
+
+```powershell
+git show 2a4e9916765b505037e1c533735d84cd9f251ccf:.ai/memory/checklist.md
+git show 2a4e9916765b505037e1c533735d84cd9f251ccf:.gitignore
+```
+
+Use one `apply_patch` action touching only `.ai/memory/checklist.md` and `.gitignore`. Resolve checklist from the same canonical-memory baseline and integration-entry allowlist as Step 3. Preserve the canonical `.gitignore` content and order exactly, then add exactly one root rule `/.superpowers/sdd/`. Do not retain any other local-only ignore line or alter a canonical rule.
+
+- [ ] **Step 5: Verify the staged merge tree and both ignore contracts**
 
 Run:
 
@@ -361,16 +390,25 @@ git diff --name-only --diff-filter=U
 git diff --quiet 2a4e9916765b505037e1c533735d84cd9f251ccf -- DSM_Back DSM_Front
 git ls-files | Select-String -Pattern '^(learning-site|tools/learning-site)/'
 git diff --check
+$canonicalIgnore = @(git show 2a4e9916765b505037e1c533735d84cd9f251ccf:.gitignore)
+$resolvedIgnore = @(Get-Content -LiteralPath .gitignore)
+$sddRules = @($resolvedIgnore | Where-Object { $_ -eq '/.superpowers/sdd/' })
+if ($sddRules.Count -ne 1) { throw 'expected exactly one SDD ignore rule' }
+$withoutSdd = @($resolvedIgnore | Where-Object { $_ -ne '/.superpowers/sdd/' })
+$ignoreDifference = @(Compare-Object $canonicalIgnore $withoutSdd -SyncWindow 0)
+if ($ignoreDifference.Count -ne 0) { $ignoreDifference; throw 'canonical ignore content changed' }
+git check-ignore -q .superpowers/sdd/2026-08-25-main-branch-integration-review/progress.md
+if ($LASTEXITCODE -ne 0) { throw 'SDD ledger is not ignored' }
 ```
 
-Expected: no unmerged paths; product tree matches canonical; no offline path is present; diff check passes.
+Expected: no unmerged paths; product tree matches canonical; no offline path is present; diff check passes; canonical ignore content/order is unchanged after removing the single SDD rule; and the ledger remains ignored.
 
-- [ ] **Step 5: Create and prove the merge commit**
+- [ ] **Step 6: Create and prove the merge commit**
 
 Run:
 
 ```powershell
-git add -- .ai/memory/plan.md .ai/memory/context.md .ai/memory/checklist.md
+git add -- .ai/memory/plan.md .ai/memory/context.md .ai/memory/checklist.md .gitignore
 git commit -m "merge: integrate canonical product branch"
 git rev-list --parents -n 1 HEAD
 git merge-base --is-ancestor 2a4e9916765b505037e1c533735d84cd9f251ccf HEAD
