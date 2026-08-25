@@ -10,6 +10,10 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - 사용자가 `1번으로 실행 승인`과 2026-08-26 `ㄱ`으로 Task 4 네 충돌 경로 보정을 승인했다. 보정 commits: `e9e265a`, `aaef828`, `fa2fc88`, `5079b0e`.
 - 오프라인 학습 사이트는 미래의 별도 `codex/offline-learning-site` branch/worktree `C:\dsm-offline-learning-site`에만 둔다. 기준은 `43145b6`, memory source는 `fb54b5d`; `396fc0a`에서는 추출하지 않는다.
 - push, PR, `main` 변경, shared/remote DB 접근, 배포는 별도 사용자 승인 전 금지한다.
+- **Task 4 완료**: merge `a639ac2`는 canonical `2a4e991`를 exact second parent로 보존하며 제품 subtree가 byte-identical하다. 독립 reviewer는 findings 없이 승인했고 보고서 closure는 `0141b9f`다.
+- **Task 5 BLOCKED (2026-08-26)**: backend `npm ci --no-audit --no-fund`는 exit `0`으로 882 packages를 설치했으나, 다음 exact command `npm run prisma:validate`가 clean worktree에 `DATABASE_URL`이 없어 Prisma `P1012`로 exit `1`이 됐다. 계획의 required-check stop condition에 따라 Prisma generate/build/test/lint와 frontend/npm/Android 검증은 실행하지 않았다. tracked status는 clean이다.
+- reviewed amendment 후보: Task 5 backend validate/generate 직전에 process-scoped parse-only URL `postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public`을 설정하고 즉시 제거한다. port `1`을 사용해 예기치 않은 DB 연결은 성공하지 못하게 하며 existing/shared/remote DB에는 접근하지 않는다. plan amendment와 사용자 승인 전 재실행하지 않는다.
+- Task 5 blocker report commit의 exact allowlist는 subject `docs: record baseline validation block`, path `docs/reviews/2026-08-25-main-integration-conflict-review.md` 하나다. memory closure commit의 exact allowlist는 subject `docs(memory): record baseline validation block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # Memory SSOT
 

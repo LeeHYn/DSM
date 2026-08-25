@@ -7,7 +7,13 @@
 - [x] SDD ignore preflight·ledger 생성
 - [x] Task 3 branch/overlap/checkpoint inventory·독립 review
 - [x] Task 4 네 충돌 경로 plan amendment 승인·검증·commits `e9e265a` / `aaef828` / `fa2fc88` / `5079b0e`
-- [/] Task 4 canonical `2a4e9916765b505037e1c533735d84cd9f251ccf` local non-squash merge·독립 review
+- [x] Task 4 canonical `2a4e9916765b505037e1c533735d84cd9f251ccf` local non-squash merge `a639ac2`·독립 review clean·closure `0141b9f`
+- [/] Task 5 canonical baseline validation
+  - [x] backend `npm ci --no-audit --no-fund` exit `0` (882 packages)
+  - [ ] backend `prisma:validate` — `DATABASE_URL` 누락 Prisma `P1012`, exit `1`, BLOCKED
+  - [ ] backend generate/build/test/non-fixing lint — stop condition으로 미실행
+  - [ ] frontend npm/test/typecheck/lint·Android build — stop condition으로 미실행
+  - [ ] process-scoped parse-only `DATABASE_URL` plan amendment 검토·사용자 승인
 - [ ] 별도 `codex/offline-learning-site` branch/worktree 생성·memory extraction·검증
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
