@@ -166,7 +166,8 @@ Path overlap alone does not prove behavioral equivalence. Foundation capability 
 
 - Ruling: defer the SDD workspace resolver until after the tracked root ignore commit — the binding spec forbids creating the workspace before the portable ignore contract, while the skill asks to resolve it at skill start — cost if wrong: SDD setup begins one controller task later, but no tracked or leaked artifact is introduced.
 - Ruling: controller-owned ignored ledger updates are globally required even when a task's `Files` block omits the ledger — the plan Global Constraints and SDD recovery contract require every task record — cost if wrong: the controller writes one ignored bookkeeping file outside some task-local file lists, but no tracked/product scope expands.
-- Ruling: split Task 4 memory conflict resolution into `.ai/memory/plan.md` + `.ai/memory/context.md`, then `.ai/memory/checklist.md`, before one merge commit — this satisfies the global one-or-two-file modification cap without changing the mandated final merge tree — cost if wrong: conflict resolution is applied in two controller actions instead of one, with the same staged result.
+- Ruling: split Task 4 conflict resolution into `.ai/memory/plan.md` + `.ai/memory/context.md`, then `.ai/memory/checklist.md` + `.gitignore`, before one merge commit — this satisfies the global one-or-two-file modification cap without changing the mandated product tree — cost if wrong: a conflict file could be resolved outside the reviewed action boundary.
+- Ruling: resolve root `.gitignore` from the canonical `2a4e991` baseline and add exactly one `/.superpowers/sdd/` rule — cost if wrong: canonical ignore policy or the portable SDD workspace exclusion could be lost.
 - Ruling: plan-specific repository roles override the generic SDD assumption that every implementer edits and commits — investigators/reviewers stay read-only, product/document writers use exact role allowlists, and the main controller alone commits and owns Git, the ledger, active memory, and conflict report — cost if wrong: controller-owned artifacts receive task review after controller commits rather than being authored by a generic implementer.
 - Ruling: Task 14's independent whole-branch review is the SDD final mutation review; Task 15 is read-only handoff and cannot add review surface — cost if wrong: no second redundant whole-branch review runs after a task that changes no files.
 
@@ -179,9 +180,11 @@ The canonical merge was not started. A read-only three-way `git merge-tree` prec
 3. `.ai/memory/plan.md`
 4. `.gitignore`
 
-The plan permits exactly the three active memory conflicts and requires `BLOCKED` rather than an improvised resolution when another path appears. Root `.gitignore` changed locally in required Task 2 commit `d4f2474` and also changed on the canonical branch, producing the fourth conflict.
+The original plan permitted exactly the three active memory conflicts and required `BLOCKED` rather than an improvised resolution when another path appeared. Root `.gitignore` changed locally in required Task 2 commit `d4f2474` and also changed on the canonical branch, producing the fourth conflict.
 
 - Ruling: do not start Task 4's real merge until a reviewed plan amendment explicitly handles the predicted `.gitignore` conflict — Task 2's required SDD rule and the canonical branch both modify root `.gitignore`, while Task 4 authorizes only three memory resolutions — cost if wrong: proceeding could silently discard either canonical ignore rules or the portable SDD ignore contract and would violate the explicit stop condition.
+
+The user approved that amendment on `2026-08-26`. Approval closure `e9e265a`, reviewed plan amendment `aaef828`, and memory closure `fa2fc88` now authorize exactly four conflict paths. The amended `git merge-tree` precheck returned `4/4` with difference `0`; Task 4 is resumed, while the real merge remains pending at this record.
 
 ## Validation matrix
 
@@ -191,7 +194,7 @@ The plan permits exactly the three active memory conflicts and requires `BLOCKED
 | Task 1 immutable refs | Six exact refs, linked clean integration worktree, approved spec blob `5a4dff47179c816963d5d2513e383f7e583b072a` | PASS |
 | Task 2 SDD ignore | Standalone commit `d4f2474`; root rule matches ledger path | PASS |
 | Task 3 topology | Exact merge bases, counts, unique commit lists, path classifications | PASS |
-| Task 4 canonical merge precheck | Conflict markers in three active memory files plus unexpected root `.gitignore`; no merge started | BLOCKED |
+| Task 4 canonical merge precheck | Approved exact conflict allowlist contains three active memory files plus root `.gitignore`; amended precheck `4/4`, difference `0`; no merge started yet | PASS |
 | Canonical product suite | Runs after the canonical merge | PENDING |
 | Offline branch suite | Runs after isolated branch creation | PENDING |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
