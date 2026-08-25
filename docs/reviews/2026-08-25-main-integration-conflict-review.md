@@ -227,9 +227,11 @@ The full Task 5 retry then passed:
 - Frontend `npm run typecheck`: exit `0`.
 - Frontend `npm run lint`: exit `0`; 0 errors, 18 warnings.
 - Android `.\gradlew.bat assembleDebug --no-daemon`: exit `0`; `BUILD SUCCESSFUL in 17m 38s`; 365 actionable tasks; ignored APK 143,247,539 bytes.
-- Post-check: tracked dirty count `0`, `git diff --check` exit `0`, canonical product diff exit `0`, `DATABASE_URL` absent, and `main`/`origin/main` unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
+- Post-check `git status --short`: empty output, exit `0` (tracked dirty count `0`).
+- Post-check `git diff --quiet 2a4e9916765b505037e1c533735d84cd9f251ccf -- DSM_Back DSM_Front`: exit `0` (canonical product equality).
+- Post-check `git diff --check`: exit `0`; `DATABASE_URL` absent; `main` and `origin/main` unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
 
-Initial independent review found one P2 documentation finding: retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. Fix round 1 added the result but its command rows were too abbreviated and left one stale residual-risk sentence. The exact command rows above and corrected residual-risk boundary below are fix round 2; no product command needs rerun. Re-review is pending at this record.
+Initial independent review found one P2 documentation finding: retry evidence had not yet been copied from the ignored Task 5 report into tracked SSOT. Fix round 1 added the result but its command rows were too abbreviated and left one stale residual-risk sentence. Fix round 2 expanded product commands and corrected the residual-risk boundary but abbreviated two post-check commands. The exact post-check rows above are fix round 3; no product command needs rerun. Re-review is pending at this record.
 
 ## Deferred items
 
