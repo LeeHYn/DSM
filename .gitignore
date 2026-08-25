@@ -29,3 +29,5 @@ build/
 
 # NestJS
 dist/
+
+/.superpowers/sdd/
