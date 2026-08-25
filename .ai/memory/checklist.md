@@ -1,4 +1,17 @@
 - [x] 마일스톤 1: 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기
+
+## Main branch integration review — 2026-08-25
+
+- [x] `main` 전환·remote ref·branch topology 확인
+- [x] stale integration spec blocker와 runtime mismatch 확인
+- [x] front product canonical + offline-site dedicated branch 구조 사용자 승인
+- [x] `C:\dsm-integration-review` worktree 생성
+- [x] revised written spec 자체 검토·local commit `24bb810`
+- [ ] written spec 사용자 검토·승인
+- [ ] 상세 implementation plan 작성·검토·승인
+- [ ] exact runtime·SDD preflight 뒤 integration 실행
+- [ ] offline branch와 main integration branch 검증
+- [ ] 별도 승인 후 push·PR 또는 local merge 결정
 - [x] 마일스톤 2: `DSM_Back` (NestJS) 초기 세팅
 - [x] 마일스톤 3: `DSM_Front` (React Native/Expo) 초기 세팅
 - [x] 마일스톤 4: 생성된 프로젝트 구조 커밋 및 푸시
