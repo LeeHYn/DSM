@@ -972,8 +972,9 @@ C:\AiWiki\AiProject\DSM\              # 일반 directory
 - learning-site Node tests 66개와 full verifier 28 sources가 PASS했다.
 - backend unit 22 suites·198 tests와 e2e 1 suite·2 tests는 sandbox Temp cache `EPERM` 뒤 `ER-20260725-002` 절차로 동일 명령을 sandbox 밖에서 재실행해 exit 0을 확인했다.
 - backend Nest build와 front TypeScript `--noEmit --incremental false`, staged `git diff --check`가 통과했다.
-- root commit `43145b6` `feat(learning-site): add offline study batches`와 `c79a042` `docs(project): add handoff and AI workflow`를 생성해 `origin/codex/m12b-front-prototype-checkpoint`에 push했다.
+- root commit `43145b6` `feat(learning-site): add offline study batches`, `c79a042` `docs(project): add handoff and AI workflow`, `fb54b5d` `docs(memory): sync project state`를 생성해 `origin/codex/m12b-front-prototype-checkpoint`에 push했다.
 - `C:\DEV\fsr`의 commit `2a4e991`을 `origin/codex/front-secure-session-rest-client`에 push했다.
 - root, `fsr`, `main`의 최종 ahead/behind는 모두 `0/0`이므로 pull은 실행하지 않았다.
 - `fsr/` worktree는 root commit에서 제외했고 stash, reset, clean, force-push, merge, PR, branch/worktree 삭제와 checkout 전환은 수행하지 않았다.
-- 이 memory 동기화는 승인된 publish 작업의 마지막 closure commit으로 기록한다.
+- push 뒤 root HEAD와 upstream이 `fb54b5d`로 일치했고 root·fsr·main의 ahead/behind `0/0`, staged/unstaged tracked diff 없음과 root의 예상된 untracked worktree 표시 `fsr/`만 확인했다.
+- 이 checklist 완료 상태 갱신은 승인된 publish 작업의 최종 closure 기록이다.
