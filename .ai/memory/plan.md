@@ -1,465 +1,179 @@
 # 목표
-DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
-
-# Main branch integration review redesign — 2026-08-25
-
-## 승인된 구조
-
-- `main`은 `2e25d98`에서 변경하지 않는다.
-- 제품 canonical branch는 `codex/front-secure-session-rest-client` `2a4e991`이다.
-- `codex/m12b-front-prototype-checkpoint` `396fc0a`는 whole-branch merge input으로 사용하지 않는다.
-- 오프라인 학습 사이트는 source snapshot `960f02b` 위의 content commit `43145b6`를 기준으로 별도 `codex/offline-learning-site` branch에 유지한다.
-- offline branch에는 `fb54b5d`의 `plan.md`, `context.md`, `checklist.md`에서 명시적으로 열거한 offline-site block과 `ER-20260809-001`~`003`만 section-scoped extraction으로 포함한다. `396fc0a`는 publish closure만 변경하므로 extraction source에서 제외하고, 두 combined memory commit은 cherry-pick하지 않는다.
-- offline branch 전용 격리 worktree는 `C:\dsm-offline-learning-site`로 고정한다. 비어 있지만 ignore되지 않은 `C:\DEV\.worktrees`와 기존 `main`·integration worktree는 사용하지 않는다.
-- `c79a042`의 external-PC handoff·AI workflow 문서는 main integration에서 file-by-file 검토해 선택적으로 port한다.
-
-## 현재 상태와 gate
-
-- 사용자가 위 branch/memory 분리를 대화에서 승인했다.
-- 격리 worktree `C:\dsm-integration-review`와 local branch `codex/integration-main-review`를 remote `6fa66eb`에서 생성했다.
-- revised written spec `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`를 commit `24bb810`으로 기록했다.
-- read-only 명세 검증에서 offline worktree 미정, offline validation matrix 누락, `396fc0a` source 오류, ref precondition 모호성의 네 findings를 확인했다.
-- 사용자가 네 review finding을 모두 선택하고 `진행해`로 명세·memory 수정 범위를 승인했다. 수정 후 revised written spec의 최종 사용자 승인 gate를 다시 거친다.
-- 네 findings를 spec에 반영해 local commit `19dde6d` `docs: resolve integration design review`로 기록했다. exact remote ref table, `C:\dsm-offline-learning-site` 생성·중단 조건, `fb54b5d` exact source map과 `396fc0a` exclusion, offline 7-row validation matrix를 추가했다.
-- memory closure commit의 자기 SHA 기록이 불가능한 점을 local HEAD precondition에 대입해 재검토하고, spec commit `225b710` `docs: tighten integration head checks`로 승인된 spec commit, exact-path `docs(memory):` commit, 승인된 plan/preflight commit의 세 분류를 고정했다.
-- `git diff --check`, exact ref/SHA 대조, `fb54b5d` source anchor 검사, stale wording 부재, offline path·ref 미존재 검증이 PASS했다. 제품 test·offline verifier는 branch 생성 전 design review 단계이므로 실행하지 않았다.
-- 사용자의 `r`을 한글 자판 `ㄱ`으로 해석해 수정된 written spec의 최종 승인으로 기록한다. 이 승인은 implementation plan 작성까지만 허용하며 offline branch/worktree 생성, product merge, SDD preflight, push, PR, `main` 수정은 포함하지 않는다.
-- `superpowers:writing-plans`로 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`를 작성했다. 단일 master plan은 16 tasks·70 checkbox로 canonical non-squash merge, offline 전용 worktree/branch, `fb54b5d` exact extraction, `c79a042` 문서 선별, backend 후보 판정, 조건부 forward migration, disposable PostgreSQL 검증, 전체 validation과 독립 review를 순서화한다.
-- fresh 자체 검증에서 필수 계약 문자열 22개, 균형 code fence 98개, placeholder 부재, `git diff --check`, dirty path 3개 allowlist와 `DSM_Back`·`DSM_Front` 제품 diff 부재가 PASS했다.
-- Node.js `24.13.0`, npm `11.6.2`는 spec 요구 `24.19.0`/`11.19.0`과 달라 implementation preflight blocker다.
-- plan commit 뒤 fresh PowerShell 검증에서 `node --version`은 `v24.13.0`, 기본 `npm --version`은 `C:\Users\jemie\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js` 접근 실패로 `MODULE_NOT_FOUND`가 됐고, 명시적 `C:\Program Files\nodejs\npm.cmd --version`만 `11.6.2`를 반환했다. 기본 명령 실패와 version mismatch 모두 implementation `BLOCKED` 근거이며 우회 명령으로 PASS 처리하지 않는다.
-- fresh executor 검증에서 Docker client `29.6.1`은 확인됐지만 `docker_engine` pipe가 없어 daemon 연결이 실패했고, `java`는 PATH에서 발견되지 않았으며 `ANDROID_HOME`·`ANDROID_SDK_ROOT`도 모두 없었다. 모두 계획 실행 전 추가 `BLOCKED` 근거이며 runtime·executor 설치/기동은 사용자가 제공하거나 별도로 승인한 환경 단계에서만 처리한다.
-- 현재 단계는 implementation plan 작성·자체 검증 완료와 별도 실행 승인 대기다. 승인 전 offline branch 생성, product merge, SDD preflight, push, PR, main 수정은 금지한다.
-- **실행 승인 기록**: 2026-08-25 사용자가 정확히 `1번으로 실행 승인`을 지시해 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`의 Subagent-Driven 실행을 승인했다. 이 승인은 계획 내부의 local worktree/merge/검증 범위만 허용하며 push, PR, `main` 변경은 계속 금지한다.
-- 실행은 Task 0 environment gate에서 시작한다. exact Node/npm, Docker daemon, Java/Android SDK가 모두 PASS하기 전에는 SDD `.gitignore` preflight, ledger 생성, ref fetch, offline branch 생성, canonical merge 또는 subagent dispatch를 하지 않는다.
-- **Task 0 실행 결과 — BLOCKED (2026-08-25)**: `node --version`은 `v24.13.0`; 기본 `npm --version`은 user-global `npm-cli.js` `MODULE_NOT_FOUND`로 exit 1; `docker version`과 `docker ps -a`는 `docker_engine` pipe 부재로 exit 1; `java`는 command not found; `ANDROID_HOME`·`ANDROID_SDK_ROOT`는 모두 `False`였다. 계획이 요구한 exact runtime/executor gate를 통과하지 못해 Task 1 전에 중단했다.
-- Task 0 실패 뒤 repository product, root `.gitignore`, SDD workspace/ledger, remote-tracking refs, offline path/ref, merge 상태는 변경하지 않았다. 환경을 사용자가 준비한 뒤 같은 Task 0부터 재개한다.
-- **환경 준비 승인 및 복구 (2026-08-25)**: 사용자가 `시스템 설치및 환경 준비 진행해`로 Task 0 blocker 해소를 위한 시스템·사용자 환경 변경을 승인했다. 공식 배포물의 SHA-256을 검증한 뒤 UAC가 두 차례 취소되어 system-wide Node/JDK MSI 설치는 중단했고, 관리자 권한이 필요 없는 administrative extraction으로 Node.js `v24.19.0`/npm `11.19.0`과 Microsoft OpenJDK `21.0.12.1`을 사용자 전용 경로에 설치했다. 기존 Android SDK의 `platforms;android-36`, `build-tools;36.0.0`, `ndk;27.1.12297006`, `platform-tools` 및 기존 license를 보존하고 공식 command-line tools만 추가했다. 기존 Docker Desktop을 시작해 server `29.6.1` 응답을 확인했다.
-- exact user toolchain paths는 `NODEJS_HOME=C:\Users\jemie\AppData\Local\Programs\NodeJS-24.19.0\PFiles64\nodejs`, `JAVA_HOME=C:\Users\jemie\AppData\Local\Programs\MicrosoftJDK-21.0.12.1\PFiles64\Microsoft\jdk-21.0.12.101-hotspot`, `ANDROID_HOME=ANDROID_SDK_ROOT=C:\Users\jemie\AppData\Local\Android\Sdk`이며 user environment와 user PATH에 영구 등록했다. system-wide `C:\Program Files\nodejs`는 UAC 취소로 `v24.13.0`을 유지하므로 계획 검증 PowerShell은 `NODEJS_HOME`을 PATH 선두에 명시적으로 적용한다.
-- **Task 0 재검증 — PASS (2026-08-25)**: 준비된 PowerShell 환경에서 exact `node --version`=`v24.19.0`, `npm --version`=`11.19.0`; Docker client/server `29.6.1`; exact migration container 두 이름 부재; Java/Javac `21.0.12.1`; Android env 두 개 존재; adb `37.0.1`; required Android four packages 설치를 모두 exit 0으로 확인했다. Task 1과 tracked SDD ignore preflight를 재개할 수 있으며 push, PR, `main` 변경 금지는 유지한다.
-- **Task 1~3 실행 결과 (2026-08-25)**: six pinned remote refs, linked-worktree/local-only commit classes, approved spec blob이 PASS했다. standalone SDD ignore commit `d4f2474`와 ignored ledger를 생성했다. investigator inventory와 독립 task review/fix round를 거쳐 conflict report commits `58aa47a`, `d773c4c`를 기록했고 checkpoint path `83/83`, `7/7`, `4/4`, `2/2` 및 unique commit full evidence `5/5`를 검증했다.
-- **Task 4 precheck — BLOCKED (2026-08-25)**: real merge를 시작하기 전 `git merge-tree` conflict-marker 검사에서 계획된 active memory 세 파일 외 root `.gitignore`가 네 번째 conflict로 검출됐다. Task 4가 다른 unmerged path를 임의 해결하지 말고 `BLOCKED`로 중단하도록 명시하므로 merge는 시작하지 않았고 HEAD `d773c4c`와 clean status를 유지했다.
-- 필요한 reviewed amendment 후보는 Task 4 predicted/actual conflict allowlist를 active memory 세 파일과 root `.gitignore`의 네 경로로 정정하고, `.gitignore`는 canonical branch 내용을 baseline으로 유지하면서 Task 2의 exact `/.superpowers/sdd/` rule만 재적용한 뒤 canonical ignore rules와 SDD ignore behavior를 함께 검증하도록 plan을 수정하는 것이다. 사용자의 amendment 승인 전 plan 수정과 real merge를 진행하지 않는다.
-- **Task 4 amendment 승인 (2026-08-26)**: 직전 응답에서 요청한 exact `amendment 승인`에 대해 사용자가 `ㄱ`으로 진행을 승인했다. 승인 범위는 implementation plan의 Task 4 expected conflict set을 active memory 세 파일과 root `.gitignore`의 네 경로로 정정하고, canonical `.gitignore`를 baseline으로 보존한 뒤 exact `/.superpowers/sdd/` rule만 재적용·검증하며 Task 4부터 승인된 local SDD 실행을 재개하는 것이다. push, PR, `main` 변경, shared DB 접근 금지는 유지한다.
-- **Task 4 amendment 반영 완료 (2026-08-26)**: implementation plan을 16 tasks·71 checks로 보정하고, predicted/actual conflict allowlist를 active memory 세 파일과 root `.gitignore`의 네 경로로 고정했다. `git diff --check`, old wording 부재, 실제 `merge-tree` 예측 `4/4`, difference `0`을 검증한 뒤 local commit `aaef828` `docs: amend canonical merge conflict plan`으로 기록했다. 실제 merge는 이 기록을 닫은 뒤 Task 4에서 시작한다.
-- 승인된 implementation-plan commit class는 local commit `587e934` `docs: add main integration plan`이며 exact allowlist는 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
-- 이어지는 closure commit class의 exact allowlist는 subject `docs(memory): record plan approval gate`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- post-commit runtime evidence closure의 exact allowlist는 subject `docs(memory): record runtime blocker`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- executor evidence 정정 closure의 exact allowlist는 subject `docs(memory): confirm executor blockers`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- execution approval 기록 commit의 exact allowlist는 subject `docs(memory): record execution approval`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- Task 0 closure commit의 exact allowlist는 subject `docs(memory): record execution preflight block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- environment recovery closure commit의 exact allowlist는 subject `docs(memory): record environment recovery`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- Task 4 precheck blocker closure commit의 exact allowlist는 subject `docs(memory): record merge precheck block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- Task 4 amendment approval closure commit의 exact allowlist는 subject `docs(memory): approve merge plan amendment`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-- approved Task 4 plan-amendment commit의 exact allowlist는 subject `docs: amend canonical merge conflict plan`, path `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
-- Task 4 plan-amendment closure commit의 exact allowlist는 subject `docs(memory): record merge plan amendment`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
-
-# 완료된 마일스톤
-1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기
-2. `DSM_Back` (NestJS) 초기 세팅
-3. `DSM_Front` (React Native/Expo) 초기 세팅
-4. 생성된 프로젝트 구조를 Git에 커밋 및 원격 저장소에 푸시
-5. `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
-6. `DSM_Back` 인증(Auth) 모듈 구현
-
-7. 일과(Task) CRUD API 구현
-8. 카테고리(Category) CRUD API 구현
-9. 리프레시 토큰 조회 구조 개선 — 토큰에 레코드 ID 임베드(`<recordId>.<secret>`)로 O(1) 조회 (계획: docs/superpowers/plans/2026-06-06-dsm-refresh-token-lookup.md)
-10. 점수(DailyScore) 집계 로직 구현 — FR-03 점수 공식 + 누적 totalScore/티어, 일과 변경 시 재계산 + 조회 API (계획: docs/superpowers/plans/2026-06-07-dsm-daily-score.md)
-11. 랭킹/백분위(FR-04) 구현 — 일간/주간/누적 내 순위·상위%, TOP100 리더보드, RankingSnapshot 영속화. 조회 시 실시간 계산, 전체 유저 기준 (계획: docs/superpowers/plans/2026-06-07-dsm-rankings.md)
-
-# 다음 마일스톤
-12. **12A 알림 기반** — FCM 토큰 수명주기 API + Task-`NotificationSchedule` 동기화
-   - 상세 계획: `.ai/docs/2026-07-10-milestone-12a-notification-foundation.md`
-   - 범위: 토큰 등록·갱신·재활성화·폐기, Task mutation과 `PENDING/CANCELLED` 예약 상태 동기화, 단위 테스트
-   - 제외: 실제 Firebase 발송·Cron(12B), 프런트 알림(12C), WebSocket(13), Redis/랭킹 배치(14)
-   - 판정: 기존 Prisma 모델과 Nest 의존성으로 구현 가능. 12A에는 새 패키지·Firebase 자격증명·schema migration이 필요하지 않음(실제 DB의 현 schema 적용 여부는 구현 전 별도 확인)
-   - **계획 작성 승인 기록**: 2026-07-10 사용자가 알림 방향으로 작업 진행을 승인함
-   - **상태**: 상세 계획 작성 완료 — **구현 승인 대기**
-
-# 지원 작업 계획: 서브 에이전트 운영 체계
-
-## 목표
-- `.ai/agents/`를 저장소의 서브 에이전트 역할 문서 SSOT로 만든다.
-- 각 역할에 책임, 읽기 범위, 수정 가능한 파일/경로, 금지 사항, 승인 필요 작업, 완료 보고 형식을 명시한다.
-- 이후 메인 에이전트가 서브 에이전트를 생성할 때 공통 규칙과 해당 역할 문서를 반드시 읽어 프롬프트에 반영하도록 연결한다.
-
-## 역할 문서
-1. `.ai/agents/README.md`: 공통 운영 계약, 우선순위, 위임 프롬프트 필수 항목, 동시 작업 충돌 방지 규칙
-2. `.ai/agents/investigator.md`: 저장소 조사 전용, task assignment의 `read scope`에 지정된 소스만 읽기 가능, 파일 수정 금지
-3. `.ai/agents/planner.md`: 계획 수립 전용, 소스 수정 금지, 승인된 `.ai/memory/plan.md` 및 계획 문서만 수정 가능
-4. `.ai/agents/backend-developer.md`: 할당받은 `DSM_Back/` 파일과 대응 테스트만 수정 가능
-5. `.ai/agents/frontend-developer.md`: 할당받은 `DSM_Front/` 파일과 대응 테스트만 수정 가능하며 `DSM_Front/AGENTS.md`의 Expo v55 규칙 준수
-6. `.ai/agents/reviewer.md`: 소스와 diff 검증 전용, 소스 수정 금지, 승인된 리뷰 보고서 경로만 수정 가능
-
-## 공통 권한과 한계
-- 모든 개발 역할은 위임 프롬프트에 명시된 정확한 파일 allowlist 안에서만 수정한다.
-- 모든 역할은 작업 시작 전 `.ai/memory/plan.md`, `context.md`, `checklist.md`를 읽되, 역할 문서가 허용하지 않으면 공유 memory 파일을 수정하지 않는다.
-- 하위 디렉터리에 더 구체적인 `AGENTS.md`가 있으면 해당 규칙을 함께 적용하며, 충돌 시 더 높은 우선순위와 더 제한적인 규칙을 따른다.
-- 동시에 실행되는 에이전트끼리 수정 파일이 겹치면 작업을 시작하지 않고 메인 에이전트에 보고한다.
-- 서브 에이전트는 사용자 승인 없이 커밋, 푸시, 브랜치 변경, 의존성 설치, DB 마이그레이션, 외부 서비스 호출, 비밀정보 접근, 파괴적 명령을 실행하지 않는다.
-- 범위 밖 변경이 필요하면 임의 확장하지 않고 사유와 필요한 파일을 보고한 뒤 중단한다.
-- 검증 명령은 역할과 위임 범위 안에서만 실행하며, 실패를 숨기거나 우회하지 않는다.
-- 완료 시 수정 파일, 실행한 검증, 실패/잔여 위험, 범위 준수 여부를 정해진 형식으로 보고한다.
-
-## 적용 연결
-1. `.ai/system_prompt.md`에 서브 에이전트 생성 전 `.ai/agents/README.md`와 선택 역할 문서를 읽는 절차를 추가한다.
-2. 루트 진입 문서(`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`)의 현재 유효하지 않은 `C:/dsm/.ai/system_prompt.md` 참조를 저장소 로컬 `.ai/system_prompt.md`로 정리한다.
-3. 메인 에이전트가 위임 시 역할명, 목표, 읽기 범위, 수정 파일 allowlist, 금지 범위, 검증 명령, 완료 조건을 명시하도록 강제한다.
-
-## 실행 순서
-1. 사용자 승인 후 `.ai/agents/README.md`와 역할 문서를 1~2개씩 작성한다.
-2. 각 단계마다 문서의 경로 권한과 금지 규칙을 상호 검토한다.
-3. `.ai/system_prompt.md`와 루트 진입 문서를 최소 단위로 연결한다.
-4. 가상 위임 시나리오로 역할별 허용/거부 사례를 점검하고 `.ai/memory/checklist.md`에 결과를 기록한다.
-
-## 승인 게이트
-- 이 계획의 승인 전에는 `.ai/agents/` 생성, 역할 문서 작성, 시스템 지침 및 루트 진입 문서 수정을 시작하지 않는다.
-- **승인 기록**: 2026-07-10 사용자가 이 지원 작업 계획의 구현을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-10 공통 계약 1개와 역할 문서 5개, 시스템 지침 연결, 루트 진입 문서 연결과 역할 계약 감사·수정을 완료했다.
-
-# 지원 작업 계획: 에이전트 간 Context Compiler 역할
-
-## 목표
-- 에이전트가 다른 에이전트에 프롬프트를 전달하거나 여러 문서에서 작업 문맥을 추출할 때, 자연어를 고정된 기계 판독형 중간 표현인 `AgentEnvelope v1`로 변환하는 읽기 전용 역할을 추가한다.
-- 번역 과정에서 권한 우선순위, 부정 표현, 숫자, 정확한 경로, 승인 상태와 중단 조건이 누락되거나 의미가 바뀌지 않도록 원문 추적성을 유지한다.
-- 대상 에이전트가 결과를 다시 사람이 읽는 보고로 풀어낼 수 있도록 encode/decode 계약을 함께 정의한다.
-
-## 역할 결정
-- 역할명: `context-compiler`
-- 기본 모드: `read-only`, `exact writable allowlist: none`
-- 이 역할은 실제 기계어·바이너리 코드나 소스 코드를 생성하지 않는다. 입력 문맥을 구조화된 JSON envelope로 컴파일한다.
-- 이 역할은 `.ai/system_prompt.md`, `.ai/agents/README.md`, 선택 역할 문서와 적용되는 `AGENTS.md`의 필수 원문 읽기를 대체하지 않는다.
-- 문서에 없는 결정을 만들거나 충돌을 임의 해결하지 않고, `confirmed`, `inferred`, `unknown`, `conflict`를 구분한다.
-
-## `AgentEnvelope v1` 최소 계약
-1. `protocol`, `mode`, `target_role`
-2. 기존 위임 필수 필드인 `objective`, `read_scope`, `exact_writable_allowlist`, `forbidden_scope`, `verification`, `done_condition`
-3. `instruction_precedence`, `verbatim_constraints`, `source_map`
-4. `confirmed_facts`, `inferences`, `unknowns`, `conflicts`
-5. `output_contract`, `stop_conditions`
-
-## 적용 범위
-- encode: 사용자·메인 에이전트의 자연어 요청과 허용된 문서 범위를 `AgentEnvelope v1` JSON으로 변환한다.
-- decode: 에이전트의 구조화 결과를 한국어 보고로 변환하되, finding·실패·잔여 위험을 숨기거나 완화하지 않는다.
-- 여러 문서 또는 여러 에이전트 사이의 복잡한 handoff에 사용한다. 단순 단일 파일 작업에는 메인 에이전트가 불필요한 중간 단계를 생략할 수 있다.
-- 민감정보, `read scope` 밖 문서, 외부 서비스와 저장소 상태 변경은 다루지 않는다.
-
-## 수정 대상과 실행 순서
-1. 역할 계약 추가 및 레지스트리 연결
-   - `.ai/agents/context-compiler.md`
-   - `.ai/agents/README.md`
-2. 호출 조건과 비대체 원칙 연결
-   - `.ai/system_prompt.md`
-3. 정적 계약 검증 후 진행 상태 기록
-   - `.ai/memory/checklist.md`
-
-각 단계는 정확한 파일 1~2개만 수정한다. 기존 사용자의 미커밋 변경은 보존하며, 역할 문서와 공통 계약의 충돌 여부를 diff로 다시 확인한다.
-
-## 검증 시나리오
-- 허용: 다중 문서에서 목표·정확한 경로·승인 게이트를 출처와 함께 envelope로 변환한다.
-- 거부: 필수 위임 필드가 빠졌거나 원문 간 충돌이 해결되지 않은 상태에서 정상 envelope를 생성한다.
-- 보존: `하지 않는다`, 수치, 파일 경로, `구현 승인 대기` 같은 원문 제약을 round-trip 후에도 동일하게 유지한다.
-- 경계: context compiler 결과만 읽고 필수 SSOT 원문 확인을 생략하려는 위임을 거부한다.
-
-## 승인 게이트
-- 이 계획의 승인 전에는 `.ai/agents/context-compiler.md`, `.ai/agents/README.md`, `.ai/system_prompt.md`, `.ai/memory/checklist.md`를 이 작업 목적으로 수정하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 Context Compiler 역할 계획의 구현을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-15 `context-compiler` 역할 계약과 역할 레지스트리, 시스템 호출 프로토콜 연결 및 허용·거부·round-trip·원문 비대체 정적 검증을 완료했다.
-- **상태**: **구현 및 검증 완료**
-
-# 지원 작업 계획: Context Compiler 하이브리드 Handoff 확장
-
-## 목표
-- `context-compiler`가 JSON만 반환하지 않고, 대상 에이전트가 바로 실행할 수 있는 영어 Markdown 프롬프트를 함께 제공한다.
-- 원문 문서 전체 또는 구조가 필요한 경우 대상 에이전트가 정확한 `.md` 파일을 직접 읽도록 handoff에 명시한다.
-- JSON은 권한, 범위, 검증, 완료 조건과 source map을 전달하는 control plane으로 유지한다.
-
-## 기본 출력: `Handoff Package v1`
-1. `English Task Prompt`
-   - 자연어 작업 지시를 영어로 번역한 Markdown 프롬프트
-   - 목표, 실행 순서, 금지 범위, 검증, 완료 조건과 중단 조건 포함
-   - 대상 에이전트의 결과 보고 언어는 `response_language`로 지정하며 기본값은 한국어(`ko`)
-2. `Required Markdown Reads`
-   - 대상 에이전트가 작업 전에 직접 읽어야 할 정확한 `.md` 경로
-   - 각 문서의 읽기 이유와 `full` 또는 정확한 section 범위 포함
-3. `AgentEnvelope v1.1`
-   - 기존 위임 필수 필드와 권한·출처·충돌 정보를 담는 JSON control block
-   - `delivery_mode`, `prompt_language`, `response_language`, `required_markdown_reads`, `translation_notes` 필드 추가
-
-## 라우팅 원칙
-- 단순하고 완결된 작업은 영어 프롬프트만 전달할 수 있다.
-- 권한·수정 범위·검증 계약이 필요한 위임은 영어 프롬프트와 JSON control block을 함께 전달한다.
-- SSOT, 표, 코드 블록, 긴 규칙, 전체 문맥 의존성이 있는 문서는 번역 요약으로 대체하지 않고 `Required Markdown Reads`에 넣어 대상 에이전트가 원본 `.md`를 직접 읽게 한다.
-- `.ai/system_prompt.md`, 공유 memory, 공통 계약, 대상 역할 문서와 적용되는 `AGENTS.md`는 기존과 같이 필수 원문 직접 읽기를 유지한다.
-
-## 영어 번역 보존 규칙
-- 실행 지시와 설명은 명확한 명령형 영어로 번역한다.
-- 파일 경로, 명령어, 코드 심볼, JSON 필드, 역할명, gate 이름, 수치와 인용된 원문은 번역하거나 정규화하지 않는다.
-- `하지 않는다`, 승인 상태, 금지 사항과 중단 조건은 원문을 `verbatim_constraints`에 보존하고 영어 프롬프트에도 동일 의미로 반영한다.
-- 번역이 둘 이상의 의미로 해석되면 임의 선택하지 않고 `translation_notes`, `unknowns` 또는 `conflicts`에 기록하고 실행용 handoff 생성을 중단한다.
-- Markdown 문서 전체를 무조건 영어로 재작성하지 않는다. 필요한 원문을 직접 읽게 하고, 영어 프롬프트에는 작업에 필요한 지시만 번역한다.
-
-## 수정 대상과 실행 순서
-1. 하이브리드 출력 계약과 역할 레지스트리 갱신
-   - `.ai/agents/context-compiler.md`
-   - `.ai/agents/README.md`
-2. 호출·라우팅 규칙과 기술 결정 갱신
-   - `.ai/system_prompt.md`
-   - `.ai/memory/context.md`
-3. 검증 후 승인·완료 상태 기록
-   - `.ai/memory/plan.md`
-   - `.ai/memory/checklist.md`
-
-각 수정 단계는 정확한 파일 1~2개로 제한하고 기존 미커밋 변경을 보존한다.
-
-## 검증 시나리오
-- 영어 번역: 한국어 작업 지시가 영어 명령형 프롬프트로 생성되는지 확인한다.
-- Markdown 직접 읽기: SSOT 문서가 `required_markdown_reads`의 정확한 경로와 읽기 범위로 전달되는지 확인한다.
-- 하이브리드 출력: 영어 프롬프트, Markdown read list와 JSON control block이 함께 존재하는지 확인한다.
-- 원문 보존: 경로, 명령어, 코드 심볼, 수치, 부정 표현과 승인 게이트가 번역 전후 동일한지 확인한다.
-- 거부: 번역 모호성, 필수 문서 누락 또는 상충하는 원문이 있으면 실행용 handoff를 만들지 않는지 확인한다.
-
-## 승인 게이트
-- 이 확장 계획의 승인 전에는 `.ai/agents/context-compiler.md`, `.ai/agents/README.md`, `.ai/system_prompt.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`를 이 작업 목적으로 수정하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 Context Compiler 하이브리드 Handoff 확장을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-15 영어 Markdown 프롬프트, 필수 Markdown 직접 읽기 목록과 `AgentEnvelope v1.1` JSON control block으로 구성된 `Handoff Package v1` 계약, 시스템 라우팅 및 기술 결정 갱신을 완료했다. 영어 번역·원문 보존·Markdown 라우팅·JSON 일치·거부 시나리오 검증을 통과했다.
-- **상태**: **구현 및 검증 완료**
-
-# 품질 작업 계획: 현재 프로그램 전체 읽기 전용 코드 리뷰
-
-## 목표
-- 현재 checkout의 백엔드와 프런트엔드 전체 제품 코드를 읽고 실제 결함, 회귀 위험, 보안 문제, 데이터 일관성 문제와 중요한 검증 누락을 찾는다.
-- 각 finding에 심각도, 정확한 `path:line`, 발생 조건·영향과 구체적인 수정 방향을 제공한다.
-- 제품 소스, 테스트, 설정, 의존성, DB와 외부 시스템은 변경하지 않는다.
-
-## 현재 기준선
-- `DSM_Back`: 70개 reviewable 파일, 이 중 소스·설정 형식 69개
-- `DSM_Front`: 50개 reviewable 파일, 이 중 소스·설정 형식 23개
-- `DSM_Back`, `DSM_Front` 안에는 현재 미커밋 변경이 없다.
-- 루트와 `.ai`, 계획 문서의 기존 미커밋 변경은 사용자 작업으로 간주하고 되돌리거나 정리하지 않는다.
-
-## 포함 범위
-1. 백엔드
-   - `DSM_Back/src/**/*.ts`
-   - `DSM_Back/prisma/schema.prisma`
-   - `DSM_Back/test/**/*`
-   - `DSM_Back/package.json`, lockfile, TypeScript·Nest·Jest·ESLint 설정
-2. 프런트엔드
-   - `DSM_Front/src/**/*`
-   - `DSM_Front/scripts/reset-project.js`
-   - `DSM_Front/app.json`, `package.json`, lockfile, TypeScript 설정
-   - `DSM_Front/AGENTS.md`와 런타임 구조 확인에 필요한 README
-3. 교차 계약
-   - API route·DTO·응답 형식과 프런트 소비 코드 일치
-   - 인증·인가·소유권, 환경 변수, 오류 처리와 비밀정보 노출
-   - UTC 날짜 경계, 점수·랭킹 재계산, soft delete와 DB 제약
-   - Expo Router 진입점, 플랫폼 분기, 테마·접근성과 런타임 설정
-
-## 제외 범위
-- `node_modules/`, `dist/`, coverage, cache와 생성 파일의 내용
-- PNG·SVG 등 바이너리/시각 자산의 품질 평가. 코드 참조와 파일 존재 여부만 확인
-- `.ai/`, `docs/`, `Planing Document/` 자체의 내용 리뷰
-- 외부 서비스 호출, 실제 DB 연결, 배포, 인증 정보 접근
-- lint, formatter, build, coverage와 e2e처럼 파일 또는 외부 상태를 바꿀 수 있는 검증
-
-## 리뷰 순서
-1. 엔트리포인트, 모듈 그래프, Prisma schema, 환경 변수와 신뢰 경계를 파악한다.
-2. 백엔드의 Auth, Category, Task, Score, Ranking, 공통 filter와 Prisma 계층을 소스·테스트 쌍으로 검토한다.
-3. 프런트의 Expo Router, 화면, component, hook, theme와 플랫폼별 구현을 검토한다.
-4. 백엔드 API와 프런트 소비 코드, 시간·오류·상태 계약을 교차 검토한다.
-5. 발견 후보를 테스트와 호출 경로로 반증하고 중복·추측·취향성 finding을 제거한다.
-6. findings-first 코드 리뷰 보고서를 채팅으로 제출하고 검토하지 못한 영역과 잔여 위험을 명시한다.
-
-## 허용 검증
-- 읽기 전용 조회: `rg`, `rg --files`, `Get-Content`, `Get-ChildItem`, `git status`, `git diff`, `git log`, `git blame`
-- 백엔드 unit test: local Jest를 `--runInBand --no-cache`로 실행
-- 백엔드·프런트 TypeScript: local `tsc --noEmit --incremental false`
-- 검증 전후 `git status --short -- DSM_Back DSM_Front` 비교
-- Expo 동작에 대한 finding 후보가 있을 때만 `DSM_Front/AGENTS.md`가 지정한 Expo SDK 55 공식 문서를 읽기 전용으로 확인
-- `caveman-review` 규칙에 따라 lint는 실행하지 않는다.
-
-검증 명령이 workspace, DB 또는 외부 시스템 상태를 바꿀 가능성이 있으면 실행하지 않고 생략 사유를 보고한다.
-
-## 결과 형식
-- findings를 `P0` → `P3` 순으로 먼저 제시한다.
-- 일반 finding은 `<path>:L<line>: <severity> <problem>. <fix>.` 한 줄 형식을 사용한다.
-- 보안 또는 아키텍처 finding은 조건·영향·근거와 수정 방향을 충분히 설명한다.
-- findings가 없으면 `발견 사항 없음`을 명시한다.
-- 마지막에 검토 범위, 실행한 검증, 실패·생략 항목과 잔여 위험을 요약한다.
-
-## 쓰기 경계와 완료 조건
-- 리뷰 중 `exact writable allowlist`: `none`
-- 제품 소스·테스트·설정과 리뷰 보고서 파일을 수정·생성하지 않는다.
-- 승인 및 종료 상태 기록은 메인 에이전트가 `.ai/memory/plan.md`, `.ai/memory/checklist.md`에만 반영한다.
-- 포함 범위의 텍스트 소스·설정을 모두 읽고, findings를 현재 줄 번호로 재검증하며, 제품 파일 변경이 없음을 확인하면 완료다.
-
-## 승인 게이트
-- 이 계획의 승인 전에는 전체 소스 리뷰, 테스트, 타입 검사를 시작하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 전체 읽기 전용 코드 리뷰 실행을 명시적으로 승인했다.
-- **완료 기록**: 2026-07-15 포함 범위의 백엔드·프런트엔드 텍스트 소스와 설정을 모두 검토했다. 백엔드 Jest 16개 스위트·78개 테스트와 백엔드 TypeScript 검사는 통과했고, 프런트 TypeScript 검사는 CSS module 선언 누락 1건으로 실패했다. 보안·권한·원자성·랭킹·입력 계약·운영 준비 findings를 현재 줄 번호로 재검증했으며 제품 파일 변경은 없었다.
-- **상태**: **리뷰 및 검증 완료 — 후속 수정 미수행**
-
-# 품질 수정 계획: 즉시 처리 5건
-
-## 목표
-- 전체 코드 리뷰에서 확인된 항목 중 사용자가 지정한 아래 5건만 수정한다.
-  1. Google 로그인 audience 검증 강제
-  2. Refresh token 동시 재사용 차단
-  3. Task의 타 사용자 Category 연결 차단
-  4. Task 변경과 점수 재계산의 원자성 보장
-  5. 프런트 CSS module TypeScript 오류 해소
-- 기존 API route와 정상 응답 형식은 유지하고 Prisma schema 및 migration은 변경하지 않는다.
-- 각 수정은 회귀 테스트를 먼저 보강하거나 같은 단계에서 보강하고, 단계별 수정 파일을 1~2개로 제한한다.
-
-## 현재 기준선
-- `DSM_Back`, `DSM_Front` 제품 디렉터리에는 미커밋 변경이 없다.
-- 백엔드 Jest는 16 suites, 78 tests가 통과하고 백엔드 TypeScript 검사도 통과한다.
-- 프런트 TypeScript 검사는 `src/components/animated-icon.web.tsx:5`의 CSS module import에서 `TS2307` 1건으로 실패한다.
-- 루트와 `.ai`, 계획 문서의 기존 미커밋 변경은 사용자 작업으로 간주하고 보존한다.
-
-## 설계 결정
-
-### 1. Google audience 검증
-- 현재 API가 `GOOGLE` provider를 노출하므로 `GOOGLE_CLIENT_ID`를 선택 설정이 아닌 non-empty 필수 설정으로 변경한다.
-- `AuthService`는 `ConfigService.getOrThrow('GOOGLE_CLIENT_ID')`로 값을 한 번 읽어 Google client 생성과 `verifyIdToken`의 `audience`에 동일한 값을 사용한다.
-- `.env.example`의 빈 문자열은 실제 client ID를 요구하는 placeholder로 교체한다.
-- provider feature flag 도입이나 Google 로그인 제거는 이번 범위에 포함하지 않는다.
-
-### 2. Refresh token 단일 사용 보장
-- token hash 비교는 기존처럼 record 조회 후 수행하되, 검증 성공 후 `id`, `revokedAt: null`, `expiresAt > now`를 조건으로 `updateMany`를 실행한다.
-- 갱신 건수가 정확히 1인 요청만 승자로 인정하고, 0이면 재사용 또는 경합으로 간주해 `UnauthorizedException`을 반환한다.
-- 기존 token revoke와 새 refresh token record 생성을 하나의 Prisma interactive transaction에서 처리한다.
-- `issueTokens`가 transaction client를 받을 수 있게 하여 신규 token 생성 실패 시 기존 token revoke도 rollback되게 한다.
-- token 형식, Access/Refresh TTL, logout 동작과 Prisma schema는 변경하지 않는다.
-
-### 3. Category 소유권 경계
-- Task 생성 또는 `categoryId` 변경 시 category가 `userId === actor`이거나 `isDefault === true`인지 mutation 전에 확인한다.
-- 존재하지 않거나 타 사용자 소유인 category는 동일하게 `NotFoundException`으로 처리해 소유 여부를 노출하지 않는다.
-- category 검증과 task mutation은 동일 transaction client를 사용한다.
-- `categoryId`가 없거나 update에서 변경되지 않으면 추가 조회하지 않는다.
-
-### 4. Task·점수 원자성
-- transaction의 최상위 소유자는 `TasksService`로 정한다.
-- create, update, remove, complete 각각에서 task 조회·mutation, 영향받은 UTC day의 `DailyScore` upsert, `User.totalScore/tier` 갱신을 하나의 transaction callback 안에서 처리한다.
-- `ScoresService.recompute`와 내부 누적 합계 갱신은 선택적인 Prisma transaction client를 받아 모든 query를 동일 client로 실행한다. 독립 호출 시에는 기존 `PrismaService`를 사용한다.
-- update가 날짜를 옮기면 기존 날짜와 새 날짜를 중복 제거한 뒤 같은 transaction에서 모두 재계산한다.
-- 점수 계산 공식, 일일 상한, tier 기준과 API 응답은 변경하지 않는다.
-
-### 5. 프런트 TypeScript 오류
-- 구현 전에 `DSM_Front/AGENTS.md`가 지정한 Expo SDK 55 공식 문서를 확인한다.
-- `src/types/css-modules.d.ts`를 추가해 `*.module.css`의 default export를 `Record<string, string>`으로 선언한다.
-- 현재 `tsconfig.json`의 `**/*.ts` include가 declaration 파일을 포함하므로 설정 파일은 수정하지 않는다.
-
-## 단계별 수정 순서
-
-### Phase 0. 기준선 재확인 — 수정 없음
-- 제품 디렉터리 Git 상태, 백엔드 78개 테스트, 양쪽 TypeScript 결과를 다시 확인한다.
-- 기준선이 위 기록과 다르면 구현을 시작하지 않고 차이를 보고한다.
-
-### Phase 1A. Google 환경 계약
-- 수정 파일:
-  - `DSM_Back/src/config/env.validation.ts`
-  - `DSM_Back/src/config/env.validation.spec.ts`
-- 검증:
-  - 유효한 `GOOGLE_CLIENT_ID`를 반환한다.
-  - 누락값과 빈 문자열을 모두 거부한다.
-
-### Phase 1B. 환경 예시 동기화
-- 수정 파일:
-  - `DSM_Back/.env.example`
-- 검증:
-  - 예시가 빈 client ID를 정상 설정처럼 제공하지 않는지 확인한다.
-
-### Phase 2. Google service enforcement와 Refresh token rotation
-- 수정 파일:
-  - `DSM_Back/src/auth/auth.service.ts`
-  - `DSM_Back/src/auth/auth.service.spec.ts`
-- 검증:
-  - service 생성 시 필수 Google client ID를 읽고 동일 audience를 사용한다.
-  - 정상 refresh는 조건부 revoke 1건 후 같은 transaction에서 새 token을 생성한다.
-  - 조건부 revoke가 0건이면 401이며 새 token을 만들지 않는다.
-  - 신규 token 생성 오류 시 transaction 오류가 전파된다.
-  - malformed, missing, revoked, expired, wrong-secret 및 logout 기존 테스트를 유지한다.
-
-### Phase 3. ScoresService transaction client 계약
-- 수정 파일:
-  - `DSM_Back/src/scores/scores.service.ts`
-  - `DSM_Back/src/scores/scores.service.spec.ts`
-- 검증:
-  - 명시적으로 전달한 client가 task 조회, DailyScore upsert·aggregate와 User update 모두에 사용된다.
-  - client를 전달하지 않은 기존 호출과 점수 계산 결과는 유지된다.
-
-### Phase 4. Task transaction과 Category 권한 검증
-- 수정 파일:
-  - `DSM_Back/src/tasks/tasks.service.ts`
-  - `DSM_Back/src/tasks/tasks.service.spec.ts`
-- 검증:
-  - create/update에서 사용자 소유 category와 default category는 허용한다.
-  - 타 사용자 category와 존재하지 않는 category는 task write 전에 404로 거부한다.
-  - create/update/remove/complete가 `$transaction` 안에서 task mutation과 `ScoresService.recompute(..., tx)`를 실행한다.
-  - update의 이전·이후 UTC day 재계산과 동일 날짜 중복 제거를 유지한다.
-  - 재계산 실패가 mutation API 실패로 전파되고 transaction 밖의 후속 write가 없는지 확인한다.
-
-### Phase 5. 프런트 CSS module declaration
-- 수정 파일:
-  - `DSM_Front/src/types/css-modules.d.ts` (신규)
-- 검증:
-  - `animated-icon.web.tsx`의 기존 import를 변경하지 않고 프런트 TypeScript 검사가 통과한다.
-
-### Phase 6. 통합 검증 — 수정 없음
-- 백엔드 대상 테스트:
-  - `env.validation.spec.ts`
-  - `auth.service.spec.ts`
-  - `scores.service.spec.ts`
-  - `tasks.service.spec.ts`
-- 백엔드 전체 Jest: local Jest `--runInBand --no-cache`
-- 백엔드 TypeScript: local `tsc --noEmit --incremental false`
-- 프런트 TypeScript: local `tsc --noEmit --incremental false`
-- `git diff --check`와 `git status --short -- DSM_Back DSM_Front`로 범위와 비의도 변경을 확인한다.
-- 실제 PostgreSQL, 외부 Google API, build, e2e와 `--fix`가 포함된 lint script는 실행하지 않는다. transaction 단일 승자와 rollback은 query 계약 단위 테스트로 검증하고 실제 DB 동시성 검증은 잔여 위험으로 보고한다.
-
-### Phase 7. 공유 memory 종료 기록
-- 1차 수정 파일:
-  - `.ai/memory/plan.md`
-  - `.ai/memory/context.md`
-- 2차 수정 파일:
-  - `.ai/memory/checklist.md`
-- 승인, 실제 변경 파일, 테스트 결과, transaction ownership 결정과 잔여 위험을 기록한다.
-
-## 구현 단계 전체 exact writable allowlist
-- `DSM_Back/.env.example`
-- `DSM_Back/src/config/env.validation.ts`
-- `DSM_Back/src/config/env.validation.spec.ts`
-- `DSM_Back/src/auth/auth.service.ts`
-- `DSM_Back/src/auth/auth.service.spec.ts`
-- `DSM_Back/src/scores/scores.service.ts`
-- `DSM_Back/src/scores/scores.service.spec.ts`
-- `DSM_Back/src/tasks/tasks.service.ts`
-- `DSM_Back/src/tasks/tasks.service.spec.ts`
-- `DSM_Front/src/types/css-modules.d.ts`
-- `.ai/memory/plan.md`
-- `.ai/memory/context.md`
-- `.ai/memory/checklist.md`
-
-## 명시적 제외 범위
-- 나머지 코드 리뷰 findings 전부: DB migration 부재, 소셜 계정 최초 생성 race, 랭킹, 날짜·상태 DTO, CORS, health/readiness, 예외 logging, reset script, 기타 입력 검증
-- Prisma schema와 migration, controller, route, DTO, package dependency와 lockfile 변경
-- API 기능 추가, 리팩터링 확장, formatting 일괄 변경
-
-## 완료 조건
-- 지정한 5건의 회귀 테스트와 전체 기존 테스트가 통과한다.
-- 백엔드와 프런트 TypeScript 검사가 모두 통과한다.
-- category 권한 검사와 task·score mutation이 같은 transaction 경계에 있음을 diff와 테스트로 확인한다.
-- refresh rotation에서 조건부 revoke가 단일 승자를 보장하고 새 token 생성까지 같은 transaction에 있음을 확인한다.
-- exact writable allowlist 밖 제품 파일에 변경이 없고 나머지 findings는 손대지 않는다.
-
-## 승인 게이트
-- 이 계획 작성 단계의 writable allowlist는 `.ai/memory/plan.md` 하나뿐이다.
-- 사용자 승인 전에는 위 제품 파일, 테스트, 환경 예시, context와 checklist를 수정하지 않는다.
-- **승인 기록**: 2026-07-15 사용자가 지정 5건의 구현 계획을 명시적으로 승인했다.
-- **실행 방식 기록**: 사용자의 추가 지시에 따라 제품 수정은 항상 역할 계약과 exact writable allowlist를 받은 서브 에이전트를 통해 수행하며, 메인 에이전트는 승인·공유 memory·diff 통합 검증을 담당한다.
-- **완료 기록**: 2026-07-15 `backend-developer` 2개 작업 흐름과 `frontend-developer`가 파일 소유권을 분리해 5건을 구현했다. `reviewer`가 기본 `Read Committed`의 stale score 가능성 P2를 발견해 `TasksService`에 `Serializable` isolation과 Prisma `P2034` 최대 2회 재시도를 추가했고, 재검토에서 기존 finding 해결 및 신규 finding 없음으로 확인했다.
-- **최종 검증**: 백엔드 Jest 16 suites, 99 tests 통과. 백엔드·프런트 `tsc --noEmit --incremental false` 통과. 계획된 제품 경로 10개 외 신규 제품 변경 없음.
-- **잔여 위험**: 실제 PostgreSQL 병렬 transaction, 외부 Google token, Expo runtime build는 실행하지 않았다. 고경합에서 3회 시도 모두 `P2034`이면 요청은 실패하지만 stale score는 commit하지 않는다.
-- **상태**: **구현·독립 재검토·검증 완료**
+
+DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이력을 함께 유지한다. 현재 최우선 목표는 완료된 current-PC Google session smoke와 `F-016` Android Git handoff를 기준선으로 보존하면서, 열린 full-project release-audit의 다음 confirmed P1 `F-006`을 별도 계획·승인 아래 수정·독립 recheck하는 것이다. audit 종료 전 M12C 완료 또는 release-ready로 표시하지 않는다.
+
+# Main branch integration review — 2026-08-26
+
+- 실행 계획: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` (16 tasks·71 checks), 설계: `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`.
+- 격리 worktree `C:\dsm-integration-review`, branch `codex/integration-main-review`; `main`과 `origin/main`은 `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`에서 변경하지 않는다.
+- canonical 제품 ref는 `origin/codex/front-secure-session-rest-client` `2a4e9916765b505037e1c533735d84cd9f251ccf`; Task 0~3 완료, Task 4 local non-squash merge가 진행 중이다.
+- 사용자가 `1번으로 실행 승인`과 2026-08-26 `ㄱ`으로 Task 4 네 충돌 경로 보정을 승인했다. 보정 commits: `e9e265a`, `aaef828`, `fa2fc88`, `5079b0e`.
+- 오프라인 학습 사이트는 미래의 별도 `codex/offline-learning-site` branch/worktree `C:\dsm-offline-learning-site`에만 둔다. 기준은 `43145b6`, memory source는 `fb54b5d`; `396fc0a`에서는 추출하지 않는다.
+- push, PR, `main` 변경, shared/remote DB 접근, 배포는 별도 사용자 승인 전 금지한다.
+
+# Memory SSOT
+
+- `plan.md`: 목표·계약·승인 경계·다음 계획
+- `context.md`: 구현·환경·검증·위험 snapshot
+- `checklist.md`: `[ ]|[/]|[x]` 공정 상태
+- `error-resolution-playbook.md`: 오류 작업의 검증 해결 지식
+- `README.md`: active/recovery routing·압축 검증
+- `*.original.md`: local recovery snapshot. Git·일반 검색·handoff·재압축 제외.
+- 상세 architecture: `.ai/docs/2026-07-15-current-project-architecture.md`
+- notification audit: `.ai/audits/20260716-change-gate-notification-12b/findings.jsonl`
+- front auth audit: `.ai/audits/20260725-change-gate-front-secure-session/findings.jsonl`
+- full project audit: `.ai/audits/20260817-release-audit-full-project/findings.jsonl`
+
+# 현재 상태 — 2026-08-17
+
+- M1~M11 완료: setup, Auth, Task, Category, refresh O(1), DailyScore, Ranking.
+- M12A 완료. M12B backend·local DB·change-gate 완료. M12C와 실제 FCM sandbox 미완료라 parent는 `[/]`.
+- Front secure session·REST client Task 1~33, Web QA, local DB migration, authentication change-gate 완료.
+- Android Google Tasks 1~7과 과거 EAS development APK는 완료 이력으로 보존한다. 현재 frontend는 Android-only React Native Community CLI로 전환해 Expo/EAS runtime·CLI·Router를 제거했다.
+- Android Studio, SDK `C:\Users\jemie\AppData\Local\Android\Sdk`, JDK 17 `C:\Users\jemie\.jdks\ms-17.0.20`, API 36 `Medium_Phone` AVD를 호스트에서 확인했다.
+- 순수 React Native Gradle sync·fresh `assembleDebug`·APK install·Metro bundle·로그인 화면 렌더를 확인했다. Windows Ninja path 문제를 피하도록 worktree는 `C:\DEV\fsr`를 유지한다.
+- disposable PostgreSQL에 migration 4개를 적용하고, frontend ignored public client ID를 출력 없이 backend process env audience로 연결해 Google 계정 인증 화면까지 진입했다.
+- value-redacted 비교로 앱 Web client와 Google Cloud project의 Web client 일치를 확인했고, 기존 Android clients 두 개가 현재 Android Studio debug signer와 불일치함을 확인했다. 사용자 승인 뒤 현재 signer용 Android OAuth client를 별도로 생성했다.
+- 재시도에서 Google ID token→`/auth/login`→Keychain session이 성공했다. force-stop/relaunch는 Home과 refresh rotation을 복구했고, logout은 active refresh token을 0으로 만든 뒤 재실행에서도 Login을 유지했다.
+- current debug OAuth blocker `F-025`는 독립 validator 2명과 fix-recheck를 거쳐 `RECHECKED`; provider reauth/OAuth 실패를 silent cancellation으로 삼키는 `F-026`은 `CONFIRMED P2`다.
+- full-project release-audit는 26건(confirmed 22, unknown 2, rechecked 2)으로 열려 있다. `F-016`과 `F-025`는 `RECHECKED`; confirmed P1/P2와 UNKNOWN이 남아 release-ready가 아니다.
+- branch `codex/front-secure-session-rest-client`; Android-only 기준선, F-016 closure와 active memory의 upstream 기준선은 `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`다. F-006 설계 문서 커밋은 local-only ahead 1이며 push·PR·merge·deploy·remote DB·Firebase send 없음.
+
+# 핵심 기술 계약
+
+## Backend·DB
+
+- NestJS + Prisma v6 + PostgreSQL. persisted time은 UTC `timestamptz`.
+- local PostgreSQL 17 Alpine: `127.0.0.1:5432/dsm`, UTC, healthy, `unless-stopped`, volume `dsm-back-postgres-data`.
+- migrations: `20260716_init`, `20260720_notification_delivery_outcome_policy`, `20260725_user_onboarding_completed_at`, `20260810_refresh_token_session_family`; 4 up-to-date, zero drift.
+- Task mutation·schedule sync·score recompute는 같은 Serializable transaction. Prisma `P2034`만 callback 전체 최대 2회 retry.
+- Category는 actor-owned/default만. score는 UTC day, difficulty 10/20/30, factor 1.5/1.3/1.0/0.7, cap 900, 6 tiers.
+
+## Auth·Front session
+
+- Google/Kakao backend 구현; Apple actual verification 보류. Access TTL 15분, Refresh TTL 30일.
+- Google은 `GOOGLE_CLIENT_ID` non-empty + ID token audience 일치 필수.
+- refresh `<recordId>.<secret>`; PK lookup + 1 bcrypt compare. conditional revoke winner + replacement create는 같은 transaction.
+- refresh family `sessionId`를 rotation에서 보존. refresh/logout은 같은 user-row `FOR UPDATE` lock으로 직렬화하고 logout은 제시 family의 active token만 revoke.
+- React Native `0.83.10` Android-only + React Navigation. access token은 memory only, refresh token은 Android `react-native-keychain@10.0.0`에 저장한다. Web/iOS target은 제거했다.
+- Native store: versioned key, serialized mutation queue, epoch guard, verified delete, tombstone fallback.
+- API URL·response runtime validation, one-attempt transport, sanitized fixed errors, token/Authorization log 금지.
+- authenticated client: 첫 `401`만 refresh single-flight, 원 요청 최대 1회 replay, generation/epoch fences로 logout·account-switch 뒤 stale refresh/replay 차단.
+- session controller: bootstrap/sign-in/refresh/profile/onboarding/logout state 분리. profile·onboarding epoch fence, offline bootstrap token 보존, refresh 401·protocol/storage failure fail-closed, offline logout local clear + best-effort revoke.
+- `User.onboardingCompletedAt`, `/auth/me`, 멱등 `/auth/me/onboarding`, exact-origin CORS(`credentials: false`) 완료.
+
+## Android Google
+
+- application ID `com.dsm.dailyup`.
+- `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`, `react-native-config@1.6.1`, React Native `0.83.10`.
+- provider adapter가 Google ID token 획득·취소·sanitized failure만 소유. 기존 `SessionController.signIn('GOOGLE', token)`이 DSM exchange·Keychain·routing을 소유.
+- `GOOGLE_WEB_CLIENT_ID`는 ignored `.env.local`의 public native build config이며 backend `GOOGLE_CLIENT_ID`와 같은 Web OAuth client를 가리켜야 한다. client secret은 frontend 금지.
+- ID token은 exchange 중 memory에서만 사용. 저장·log·error serialization 금지.
+- React Native Community CLI Android autolinking을 사용한다. Expo config plugin·prebuild·EAS는 현재 개발 경로가 아니다.
+- Google OAuth consent는 External testing. Web+Android OAuth client와 EAS development env/signing/cloud APK 구성 완료. credential·SHA-1·client ID 완전값은 Git·memory·chat 기록 금지.
+- 설계: `docs/superpowers/specs/2026-08-12-android-google-provider-login-design.md`
+- 구현 계획: `docs/superpowers/plans/2026-08-12-android-google-provider-login.md`
+- local Android 계획: `docs/superpowers/plans/2026-08-15-android-studio-local-development.md`
+
+## Notification 12A/12B
+
+- Node `>=22`, `firebase-admin@14.1.0`, `@nestjs/schedule@6.1.3`; ADC only. 12C 전 `FCM_DISPATCH_ENABLED=false`.
+- token lifecycle + Task-`NotificationSchedule` 원자 동기화. foreign-owner token/FID는 mutation 전 409.
+- Cron 30초, schedule claim 100, delivery 500, lease 5분, heartbeat 60초, per-device 최대 3회 명시적 failure retry.
+- send 직전 Task/schedule/delivery/token owner 재검증. `sendStartedAt` 뒤 모호 결과는 terminal `UNKNOWN`; 자동 재발송 금지.
+- payload는 account-neutral data-only `REMINDER_SYNC`/`version=1`; task/schedule/user ID·notification text 금지.
+- F-007 cancellation race는 사용자 `ACCEPTED_RISK`, `MITIGATION_ONLY`; 해결·`RECHECKED` 표시 금지.
+
+# 검증 기준선
+
+- Front Android-only gate: Jest 18 suites/162 tests, TypeScript, ESLint 0 errors(style/no-void warnings 18), Community CLI config/autolinking과 Expo runtime leakage check 통과.
+- Backend: Jest 23 suites/214 tests, e2e 1 suite/2 tests, Nest build, non-fixing lint, Prisma validate/generate 통과.
+- Local DB: 4 migrations up-to-date, zero drift, live `sessionId text NOT NULL`, `(userId, sessionId)` index, refresh-token NULL/total `0/0`.
+- auth change-gate F-001~F-005 전부 `RECHECKED`; 미해결 P0/P1·`UNKNOWN`·`ACCEPTED_RISK` 없음.
+- notification audit는 F-007만 `ACCEPTED_RISK`; 나머지 12건 `RECHECKED`.
+- EAS Android development build는 `FINISHED`와 archive 존재를 재검증했다.
+- 순수 React Native `assembleDebug`: `BUILD SUCCESSFUL in 19m 1s`, 365 tasks. Android Studio Gradle sync 뒤 Expo modules가 사라졌고 `Run app` build/install도 성공했다.
+- 2026-08-17 fresh gate: Backend 23 suites/214 + e2e 2, build/ESLint/Prisma; Frontend 18 suites/162, typecheck/ESLint; disposable DB migration 4개; Android assembleDebug 365 tasks 전부 통과했다.
+- 원격 feature branch clean checkout에서 `npm ci`, Frontend 18 suites/162, typecheck, ESLint, Community CLI config와 `assembleDebug` 365 tasks가 통과했다. Android 52개 추적, 금지 파일 0개, clean status와 APK SHA-256을 확인했다.
+- audit ledger는 26행 JSON parse, unique ID/fingerprint, SHA-256 재계산, severity별 validation 정적 계약을 통과했다. F-016 독립 recheck 반영 뒤 status count는 confirmed 22·unknown 2·rechecked 2다. 완전한 Draft 2020-12 validator는 설치하지 않았다.
+- Backend Prettier는 66 files에서 실패했다. npm audit는 Backend 15건, Frontend 17건, critical 0이다.
+- Prisma generate는 Windows DLL rename `EPERM` 방지를 위해 backend build/e2e와 직렬 실행한다.
+
+# 다음 실행 계획
+
+1. 다음 P1 `F-006` 데이터 무결성 문제를 새 plan과 exact 1–2-file stages로 분해하고 사용자 승인을 받는다. 남은 P1 `F-003`, `F-005`, `F-017`도 같은 절차로 처리한다.
+2. UNKNOWN `F-013`, `F-015`의 readiness·notification release scope 증거를 확정한다.
+3. `F-026`을 포함한 confirmed P2/P3를 수정·독립 recheck하고, 서로 다른 자유 탐색 2회에서 신규 confirmed P0–P2 0건을 연속 달성한다.
+4. audit 종료 후 M12C: permission, Firebase token rotation, data-only signal, authenticated current-state client를 진행한다.
+5. 별도 Firebase test project/device에서 ADC·FCM sandbox 후 dispatch 활성 여부를 판단한다.
+6. M13 WebSocket realtime ranking → M14 Redis/batch caching.
+
+# F-016 Android Git handoff 계획 — 2026-08-17
+
+- 상태: 완료. 설계·구현 계획 승인, 검증, 의도별 commit, feature branch push, clean checkout 재현과 독립 fix-recheck까지 마쳤고 audit `F-016`은 `RECHECKED`다.
+- 설계 SSOT: `docs/superpowers/specs/2026-08-17-f016-android-git-handoff-design.md`.
+- 선택안: `android/`만 단독 commit하지 않고 현재 Android-only React Native 전환 기준선 전체를 검증한 뒤 의도별 commit과 current feature branch push, clean-checkout 검증으로 handoff를 닫는다.
+- 이유: `android/` 52개가 모두 untracked이고, 네이티브 프로젝트가 요구하는 `package.json`, entrypoint, navigation/config/toolchain 변경도 미커밋이라 Android-only 기준선이 분리될 수 없다.
+- Git 경계: 작업 시작 시 branch는 origin보다 36 commits ahead였고, 승인된 push 뒤 현재 feature branch는 origin과 동기화됐다. `main` direct push·force push·PR·merge는 금지하고 `codex/front-secure-session-rest-client`만 사용한다.
+- 보안 경계: `.env.local`, `android/local.properties`, debug/release keystore, `.idea`, `.gradle`, build/cache, credential·token·OAuth 식별자 완전값은 stage·문서·출력에서 제외한다.
+- 완료 근거: commit `846cf1968ae0b729e0525ccb2af82f6fc5bd8e20`이 Android-only product와 native 52개를 추적했다. clean checkout 기준선은 `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`, F-016 closure까지 포함한 current remote HEAD는 `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`다.
+- clean handoff: 별도 checkout에서 npm install/test/type/lint/autolinking과 Gradle debug APK를 재현했다. `.env.local`, `local.properties`, keystore, `.gradle`, `.idea`, build/cache는 추적되지 않는다.
+- 독립 recheck: reviewer `f016_fix_rechecker_c`가 corrected commit range, remote/clean tree, wrapper/config, APK metadata/hash와 secret/local 경계를 확인해 `RECHECKED`; 신규 P0/P1 없음.
+- 후속: `F-016` RECHECKED 뒤 `F-006`을 별도 data-integrity change-gate로 설계·승인·TDD한다.
+
+# F-006 Task score integrity 계획 — 2026-08-17
+
+- 상태: 정책·설계 승인(`ㄱ`) 후 formal spec 작성·self-review 중. 제품 코드, migration, DB 적용 전 implementation plan과 별도 승인이 필요하다.
+- 설계 SSOT: `docs/superpowers/specs/2026-08-17-f006-score-integrity-design.md`.
+- 승인 정책: 과거·미래 Task 생성은 유지하되 사용자별 UTC `startAt` 날짜당 active Task 최대 20개, `completedAt`이 같은 UTC 날짜인 COMPLETED Task만 점수 인정, 기존 900점 cap 유지.
+- Task 상태 계약: generic update의 완료 전환은 `completedAt=now`, 완료 상태 이탈은 null, 반복 complete는 기존 non-null timestamp를 보존한다.
+- score 계약: 등록 수는 `startAt` 날짜 기준을 유지하고 same-day completion만 난이도 점수에 포함한다. late/early/null completion은 상태만 보존하고 점수는 0이다.
+- 기존 데이터: schema 변경 없이 data-only Prisma migration으로 `DailyScore`, `User.totalScore`와 tier를 canonical Task에서 재계산한다. Task timestamp와 historical `RankingSnapshot`은 변경하지 않는다.
+- 구현 경계: Task service+spec, Score service+spec, migration+real-DB e2e의 exact 2-file stages. remote/prod DB 적용 없음.
+- 검증: unit TDD, UTC boundary, 20개 create/move, completion state, disposable PostgreSQL 17 migration repair와 19+2 concurrent create, backend full gate, 구현자와 분리된 `fix-recheck`.
+- 오류 플레이북: `ER-20260715-004`는 Serializable stale-score/P2034 concurrency 해결이지만 이번 F-006의 arbitrary-date eligibility·20-count 누락과 root cause가 달라 직접 재사용하지 않는다. 기존 transaction retry 계약만 보존한다.
+- 다음 정지점: spec 문서 commit 뒤 사용자 written-spec review. 승인 전 제품 source/test/migration 수정 금지.
+
+# 승인·안전 경계
+
+- 실제 credential/token 조회·출력·문서화, physical-device 조작, Firebase send, remote/prod DB, deploy는 별도 action-time 승인 필요.
+- DB reset/drop, force push, main direct push 금지.
+- Git stage·commit·push·PR·merge는 명시 승인 전 금지.
+- 한 구현 단계는 exact 1~2 files. 기존 사용자 변경 보존.
+- 오류 작업은 먼저 `error-resolution-playbook.md`를 signature/component/code/tag로 검색. 환경·version·root cause 일치 `VERIFIED`만 현재 checkout에서 재검증.
+- auth/permission/data integrity/transaction/concurrency/time/external integration은 `.ai/agents/verification-workflow.md`의 `change-gate`; release 전 `release-audit`.
+- finder·validator·implementer·fix-recheck 분리. main만 audit ledger/shared memory 수정. confirmed fix는 새 plan + 사용자 승인 + exact allowlist 필요.
+
+# 잔여 위험·보류
+
+- 현재 PC의 native provider-token/session lifecycle smoke는 통과했다. Google OAuth client는 Git 밖의 persistent external state이고 backend audience는 이번 process에만 임시 연결했으므로 repository release provisioning은 여전히 없다.
+- Android native project는 feature branch에 52개 파일이 추적·push되어 clean checkout 재현이 가능하다. `main` 통합은 아직 하지 않았다.
+- release signing과 release `.env` provisioning이 없어 production artifact/start path가 닫히지 않는다.
+- 핵심 Task/Score/Ranking Android UI는 prototype state·고정 data를 사용한다.
+- 임의 날짜 Task 즉시 완료가 누적 점수/TOTAL ranking에 반영되는 integrity blocker가 있다.
+- Expo runtime은 없지만 launcher/splash/app name에 Expo/template branding이 남아 있다.
+- 각 PC의 기본 debug keystore가 다르므로 새 PC는 `signingReport`의 debug SHA-1을 같은 Google Cloud project의 `com.dsm.dailyup` Android OAuth client로 별도 등록해야 한다. 전체 fingerprint/client ID는 Git·memory·chat 기록 금지.
+- session controller의 최초 snapshot은 `bootstrapping/recovering`; 저장 세션 cold start 첫 프레임에 Login route를 노출하지 않는다.
+- Node 문서 계약 `>=20.19.4 <21 || >=22.0.0`은 direct testing dependency의 `^22.13.0 || >=24` engine과 충돌한다. 수정 전 clean-PC 권장 runtime은 현재 검증된 Node 24다.
+- 비-Expo 라이브러리 2개가 호환성 metadata로 `@expo/config-plugins`를 transitive lock dependency로 포함하지만 Expo runtime·CLI·autolinking에는 참여하지 않는다.
+- actual multi-connection PostgreSQL refresh/logout interleaving 미실행.
+- actual Firebase delivery와 F-007 race는 완화·gate 유지.
+- dependency audit 32건(critical 0; Backend 15, Frontend 17) 별도 triage.
+- Task parser hash/non-string 명시 test, Apple verification, revoked-token reuse hook, UTC midnight score Cron 보류.
+- M12C, WebSocket, Redis/batch 미구현.
+
+# `.ai/memory` 압축·정리 — 2026-08-16
+
+- `caveman-compress` 스크립트는 `read_text(errors="ignore")`·인코딩 미지정 `write_text()`를 사용해 `ER-20260720-014` 적용 조건과 일치하므로 실행 금지. 외부 Claude 전송 없음.
+- 기존 `*.original.md`는 비접근·비덮어쓰기. 새 날짜 backup에 byte-exact pre-image 보존.
+- active 3문서는 current-state·계약·gate 중심 local-only 압축. 상세 완료 이력은 linked spec/plan/audit/source가 소유.
+- README가 backup hash·크기·압축률과 최종 검증을 기록한다.
+- 제품 code/test/config, Android artifact, DB, Docker, Firebase, Git write는 범위 밖이다.
+
+# 완료 기준
+
+1. 시작·종료 시 active 3문서와 actual source/test/Git 상태 대조.
+2. 오류 작업은 playbook match·적용 가능성 기록.
+3. plan + exact allowlist + 사용자 승인 후 실행.
+4. proportional verification·필요 시 independent review.
+5. 최종 memory 동기화, 미실행 검증·잔여 위험·승인 gate 보고.

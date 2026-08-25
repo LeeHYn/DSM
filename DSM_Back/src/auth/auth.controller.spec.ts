@@ -11,10 +11,17 @@ const TOKEN_RESPONSE = {
   refreshToken: 'refresh-token',
 };
 
+const CURRENT_USER = {
+  userId: 'user-uuid-1',
+  onboardingCompletedAt: new Date('2026-07-25T00:00:00.000Z'),
+};
+
 const makeAuthServiceMock = () => ({
   socialLogin: jest.fn().mockResolvedValue(TOKEN_RESPONSE),
   refreshTokens: jest.fn().mockResolvedValue(TOKEN_RESPONSE),
   logout: jest.fn().mockResolvedValue(undefined),
+  getCurrentUser: jest.fn().mockResolvedValue(CURRENT_USER),
+  completeOnboarding: jest.fn().mockResolvedValue(CURRENT_USER),
 });
 
 describe('AuthController', () => {
@@ -60,8 +67,21 @@ describe('AuthController', () => {
     expect(result).toEqual(TOKEN_RESPONSE);
   });
 
-  it('me returns userId from jwt payload', () => {
+  it('me returns the canonical current-user projection', async () => {
     const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
-    expect(controller.me(req)).toEqual({ userId: 'user-uuid-1' });
+
+    await expect(controller.me(req)).resolves.toEqual(CURRENT_USER);
+    expect(authServiceMock.getCurrentUser).toHaveBeenCalledWith('user-uuid-1');
+  });
+
+  it('completeOnboarding delegates with the authenticated user', async () => {
+    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
+
+    await expect(controller.completeOnboarding(req)).resolves.toEqual(
+      CURRENT_USER,
+    );
+    expect(authServiceMock.completeOnboarding).toHaveBeenCalledWith(
+      'user-uuid-1',
+    );
   });
 });

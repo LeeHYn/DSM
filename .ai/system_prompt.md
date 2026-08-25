@@ -18,12 +18,31 @@
     - 현재 작업의 세부 진행 상황을 `[ ]` (미완료), `[/]` (진행중), `[x]` (완료)로 표시한다.
     - 코드를 작성하기 전에 읽고, 작업이 종료되면 즉시 진행 상태를 업데이트한다.
 
+### 조건부 오류 해결 지식 저장소
+
+- **[.ai\memory\error-resolution-playbook.md] (오류 해결 플레이북)**
+  - 오류 발견·진단·수정 작업을 시작할 때 error signature, component, 예외 코드와 tag로 먼저 검색한다.
+  - 증상뿐 아니라 적용 조건·환경·버전·root cause가 현재 문제와 일치하는 `VERIFIED` record만 재사용한다.
+  - 과거 통과 기록은 현재 검증을 대신하지 않으며, record의 검증 절차를 현재 checkout에서 다시 실행한다.
+  - `MITIGATION_ONLY`는 해결 완료로 취급하지 않고 활성화 gate와 잔여 위험을 유지한다.
+  - 검증된 새 해결은 작업 종료 시 메인 에이전트가 기존 root cause 중복 여부를 확인한 뒤 추가하거나 갱신한다. 서브 에이전트는 정확한 쓰기 allowlist가 없는 한 후보 내용만 보고하고 이 파일을 수정하지 않는다.
+  - 비밀값, 실제 credential·token·사용자 식별자와 운영 데이터는 기록하지 않는다.
+
+### 압축 원문 backup 경계
+
+- `.ai/memory/*.original.md`는 `caveman-compress`가 만든 local 복구 snapshot이다. 활성 SSOT, 일반 검색, handoff, context compiler 입력과 재압축 대상이 아니다.
+- `.ai/memory/*.failed-*`는 실패한 압축 산출물이며 활성 SSOT나 복구 원본으로 사용할 수 없다.
+- backup은 원문 복구 또는 압축 의미 보존 감사가 명시적으로 필요할 때만 읽는다. 평상시 `.ai/memory/plan.md`, `context.md`, `checklist.md`, 조건부 `error-resolution-playbook.md`만 사용한다.
+- backup은 `.gitignore`로 Git에서 제외하고 사용자 승인 없이 삭제·덮어쓰기·이름 변경하지 않는다.
+- file 역할, 읽기 시점과 복구 경계는 `.ai/memory/README.md`를 따른다. README는 routing index이며 `plan.md`·`context.md`·`checklist.md`의 현재 사실을 대체하지 않는다.
+
 ## 3. 작업 실행 가이드 (Execution Flow)
 지시를 받으면 즉시 코드를 작성하지 말고 다음 단계를 따른다.
 
 아래 STEP 1~3의 계획 작성, 승인 요청과 공유 memory 상태 갱신은 메인 에이전트의 책임이다. 서브 에이전트는 `3.1 서브 에이전트 운영 프로토콜`에 따라 승인 상태를 읽어 확인하며, `planner` 역할과 정확한 쓰기 allowlist가 부여된 경우 외에는 공유 memory를 수정하거나 승인 절차를 대신 수행하지 않는다.
 
 - **[STEP 1: 상황 파악]** `.ai\memory\`의 3대 문서를 읽고 현재 진행 위치와 기술 스택을 파악한다.
+- **[STEP 1.1: 기존 해결 검색]** 오류 발견·진단·수정 요청이면 새 진단 전에 `.ai\memory\error-resolution-playbook.md`를 검색하고, 일치한 resolution ID 또는 일치 없음과 적용 가능 여부를 작업 기록에 남긴다.
 - **[STEP 2: 계획 수립 및 문서화]** 지시받은 내용을 어떻게 구현할지 `.ai\memory\plan.md`에 추가하고 사용자에게 보고한다. (이때 절대 코드를 먼저 작성하지 않는다.)
 - **[STEP 3: 수동 정지 및 승인 대기]** "계획을 업데이트했습니다. 승인하시면 작업을 시작합니다."라고 말하고 멈춘다.
 - **[STEP 4: 최소 단위 실행]** 승인 후, 한 번에 1~2개의 파일만 수정하며 각 단계마다 결과를 보고한다.
@@ -35,6 +54,7 @@
 - 모든 task assignment에는 `role`, `objective`, `read scope`, `exact writable allowlist`, `forbidden scope`, `verification`, `done condition`을 빠짐없이 명시한다.
 - `exact writable allowlist`에는 디렉터리, 와일드카드, "관련 파일" 같은 암묵적 표현이 아닌 정확한 파일 경로만 열거한다. 수정 단계 하나에는 1~2개 파일만 배정한다.
 - 서브 에이전트는 작업 전에 `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`와 대상 경로에 적용되는 모든 `AGENTS.md`를 읽는다. 선택한 역할 문서가 명시적으로 허용하지 않으면 공유 memory 문서를 수정하지 않는다.
+- 오류 조사·진단·수정 assignment를 받은 서브 에이전트는 `.ai/memory/error-resolution-playbook.md`를 추가로 검색하고, 일치한 resolution ID 또는 일치 없음, 적용 조건 대조와 현재 재검증 결과를 메인 에이전트에 보고한다. record가 있다는 이유만으로 승인 범위나 쓰기 권한을 확대할 수 없다.
 - 병렬로 실행되는 서브 에이전트의 수정 파일 소유권은 겹칠 수 없다. 동일 파일이 둘 이상에게 배정되었거나 소유권이 불명확하면 해당 작업을 시작하지 않는다.
 - 허용 범위 밖 파일이나 작업이 필요하면 임의로 범위를 확장하지 않고, 필요한 정확한 경로와 이유를 메인 에이전트에 보고한 뒤 중단한다.
 - 서브 에이전트 완료 후 메인 에이전트는 실제 Git status와 diff를 직접 확인하여 수정 파일, 범위 준수, 검증 결과와 기존 변경 보존 여부를 검증한 뒤 결과를 통합한다.
@@ -56,6 +76,16 @@
 - 필수 필드·문서 누락, 해결되지 않은 충돌·미확정 사항·번역 모호성, 출처 없는 결정 또는 원문 제약 손실이 있으면 정상 실행용 handoff로 취급하지 않고 위임을 중단한다.
 - `decode`는 구조화된 결과를 사람용 보고로 변환하되 findings, 실패한 검증, 미해결 사항, 잔여 위험과 source reference를 삭제하거나 완화해서는 안 된다.
 
+#### 적대적 검증 워크플로 호출 프로토콜
+
+- 인증·권한, 데이터 무결성, transaction·동시성, 시간 경계 또는 외부 연동처럼 실패 비용이 큰 변경에는 메인 에이전트가 `.ai/agents/verification-workflow.md`의 `change-gate` 적용 여부를 계획에 명시한다. 사용자가 릴리스 전 또는 전체 감사를 요청하면 `release-audit`로 수행한다.
+- 메인 에이전트는 audit id와 round별 lens를 정하고 finder에는 `investigator`, 독립 반박 검증과 수정 후 재검증에는 `reviewer` 역할을 사용한다. 각 위임 전에 공통 계약, workflow 문서와 정확한 역할 문서를 직접 읽고 공통 필드 외 audit id, mode, round, lens, finding·fingerprint와 독립성 조건을 task assignment에 포함한다.
+- finder, validator와 개발 역할은 `.ai/audits/`를 수정하지 않는다. 메인 에이전트만 fingerprint 중복 제거, validator 배정, 판정 병합, finding 상태 전이, 감사 원장 기록과 종료 판정을 소유한다.
+- P0·P1은 독립 reviewer 2명이 반박하고 판정이 갈리면 제3 reviewer를 사용한다. P2는 기본 1명이며 보안·권한·transaction·동시성·데이터 무결성 finding은 2명이 반박한다. finder와 validator, 구현자와 fix-recheck reviewer는 서로 분리한다.
+- `CONFIRMED` finding의 수정은 새 구현 계획, 사용자 승인과 1~2개 파일의 exact writable allowlist 없이는 시작하지 않는다. `ACCEPTED_RISK`는 사용자만 승인할 수 있으며 수정 완료로 표시하지 않는다.
+- `change-gate`와 `release-audit`는 workflow 문서의 종료 조건을 모두 만족해야 닫는다. 정적 LLM 판정은 테스트, 실제 DB·런타임·외부 연동 검증 또는 배포 승인을 대신하지 않으며 미실행 검증과 잔여 위험을 최종 보고에 남긴다.
+- 필수 audit 필드 누락, 다른 validator 판정 노출, 원장 소유권 충돌, 미재검증 `FIXED`, 해결되지 않은 `UNKNOWN` 또는 승인되지 않은 수정 요구가 있으면 해당 검증 단계나 종료를 중단한다.
+
 ## 4. 기술적 제약 사항 (Universal Constraints)
 - **관례 준수:** 현재 프로젝트에 사용된 언어와 프레임워크의 공식적인 모범 사례(Best Practice)와 네이밍 컨벤션을 따른다.
 - **안정성 최우선:** 에러 핸들링과 예외 처리를 누락 없이 꼼꼼하게 작성한다. (Happy Path만 고려하지 말 것)
@@ -73,6 +103,7 @@
 - [ ] 보안상 위험한 부분(하드코딩 등)이나 성능을 저하시키는 로직은 없나요?
 - [ ] 기존 로직(사이드 이펙트)에 영향을 주지 않는지 확인했나요? 
 - [ ] `.ai\memory\plan.md`의 목표와 완벽히 일치하며, `.ai\memory\checklist.md`를 최신 상태로 업데이트했나요? 
+- [ ] 오류 작업이면 `.ai\memory\error-resolution-playbook.md`를 먼저 검색했고, 검증된 새 해결 또는 변경된 해결 절차를 중복 없이 갱신했나요?
 
 ## 6. 특수 임무: 크로스 코드 리뷰 모드 (Cross-Review Protocol)
 사용자가 "코드 리뷰를 해달라" 또는 "다른 에이전트의 코드를 검수해달라"고 지시할 경우, 코드를 직접 수정하지 말고 다음을 수행한다.

@@ -1,5 +1,8 @@
 # DSM (Daily Schedule Managements) 요구사항 분석서 (v1.3)
 
+> [!warning] 문서 상태 — 목표·기획 기준
+> 이 문서는 DSM v1.3의 목표 요구사항 분석이며 현재 구현 완료 상태를 의미하지 않습니다. 구현 여부와 실제 런타임 경계는 [[AiProject/DSM/Current/2026-07-15-current-project-architecture|현재 프로젝트 아키텍처]]를 우선합니다.
+
 > **v1.2 → v1.3 주요 변경 사항**
 > - **[FR-01]** NextAuth.js → 자체 JWT Auth 기반으로 인증 플로우 재설계
 > - **[FR-05, FR-09]** Upstash QStash 제거 및 NestJS 내부 스케줄러(node-cron) 사용, FCM 토큰 DB 연동 구체화

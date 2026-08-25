@@ -30,4 +30,10 @@ build/
 # NestJS
 dist/
 
+# Local Git worktrees
+.worktrees/
+
+# AI memory compression recovery backups
+.ai/memory/*.original.md
+.ai/memory/*.failed-*
 /.superpowers/sdd/

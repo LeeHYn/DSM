@@ -30,6 +30,8 @@ const makeClientMock = () => ({
     update: jest.fn(),
   },
   category: { findFirst: jest.fn() },
+  notificationSchedule: { updateMany: jest.fn() },
+  notificationDelivery: { updateMany: jest.fn() },
 });
 
 type ClientMock = ReturnType<typeof makeClientMock>;
@@ -42,9 +44,8 @@ const makeTransactionConflict = () =>
 
 const makePrismaMock = (transactionMock: ClientMock) => ({
   ...makeClientMock(),
-  $transaction: jest.fn(
-    (callback: (client: ClientMock) => Promise<unknown>) =>
-      callback(transactionMock),
+  $transaction: jest.fn((callback: (client: ClientMock) => Promise<unknown>) =>
+    callback(transactionMock),
   ),
 });
 
@@ -68,6 +69,10 @@ describe('TasksService', () => {
     }).compile();
 
     service = module.get<TasksService>(TasksService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('create', () => {
@@ -100,6 +105,64 @@ describe('TasksService', () => {
       );
       expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.task.create).not.toHaveBeenCalled();
+    });
+
+    it('creates one pending schedule for an enabled future task', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
+      transactionMock.task.create.mockResolvedValue(MOCK_TASK);
+
+      await service.create('user-uuid-1', {
+        title: 'Morning run',
+        startAt: '2026-06-03T06:00:00Z',
+        endAt: '2026-06-03T07:00:00Z',
+        difficulty: TaskDifficulty.MEDIUM,
+      });
+
+      expect(transactionMock.task.create).toHaveBeenCalledWith({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.objectContaining({
+          userId: 'user-uuid-1',
+          notificationSchedules: {
+            create: {
+              userId: 'user-uuid-1',
+              scheduledAt: new Date('2026-06-03T06:00:00Z'),
+              status: 'PENDING',
+            },
+          },
+        }),
+      });
+      expect(
+        transactionMock.task.create.mock.invocationCallOrder[0],
+      ).toBeLessThan(scoresMock.recompute.mock.invocationCallOrder[0]);
+    });
+
+    it.each([
+      ['a past task', '2026-05-31T23:59:59Z', undefined],
+      ['a task starting exactly now', '2026-06-01T00:00:00Z', undefined],
+      ['a disabled future task', '2026-06-03T06:00:00Z', false],
+    ])('does not schedule %s', async (_label, startAt, notificationEnabled) => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
+      transactionMock.task.create.mockResolvedValue({
+        ...MOCK_TASK,
+        startAt: new Date(startAt),
+        notificationEnabled: notificationEnabled ?? true,
+      });
+
+      await service.create('user-uuid-1', {
+        title: 'Morning run',
+        startAt,
+        endAt: '2026-06-03T07:00:00Z',
+        difficulty: TaskDifficulty.MEDIUM,
+        notificationEnabled,
+      });
+
+      expect(transactionMock.task.create).toHaveBeenCalledWith({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.not.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          notificationSchedules: expect.anything(),
+        }),
+      });
     });
 
     it.each([
@@ -166,6 +229,22 @@ describe('TasksService', () => {
           difficulty: TaskDifficulty.MEDIUM,
         }),
       ).rejects.toBe(recomputeError);
+    });
+
+    it('does not recompute scores when the task nested write fails', async () => {
+      const writeError = new Error('task and schedule write failed');
+      transactionMock.task.create.mockRejectedValue(writeError);
+
+      await expect(
+        service.create('user-uuid-1', {
+          title: 'Morning run',
+          startAt: '2099-06-03T06:00:00Z',
+          endAt: '2099-06-03T07:00:00Z',
+          difficulty: TaskDifficulty.MEDIUM,
+        }),
+      ).rejects.toBe(writeError);
+
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
     });
   });
 
@@ -318,6 +397,239 @@ describe('TasksService', () => {
         MOCK_TASK.startAt,
         transactionMock,
       );
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.not.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          notificationSchedules: expect.anything(),
+        }),
+      });
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        'start time',
+        MOCK_TASK,
+        { startAt: '2026-06-04T06:00:00Z' },
+        new Date('2026-06-04T06:00:00Z'),
+      ],
+      [
+        'notification enablement',
+        { ...MOCK_TASK, notificationEnabled: false },
+        { notificationEnabled: true },
+        MOCK_TASK.startAt,
+      ],
+      [
+        'status back to pending',
+        { ...MOCK_TASK, status: TaskStatus.CANCELLED },
+        { status: TaskStatus.PENDING },
+        MOCK_TASK.startAt,
+      ],
+    ])(
+      'cancels nonterminal notifications and creates the next pending schedule when %s actually changes',
+      async (_label, existingTask, dto, scheduledAt) => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
+        const updatedTask = {
+          ...existingTask,
+          ...dto,
+          startAt:
+            'startAt' in dto && dto.startAt
+              ? new Date(dto.startAt)
+              : existingTask.startAt,
+        };
+        transactionMock.task.findFirst.mockResolvedValue(existingTask);
+        transactionMock.task.update.mockResolvedValue(updatedTask);
+
+        await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+        expect(
+          transactionMock.notificationSchedule.updateMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            taskId: 'task-uuid-1',
+            status: { in: ['PENDING', 'PROCESSING'] },
+          },
+          data: { status: 'CANCELLED' },
+        });
+        expect(
+          transactionMock.notificationDelivery.updateMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            schedule: { taskId: 'task-uuid-1' },
+            status: { in: ['PENDING', 'PROCESSING'] },
+          },
+          data: {
+            status: 'CANCELLED',
+            claimId: null,
+            processingStartedAt: null,
+            nextAttemptAt: null,
+          },
+        });
+        expect(transactionMock.task.update).toHaveBeenCalledWith({
+          where: { id: 'task-uuid-1' },
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          data: expect.objectContaining({
+            notificationSchedules: {
+              create: {
+                userId: 'user-uuid-1',
+                scheduledAt,
+                status: 'PENDING',
+              },
+            },
+          }),
+        });
+        expect(
+          transactionMock.notificationSchedule.updateMany.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(
+          transactionMock.notificationDelivery.updateMany.mock
+            .invocationCallOrder[0],
+        );
+        expect(
+          transactionMock.notificationDelivery.updateMany.mock
+            .invocationCallOrder[0],
+        ).toBeLessThan(transactionMock.task.update.mock.invocationCallOrder[0]);
+        expect(
+          transactionMock.task.update.mock.invocationCallOrder[0],
+        ).toBeLessThan(scoresMock.recompute.mock.invocationCallOrder[0]);
+      },
+    );
+
+    it.each([
+      ['notification disablement', { notificationEnabled: false }],
+      ['cancellation', { status: TaskStatus.CANCELLED }],
+    ])('cancels nonterminal notifications after %s', async (_label, dto) => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockResolvedValue({ ...MOCK_TASK, ...dto });
+
+      await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          taskId: 'task-uuid-1',
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          schedule: { taskId: 'task-uuid-1' },
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          claimId: null,
+          processingStartedAt: null,
+          nextAttemptAt: null,
+        },
+      });
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.not.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          notificationSchedules: expect.anything(),
+        }),
+      });
+    });
+
+    it.each([
+      ['the same start time', { startAt: '2026-06-03T06:00:00Z' }],
+      ['the same notification setting', { notificationEnabled: true }],
+      ['the same status', { status: TaskStatus.PENDING }],
+    ])('does not write schedules for %s', async (_label, dto) => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockResolvedValue(MOCK_TASK);
+
+      await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.not.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          notificationSchedules: expect.anything(),
+        }),
+      });
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('cancels nonterminal notifications without creating a schedule when changed start time is not future', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-04T06:00:00Z'));
+      const movedTask = {
+        ...MOCK_TASK,
+        startAt: new Date('2026-06-04T06:00:00Z'),
+      };
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockResolvedValue(movedTask);
+
+      await service.update('user-uuid-1', 'task-uuid-1', {
+        startAt: '2026-06-04T06:00:00Z',
+      });
+
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          taskId: 'task-uuid-1',
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          schedule: { taskId: 'task-uuid-1' },
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          claimId: null,
+          processingStartedAt: null,
+          nextAttemptAt: null,
+        },
+      });
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.not.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          notificationSchedules: expect.anything(),
+        }),
+      });
+    });
+
+    it('does not recompute scores when the task nested write fails', async () => {
+      const writeError = new Error('task and schedule update failed');
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockRejectedValue(writeError);
+
+      await expect(
+        service.update('user-uuid-1', 'task-uuid-1', {
+          notificationEnabled: false,
+        }),
+      ).rejects.toBe(writeError);
+
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
     });
 
     it('does not reload an unchanged category', async () => {
@@ -420,17 +732,66 @@ describe('TasksService', () => {
         expect.any(Function),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          taskId: 'task-uuid-1',
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          schedule: { taskId: 'task-uuid-1' },
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          claimId: null,
+          processingStartedAt: null,
+          nextAttemptAt: null,
+        },
+      });
       expect(transactionMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+          data: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            deletedAt: expect.any(Date),
+          }),
         }),
       );
+      expect(
+        transactionMock.notificationSchedule.updateMany.mock
+          .invocationCallOrder[0],
+      ).toBeLessThan(
+        transactionMock.notificationDelivery.updateMany.mock
+          .invocationCallOrder[0],
+      );
+      expect(
+        transactionMock.notificationDelivery.updateMany.mock
+          .invocationCallOrder[0],
+      ).toBeLessThan(transactionMock.task.update.mock.invocationCallOrder[0]);
       expect(scoresMock.recompute).toHaveBeenCalledWith(
         'user-uuid-1',
         MOCK_TASK.startAt,
         transactionMock,
       );
+    });
+
+    it('does not recompute scores when the task nested write fails', async () => {
+      const writeError = new Error('task and schedule remove failed');
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockRejectedValue(writeError);
+
+      await expect(service.remove('user-uuid-1', 'task-uuid-1')).rejects.toBe(
+        writeError,
+      );
+
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
     });
   });
 
@@ -452,6 +813,29 @@ describe('TasksService', () => {
         expect.any(Function),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          taskId: 'task-uuid-1',
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          schedule: { taskId: 'task-uuid-1' },
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          claimId: null,
+          processingStartedAt: null,
+          nextAttemptAt: null,
+        },
+      });
       expect(transactionMock.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -462,11 +846,34 @@ describe('TasksService', () => {
           }),
         }),
       );
+      expect(
+        transactionMock.notificationSchedule.updateMany.mock
+          .invocationCallOrder[0],
+      ).toBeLessThan(
+        transactionMock.notificationDelivery.updateMany.mock
+          .invocationCallOrder[0],
+      );
+      expect(
+        transactionMock.notificationDelivery.updateMany.mock
+          .invocationCallOrder[0],
+      ).toBeLessThan(transactionMock.task.update.mock.invocationCallOrder[0]);
       expect(scoresMock.recompute).toHaveBeenCalledWith(
         'user-uuid-1',
         completedTask.startAt,
         transactionMock,
       );
+    });
+
+    it('does not recompute scores when the task nested write fails', async () => {
+      const writeError = new Error('task and schedule completion failed');
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockRejectedValue(writeError);
+
+      await expect(service.complete('user-uuid-1', 'task-uuid-1')).rejects.toBe(
+        writeError,
+      );
+
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
     });
   });
 });

@@ -10,12 +10,12 @@
 
 | 역할 문서 | 역할 | 기본 쓰기 경계 |
 |---|---|---|
-| [`investigator`](./investigator.md) | 저장소 상태와 원인을 조사하는 읽기 전용 역할 | `none` — 모든 파일 수정·생성·삭제 금지 |
+| [`investigator`](./investigator.md) | 저장소 상태와 원인을 조사하고 검증 lens에서 후보 finding을 찾는 읽기 전용 역할 | `none` — 모든 파일 수정·생성·삭제 금지 |
 | [`context-compiler`](./context-compiler.md) | 프롬프트·문서를 영어 Markdown 프롬프트, 필수 Markdown 읽기 목록과 `AgentEnvelope v1.1` JSON으로 컴파일하거나 구조화 결과를 사람용 보고로 복원하는 읽기 전용 역할 | `none` — 모든 파일 수정·생성·삭제 금지 |
 | [`planner`](./planner.md) | 근거 기반 구현 계획을 작성하는 plan-only 역할 | 승인되고 allowlist에 정확히 명시된 `.ai/memory/plan.md` 또는 단일 `.ai/docs/<exact-plan-file>.md`만 |
 | [`backend-developer`](./backend-developer.md) | 승인된 NestJS 백엔드 구현 역할 | allowlist에 정확히 명시된 `DSM_Back/` 아래 파일 1~2개만 |
 | [`frontend-developer`](./frontend-developer.md) | 승인된 React Native·Expo Router 구현 역할 | allowlist에 정확히 명시된 `DSM_Front/` 아래 파일 1~2개만. `DSM_Front/AGENTS.md`와 Expo SDK 55 공식 문서 확인 필수 |
-| [`reviewer`](./reviewer.md) | 소스와 diff를 검토하는 review-only 역할 | 기본 `none`; 선택적으로 allowlist에 정확히 명시된 단일 `.ai/codeReview/<exact-report-file>.md`만 |
+| [`reviewer`](./reviewer.md) | 소스와 diff를 검토하고 독립 반박 검증·수정 후 재검증을 수행하는 review-only 역할 | 기본 `none`; 선택적으로 allowlist에 정확히 명시된 단일 `.ai/codeReview/<exact-report-file>.md`만 |
 
 역할 문서가 없거나 목표와 역할이 일치하지 않으면 메인 에이전트는 서브 에이전트를 생성하지 않습니다. 생성 후 불일치가 발견되면 서브 에이전트는 즉시 중단하고 메인 에이전트에 보고합니다.
 
@@ -73,6 +73,18 @@
 - SSOT, 표, 코드 블록, 긴 규칙 또는 전체 문맥 의존성이 있는 `.md`는 요약으로 대체하지 않고 정확한 경로와 읽기 범위를 제공해 대상 에이전트가 직접 읽게 합니다.
 - handoff package는 `.ai/system_prompt.md`, 공유 memory, 공통 계약, 대상 역할 문서와 적용되는 `AGENTS.md`의 원문을 대체하지 않습니다. context compiler와 대상 에이전트는 각자 필수 원문을 직접 읽습니다.
 - 필수 필드·문서 누락, 해결되지 않은 충돌·번역 모호성, 출처 없는 결정 또는 원문 제약 손실이 있으면 실행용 handoff package를 만들지 않고 중단합니다.
+
+### 적대적 검증 워크플로
+
+고위험 변경의 `change-gate` 또는 릴리스 전 `release-audit`에는 [`verification-workflow.md`](./verification-workflow.md)를 적용합니다.
+
+- `investigator`는 지정 lens의 읽기 전용 finder이며 후보 finding과 근거를 반환합니다.
+- `reviewer`는 `adversarial-validation` 또는 `fix-recheck` 모드로 독립 판정하며 다른 validator의 판정을 전달받지 않습니다.
+- 메인 에이전트만 audit id, fingerprint 중복 제거, validator 배정, 판정 병합, 상태 전이, `.ai/audits/` 원장과 종료 판정을 소유합니다.
+- 확정 finding의 제품 수정은 별도 계획, 사용자 승인과 개발 역할의 exact writable allowlist 없이는 시작하지 않습니다.
+- 워크플로 판정은 테스트, 실제 DB·외부 연동 검증이나 배포 승인을 대체하지 않습니다.
+
+감사 위임에는 공통 필수 필드 외에 audit id, mode, round, lens, finder/validator 구분, reviewer 모드, 기존 fingerprint와 구조화 출력 계약을 명시해야 합니다. 누락되거나 원장 쓰기 권한이 서브 에이전트에 배정되면 작업을 중단합니다.
 
 ## 4. 쓰기 권한과 파일 소유권
 
