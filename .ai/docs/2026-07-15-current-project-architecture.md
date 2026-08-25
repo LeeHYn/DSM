@@ -1,8 +1,8 @@
 # DSM 현재 프로젝트 전체 아키텍처
 
-> 기준일: 2026-07-15
+> 기준일: 2026-07-25
 >
-> 기준 저장소: `C:\DEV` 현재 checkout
+> 기준 저장소: `C:\DEV` branch `codex/m12b-front-prototype-checkpoint`, checkpoint `9ee7b97`
 > 문서 성격: 목표 설계가 아니라 **현재 구현을 우선하는 아키텍처 스냅샷**
 
 ## 1. 문서 목적과 판정 기준
@@ -29,7 +29,8 @@ DSM(Daily Schedule Managements)은 일과 관리, 점수·티어, 전체 사용�
 | 영역 | 현재 상태 | 핵심 판정 |
 |---|---|---|
 | 백엔드 | **구현됨** | NestJS 11 기반 modular monolith. Auth, Category, Task, DailyScore, Ranking REST API와 PostgreSQL/Prisma 계층이 있다. |
-| 프런트엔드 | **구현됨(플랫폼 셸)** | Expo SDK 55, Expo Router, native/web 2탭, splash·theme·platform 분기까지만 있다. DSM 제품 화면과 API 연동은 없다. |
+| 프런트엔드 | **제품 프로토타입 구현됨** | Expo SDK 55와 Expo Router 기반으로 로그인·튜토리얼·홈·랭킹·마이페이지, Task 생성·완료·삭제와 loading·empty·error·offline 상태를 구현했다. 상태와 데이터는 `PrototypeProvider`의 local mock이며 실제 OAuth·REST API·DB·FCM 연동은 없다. |
+| Front session/API | **설계 명세 완료·진행 중** | iOS/Android secure refresh token, memory-only access token, Web 비지속 session, single-flight refresh, runtime response validation과 CORS 축소 설계 명세를 작성·자체 검토했다. 상세 TDD 계획과 제품 코드는 아직 없다. |
 | 데이터 모델 | **구현·로컬 적용됨** | Prisma schema와 Branch A 초기 migration에 사용자, 인증, 일과, 점수, 랭킹, FCM token, 알림 예약·device별 delivery 모델이 있다. 지속형 로컬 PostgreSQL에 migration을 적용했고 live schema parity를 확인했다. |
 | 알림 12A | **구현됨** | FCM token 수명주기와 Task-`NotificationSchedule` 동기화가 구현됐다. 현재 12B를 포함한 백엔드 전체 검증은 Jest 22 suites·198 tests와 TypeScript를 통과한다. |
 | 알림 12B | **구현·로컬 기동 검증됨** | per-device `NotificationDelivery`, Firebase ADC provider, 30초 Cron dispatcher, retry·lease·token revoke를 구현했다. Auth/JWT module DI를 복구해 AppModule compile과 기존 e2e가 통과하며, 실제 Firebase 호출은 별도 gate다. |
@@ -37,7 +38,7 @@ DSM(Daily Schedule Managements)은 일과 관리, 점수·티어, 전체 사용�
 | 로컬 DB 실행 | **구축·검증 완료** | Docker Desktop 4.82.0, Engine·CLI 29.6.1, Compose 5.3.0, WSL 2.7.10 위에서 PostgreSQL 17 컨테이너가 `healthy`다. `127.0.0.1:5432`와 `dsm-back-postgres-data` named volume만 사용한다. |
 | 배포/운영 | **미확정** | 로컬 개발 DB Compose만 있으며 백엔드 image, CI/CD, 환경별 배포 manifest와 관측성 구성은 없다. |
 
-핵심적으로 현재 시스템은 **백엔드 도메인 API가 먼저 구현된 상태**이며, 프런트는 아직 그 API를 소비하지 않는다. 따라서 현재 checkout만으로는 계획된 DSM 사용자 여정을 end-to-end로 실행할 수 없다.
+현재 시스템은 **검증된 백엔드 도메인 API**와 **독립 실행 가능한 프런트 제품 프로토타입**을 갖췄다. 그러나 프런트 데이터와 상호작용은 local mock state이므로 실제 OAuth·REST API·PostgreSQL·FCM을 잇는 end-to-end 사용자 여정은 아직 실행할 수 없다.
 
 ## 3. 저장소 구조
 
@@ -59,9 +60,10 @@ C:\DEV
 │  │  └─ main.ts, app.bootstrap.ts, app.module.ts
 │  └─ test/                   # e2e 환경과 smoke test
 ├─ DSM_Front/                 # React Native + Expo Router 프런트
-│  ├─ src/app/                # 파일 기반 route
-│  ├─ src/components/         # 공통·플랫폼별 UI
-│  ├─ src/hooks/ constants/ types/
+│  ├─ src/app/                # login, tutorial, (tabs) route
+│  ├─ src/components/dailyup/ # 제품 UI primitive, screen state, Task sheet
+│  ├─ src/features/prototype/ # local mock data와 state/action provider
+│  ├─ src/constants/          # 공통 theme와 DailyUp token
 │  └─ app.json, package.json
 ├─ Planing Document/          # v1.3 요구사항·IA·목표 아키텍처
 └─ docs/superpowers/plans/    # 완료 기능별 구현 계획
@@ -75,7 +77,8 @@ C:\DEV
 flowchart LR
     U["사용자"] --> F["DSM_Front<br/>Expo SDK 55 / React Native"]
 
-    F -. "REST + JWT 연동 예정" .-> B["DSM_Back<br/>NestJS modular monolith"]
+    F --> PM["PrototypeProvider<br/>local mock state"]
+    F -. "secure session·REST client 설계 중" .-> B["DSM_Back<br/>NestJS modular monolith"]
     B --> P[("PostgreSQL<br/>Prisma 6")]
 
     B --> G["Google token 검증"]
@@ -91,57 +94,67 @@ flowchart LR
     F -. "오프라인/LWW 계획" .-> L[("SQLite 또는 AsyncStorage")]
 ```
 
-실선은 현재 실행 검증된 백엔드 연동이고, 점선은 목표 설계·후속 마일스톤 또는 코드 경계만 구현되고 실제 외부 호출은 검증하지 않은 연동이다. 프런트에서 백엔드로 향하는 REST 연결도 아직 구현되지 않았으므로 점선이다.
+실선은 현재 실행 검증된 백엔드 연동이고, 점선은 목표 설계·후속 마일스톤 또는 코드 경계만 구현되고 실제 외부 호출은 검증하지 않은 연동이다. 실선 `F → PM`은 구현된 local state이고, 프런트에서 백엔드로 향하는 점선 연결은 아직 구현되지 않은 통합이다.
 
 ## 5. 프런트엔드 아키텍처
 
 ### 5.1 런타임과 진입점
 
 - React 19.2, React Native 0.83.6, Expo SDK 55를 사용한다.
-- `expo-router/entry`가 애플리케이션 entry이며 `src/app`의 파일 구조가 route가 된다.
+- `expo-router/entry`가 entry이고 `src/app/_layout.tsx`가 `PrototypeProvider`, theme, font와 Stack route를 구성한다.
 - `app.json`은 portrait, `dsmfront` scheme, 자동 light/dark, 정적 web output, typed routes와 React Compiler를 활성화한다.
-- 현재 route는 `/`와 `/explore`뿐이다.
+- 현재 route 경계는 `/` 로그인, `/tutorial`, `/(tabs)` 아래 홈·랭킹·마이페이지다. `/explore`는 프로토타입 상태 확인용 보조 화면으로 남아 있다.
+- `@expo-google-fonts/noto-sans-kr`를 포함하지만 secure storage, OAuth provider SDK, query cache와 notification client dependency는 아직 없다.
 
 ### 5.2 현재 화면·컴포넌트 구조
 
 ```mermaid
 flowchart TD
     E["expo-router/entry"] --> L["src/app/_layout.tsx"]
-    L --> T["Navigation ThemeProvider"]
-    L --> SP["Animated splash overlay<br/>native only"]
-    L --> TAB["AppTabs"]
-    TAB --> H["/ - Home starter"]
-    TAB --> X["/explore - Expo tutorial"]
-    TAB --> N["NativeTabs<br/>native"]
-    TAB --> W["expo-router/ui tabs<br/>web"]
-    H --> UI["ThemedText / ThemedView / useTheme"]
-    X --> UI
+    L --> P["PrototypeProvider"]
+    L --> S["Stack"]
+    S --> LOGIN["/ - provider login prototype"]
+    S --> TUTORIAL["/tutorial - 3-page onboarding"]
+    S --> TABS["/(tabs)"]
+    TABS --> HOME["Home - date, score, task timeline"]
+    TABS --> RANK["Ranking - period and leaderboard"]
+    TABS --> MY["My Page - profile, tier, settings"]
+    P --> DATA["prototype-data.ts<br/>local mock data"]
+    P --> SHEETS["TaskSheets<br/>create, detail, complete, delete"]
+    P --> STATES["normal, loading, empty, error, offline"]
+    HOME --> UI["dailyup primitives and theme"]
+    RANK --> UI
+    MY --> UI
 ```
 
-현재 실제 사용자 흐름은 `앱 실행 → native splash 애니메이션 → Home 또는 Explore 스타터 화면`이다. 네이티브는 `unstable-native-tabs`, 웹은 `expo-router/ui`를 사용하고 `.web.tsx` 파일 치환으로 구현을 분리한다.
+현재 사용자 흐름은 `로그인 provider 선택 → 튜토리얼 → 3탭 제품 화면`이다. provider 버튼은 실제 OAuth token을 얻지 않고 route만 전환한다. 홈 화면은 local mock Task를 만들고 상세 sheet에서 완료 상태를 전환하거나 삭제할 수 있으며, 첫 실패 rollback과 toast도 prototype state로 시뮬레이션한다.
 
-UI 공통 계층은 다음만 제공한다.
+현재 구현된 프런트 계층은 다음과 같다.
 
-- light/dark color token과 플랫폼별 font·spacing
-- `ThemedText`, `ThemedView`, `useTheme`
-- safe-area와 web/native layout 분기
-- 애니메이션 icon과 외부 Expo 문서 링크
+- DailyUp dark-first color·spacing·typography token과 Noto Sans KR font
+- 로그인, 3페이지 튜토리얼, 홈·랭킹·마이페이지 3탭
+- 날짜·점수·tier·Task timeline·leaderboard·profile/settings 표현
+- 새 Task 입력 validation, 상세 조회, 완료/취소, 삭제 sheet
+- `normal`, `loading`, `empty`, `error`, `offline` 화면 상태
+- local theme 전환, logout 시 prototype state reset
+- 909×540 web과 390×844 mobile viewport Browser QA 기록
 
-### 5.3 현재 없는 프런트 계층
+### 5.3 현재 연동 경계와 진행 중 설계
 
-다음 요소는 v1.3 목표에는 있으나 현재 `DSM_Front`에는 없다.
+다음 요소는 화면 또는 설계가 있어도 현재 제품 연동으로 구현되지 않았다.
 
-- 인증 route, JWT 저장·refresh·logout, root auth gate
-- Home·Ranking·My Page의 DSM 3탭과 온보딩
-- API base URL, REST client, 도메인 DTO와 오류 처리
-- server state/query cache, local state store, optimistic update
-- Task·Category·Score·Ranking·Profile 제품 화면
+- provider SDK 기반 Google·Kakao·Apple OAuth token 획득
+- access token memory 보관, refresh token SecureStore 보관과 bootstrap
+- API base URL validation, REST client, runtime response validation과 공통 오류 변환
+- `/auth/login`, `/auth/me`, `/auth/refresh`, `/auth/logout` 실제 호출
+- Task·Category·Score·Ranking backend API와 server state/query cache
+- `User.onboardingCompletedAt` migration·API·root auth/onboarding gate
 - UTC 직렬화·표시 변환 계층
 - SQLite/AsyncStorage offline queue와 `updatedAt` 기반 LWW
-- FCM 권한·token·local notification, WebSocket client
+- FCM 권한·token·local notification와 WebSocket client
 - 프런트 unit/component/e2e test와 EAS/release pipeline
 
-즉, 현재 프런트는 디자인 시스템의 작은 기반과 라우팅 데모이며 백엔드 도메인 아키텍처와 아직 연결되지 않았다.
+2026-07-25 현재 secure session·REST API client 전체 설계는 사용자 승인을 받았고 `docs/superpowers/specs/2026-07-25-front-secure-session-rest-client-design.md` 작성·자체 검토를 마쳤다. 상세 TDD 계획과 제품 코드는 아직 없으므로 이 상태는 **진행 중**이며 실제 provider OAuth E2E 완료를 의미하지 않는다.
 
 ## 6. 백엔드 아키텍처
 
@@ -439,7 +452,8 @@ Task create/update는 사용자 소유 category 또는 기본 category만 허용
 
 - TypeScript strict와 CSS module type declaration은 있다.
 - unit/component/e2e test script와 test file은 없다.
-- 실제 iOS/Android/Web build, 접근성, 반응형, native tab 동작은 이 문서화 작업에서 실행하지 않았다.
+- Phase 1 prototype은 TypeScript, Expo lint와 909×540·390×844 Browser QA 기록이 있다.
+- 실제 iOS/Android device, provider OAuth, backend integration과 accessibility automation은 검증하지 않았다.
 
 ## 11. 배포·운영 아키텍처
 
@@ -462,6 +476,7 @@ Task create/update는 사용자 소유 category 또는 기본 category만 허용
 | NestJS bootstrap·validation·error·health | 구현됨 | `main.ts`, `app.bootstrap.ts`, `health/` | production CORS, logging, readiness |
 | PostgreSQL/Prisma model | 구현·로컬 적용됨 | `prisma/schema.prisma`, `prisma/migrations/`, live migration status·zero drift | 원격·운영 migration 절차 |
 | Social JWT Auth | 구현됨/부분 | Google·Kakao, access/refresh, guard | Apple 검증, 프런트 secure session |
+| Front secure session·REST client | 설계 명세 완료·진행 중 | `docs/superpowers/specs/2026-07-25-front-secure-session-rest-client-design.md`, `.ai/memory/checklist.md`; 제품 코드 없음 | 상세 TDD 계획, 별도 구현 승인 |
 | Category CRUD | 구현됨 | controller/service/spec | 프런트 category UI |
 | Task CRUD·완료·soft delete | 구현됨 | controller/service/spec | 20개 제한, 프런트 calendar/task UI |
 | DailyScore·tier | 구현됨 | policy/service/controller/spec | 운영 검증, UI 시각화 |
@@ -471,7 +486,7 @@ Task create/update는 사용자 소유 category 또는 기본 category만 허용
 | 모바일 알림 12C | 계획됨 | 권한·FCM installation 수명주기·authenticated sync/display 미구현 | secure session·API client, 12B data-only 계약 |
 | WebSocket 13 | 계획됨 | package·gateway·client 없음 | event/auth/idempotency 계약 |
 | Redis·batch 14 | 계획됨 | dependency·runtime 없음 | ranking 부하·운영 요구 확정 |
-| DSM 프런트 제품 화면 | 계획됨 | 현재 Expo starter 2 route | auth/API/state 기반 |
+| DSM 프런트 제품 화면 | 프로토타입 구현됨 | login/tutorial/home/ranking/my, DailyUp components, `PrototypeProvider`, Task 생성·상세 조회·완료/취소·삭제와 5개 screen state | secure session·REST API·server state와 실제 device QA |
 | Offline/LWW | 계획됨 | client 저장소·sync API 없음 | online mutation contract 안정화 |
 | 로컬 PostgreSQL container | 구축·검증 완료 | `healthy` PostgreSQL 17, named volume, loopback port, restart persistence | backup/restore·운영 DB 절차 |
 | App container/CI/CD/observability | 미확정 | 애플리케이션 배포 설정 없음 | 배포 provider·SLO 결정 |
@@ -496,7 +511,7 @@ Task create/update는 사용자 소유 category 또는 기본 category만 허용
 - at-most-once 정책 때문에 marker 이후 결과가 불명확하면 delivery가 `UNKNOWN`으로 종결되어 reminder가 누락될 수 있다.
 - FCM send 시작 뒤 recall 불가와 client 표시 결정 직후 Task 취소 race는 사용자 `ACCEPTED_RISK`다. 12C authenticated current-state display가 구현·검증되기 전에는 dispatch를 활성화하지 않는다.
 - cross-user token/FID 이전은 거부하지만 12C logout/account-switch Installation rotation과 실제 device 검증은 아직 없다.
-- 프런트의 API client, secure storage, query/state library와 feature directory 구조가 미결정이다.
+- secure session·REST API client의 저장·refresh·오류·CORS 계약은 승인됐지만 제품 코드와 migration은 아직 없고, query/cache 도입은 후속 범위다.
 - Apple token 검증, FCM credential, Redis provider, image storage provider가 미확정이다.
 - offline LWW는 목표만 있고 conflict API와 삭제 tombstone 계약이 없다.
 - WebSocket event schema, 인증, 재연결, replay·중복 방지 계약이 없다.
@@ -520,6 +535,12 @@ Task create/update는 사용자 소유 category 또는 기본 category만 허용
 - `DSM_Front/src/app/`
 - `DSM_Front/src/components/`
 - `DSM_Front/src/constants/theme.ts`
+- `DSM_Front/src/app/index.tsx`
+- `DSM_Front/src/app/tutorial.tsx`
+- `DSM_Front/src/app/(tabs)/`
+- `DSM_Front/src/components/dailyup/`
+- `DSM_Front/src/constants/dailyup-theme.ts`
+- `DSM_Front/src/features/prototype/`
 - `DSM_Back/package.json`, `DSM_Front/package.json`, `DSM_Front/app.json`
 
 ### 승인·계획·목표
@@ -537,4 +558,4 @@ Task create/update는 사용자 소유 category 또는 기본 category만 허용
 - `docs/superpowers/plans/2026-06-07-dsm-daily-score.md`
 - `docs/superpowers/plans/2026-06-07-dsm-rankings.md`
 
-이 문서는 12A 완료, 12B per-device migration·지속형 로컬 DB·Firebase provider·Cron dispatcher 구현, Auth/JWT DI 복구와 로컬 AppModule·e2e 검증, 실제 Firebase 미검증까지 반영한다.
+이 문서는 2026-07-25 checkpoint `9ee7b97`의 12A·12B backend, persistent local PostgreSQL, DailyUp frontend prototype과 검증 경계를 반영한다. 이후 secure session·REST API client는 설계 명세 작성·자체 검토를 마친 **진행 중 작업**이며 상세 TDD 계획과 제품 구현 완료로 포함하지 않는다.
