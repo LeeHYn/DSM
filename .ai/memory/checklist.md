@@ -13,7 +13,8 @@
   - [ ] backend `prisma:validate` — `DATABASE_URL` 누락 Prisma `P1012`, exit `1`, BLOCKED
   - [ ] backend generate/build/test/non-fixing lint — stop condition으로 미실행
   - [ ] frontend npm/test/typecheck/lint·Android build — stop condition으로 미실행
-  - [ ] process-scoped parse-only `DATABASE_URL` plan amendment 검토·사용자 승인
+  - [x] process-scoped parse-only `DATABASE_URL` plan amendment 사용자 승인
+  - [ ] 승인된 plan amendment 반영·검증·commit
 - [ ] 별도 `codex/offline-learning-site` branch/worktree 생성·memory extraction·검증
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지

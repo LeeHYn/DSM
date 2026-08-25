@@ -13,7 +13,9 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - **Task 4 완료**: merge `a639ac2`는 canonical `2a4e991`를 exact second parent로 보존하며 제품 subtree가 byte-identical하다. 독립 reviewer는 findings 없이 승인했고 보고서 closure는 `0141b9f`다.
 - **Task 5 BLOCKED (2026-08-26)**: backend `npm ci --no-audit --no-fund`는 exit `0`으로 882 packages를 설치했으나, 다음 exact command `npm run prisma:validate`가 clean worktree에 `DATABASE_URL`이 없어 Prisma `P1012`로 exit `1`이 됐다. 계획의 required-check stop condition에 따라 Prisma generate/build/test/lint와 frontend/npm/Android 검증은 실행하지 않았다. tracked status는 clean이다.
 - reviewed amendment 후보: Task 5 backend validate/generate 직전에 process-scoped parse-only URL `postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public`을 설정하고 즉시 제거한다. port `1`을 사용해 예기치 않은 DB 연결은 성공하지 못하게 하며 existing/shared/remote DB에는 접근하지 않는다. plan amendment와 사용자 승인 전 재실행하지 않는다.
+- **Task 5 amendment 승인 (2026-08-26)**: 사용자가 정확히 `Task 5 amendment 승인`으로 위 process-scoped parse-only URL 보정과 Task 5 재실행을 승인했다. 승인 범위는 implementation plan의 Task 5 backend validate/generate 환경 precondition 보정뿐이며, 실제 DB 연결·shared/remote DB 접근·제품 수정·push·PR·`main` 변경·배포는 포함하지 않는다.
 - Task 5 blocker report commit의 exact allowlist는 subject `docs: record baseline validation block`, path `docs/reviews/2026-08-25-main-integration-conflict-review.md` 하나다. memory closure commit의 exact allowlist는 subject `docs(memory): record baseline validation block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- Task 5 amendment approval closure commit의 exact allowlist는 subject `docs(memory): approve baseline validation amendment`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다. approved Task 5 plan-amendment commit의 exact allowlist는 subject `docs: amend baseline validation environment`, path `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
 
 # Memory SSOT
 
