@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM 원본 소스를 근거로 학습하는 오프라인 사이트">
+  <title>JWT session · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../index.html">프로젝트 지도</a><a class="nav-link" href="../architecture.html">아키텍처</a><a class="nav-link" href="./serializable-transaction.html" aria-current="page">개념</a><a class="nav-link" href="../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../index.html#files">파일</a><a class="nav-link" href="../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="page-shell reading-page">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><span aria-current="page">개념</span><span aria-hidden="true">/</span></li><li><span aria-current="page">JWT session</span></li></ol></nav>
+  <header class="page-heading">
+  <p class="eyebrow">AUTH CONCEPT</p>
+  <h1>짧은 access와 DB에 남는 refresh의 역할 나누기</h1>
+  <p class="lede">access payload·TTL, refresh hash·TTL, guard와 /auth/me의 실제 반환 범위를 비교합니다.</p>
+</header>
+  <section class="concept-grid">
+    <article><p class="step-number">01</p><h2>access · 15m</h2><p>payload는 sub와 access type을 가지며 guard가 signature와 type을 확인합니다.</p></article>
+    <article><p class="step-number">02</p><h2>refresh · 30일</h2><p>client는 id와 secret 조합을 받고 DB에는 secret 평문 대신 bcrypt hash가 남습니다.</p></article>
+    <article><p class="step-number">03</p><h2>/auth/me</h2><p>현재 응답은 { userId } 하나뿐입니다. profile 전체 응답이 아닙니다.</p></article>
+  </section>
+  <aside class="boundary-note"><strong>배포 전 확인</strong><p>JWT_ACCESS_SECRET은 ConfigService.get으로 읽습니다. 값 누락 시 fail-fast 계약은 별도 확인 대상입니다.</p></aside>
+  <a class="evidence-link" href="../files/DSM_Back/src/auth/guards/jwt-auth.guard.ts.html">원본 근거 · jwt-auth.guard.ts</a>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../index.html">프로젝트 지도</a></footer>
+  <script src="../assets/site-data.js" defer></script>
+  <script src="../assets/site.js" defer></script>
+</body>
+</html>

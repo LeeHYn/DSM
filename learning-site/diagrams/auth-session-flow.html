@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM 원본 소스를 근거로 학습하는 오프라인 사이트">
+  <title>Auth session 다이어그램 · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../index.html">프로젝트 지도</a><a class="nav-link" href="../architecture.html" aria-current="page">아키텍처</a><a class="nav-link" href="../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../index.html#files">파일</a><a class="nav-link" href="../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="page-shell">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><span aria-current="page">다이어그램</span><span aria-hidden="true">/</span></li><li><span aria-current="page">Auth session</span></li></ol></nav>
+  <header class="page-heading">
+  <p class="eyebrow">ZOOMABLE AUTH DIAGRAM</p>
+  <h1>Social login → access/refresh 발급 → guard·rotation·logout</h1>
+  <p class="lede">provider login과 refresh single-winner rotation을 서로 다른 lane에서 읽습니다.</p>
+</header>
+  <div class="diagram-toolbar" aria-label="다이어그램 조작"><button type="button" data-diagram-zoom="out" aria-label="축소">−</button><button type="button" data-diagram-reset>원래 크기</button><button type="button" data-diagram-zoom="in" aria-label="확대">+</button></div>
+  <div class="diagram-viewport" data-diagram-viewport tabindex="0" aria-label="Auth session 흐름 다이어그램. 방향키로 이동"><svg class="architecture-svg" viewBox="0 0 1160 650" role="img" aria-labelledby="auth-flow-title auth-flow-desc">
+  <title id="auth-flow-title">Auth session login과 refresh 흐름</title>
+  <desc id="auth-flow-desc">위쪽 provider login lane과 아래쪽 refresh single-winner lane을 분리해 표시한다.</desc>
+  <defs>
+    <marker id="auth-arrow-confirmed" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" class="marker-confirmed"/></marker>
+    <marker id="auth-arrow-conditional" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" class="marker-conditional"/></marker>
+  </defs>
+  <g class="diagram-layer" data-diagram-layer>
+    <text x="30" y="35" class="diagram-node__sub">LOGIN · provider lane</text>
+    <g class="diagram-node"><rect x="30" y="55" width="190" height="72" rx="12"/><text x="125" y="88">POST /auth/login</text><text x="125" y="108" class="diagram-node__sub">DTO validation</text></g>
+    <g class="diagram-node diagram-node--conditional"><rect x="280" y="55" width="210" height="72" rx="12"/><text x="385" y="88">provider 확인</text><text x="385" y="108" class="diagram-node__sub">Google · Kakao · Apple 409</text></g>
+    <g class="diagram-node"><rect x="550" y="55" width="220" height="72" rx="12"/><text x="660" y="88">socialAccount</text><text x="660" y="108" class="diagram-node__sub">기존 / 신규 user</text></g>
+    <g class="diagram-node"><rect x="830" y="55" width="280" height="72" rx="12"/><text x="970" y="88">access + refresh 발급</text><text x="970" y="108" class="diagram-node__sub">15m · 30일</text></g>
+    <path class="diagram-edge diagram-edge--confirmed" d="M220 91 H280" marker-end="url(#auth-arrow-confirmed)"/><path class="diagram-edge diagram-edge--conditional" d="M490 91 H550" marker-end="url(#auth-arrow-conditional)"/><path class="diagram-edge diagram-edge--confirmed" d="M770 91 H830" marker-end="url(#auth-arrow-confirmed)"/>
+    <text x="30" y="260" class="diagram-node__sub">ROTATION · refresh lane</text>
+    <g class="diagram-node"><rect x="30" y="280" width="190" height="86" rx="12"/><text x="125" y="315">id.secret parse</text><text x="125" y="338" class="diagram-node__sub">PK findUnique</text></g>
+    <g class="diagram-node diagram-node--conditional"><rect x="280" y="280" width="210" height="86" rx="12"/><text x="385" y="315">유효성 검사</text><text x="385" y="338" class="diagram-node__sub">revoked · expiry · bcrypt</text></g>
+    <g class="diagram-node diagram-node--transaction"><rect x="550" y="280" width="220" height="86" rx="12"/><text x="660" y="315">updateMany</text><text x="660" y="338" class="diagram-node__sub">count === 1</text></g>
+    <g class="diagram-node"><rect x="830" y="280" width="280" height="86" rx="12"/><text x="970" y="315">replacement refresh</text><text x="970" y="338" class="diagram-node__sub">단일 승자</text></g>
+    <path class="diagram-edge diagram-edge--confirmed" d="M220 323 H280" marker-end="url(#auth-arrow-confirmed)"/><path class="diagram-edge diagram-edge--conditional" d="M490 323 H550" marker-end="url(#auth-arrow-conditional)"/><path class="diagram-edge diagram-edge--confirmed" d="M770 323 H830" marker-end="url(#auth-arrow-confirmed)"/>
+    <g class="diagram-node diagram-node--conditional"><rect x="550" y="470" width="220" height="86" rx="12"/><text x="660" y="505">race loser</text><text x="660" y="528" class="diagram-node__sub">401</text></g>
+    <path class="diagram-edge diagram-edge--conditional" d="M660 366 V470" marker-end="url(#auth-arrow-conditional)"/>
+    <text x="30" y="620" class="diagram-node__sub">확인 필요 · live provider와 실제 DB 통합 동작</text>
+  </g>
+</svg></div>
+  <section class="evidence-legend" aria-labelledby="evidence-title">
+  <h2 id="evidence-title">관계 근거 범례</h2>
+  <ul>
+    <li><span class="evidence-line evidence-line--confirmed" aria-hidden="true"></span><strong>확인됨</strong> · 원본 호출·쓰기 근거</li>
+    <li><span class="evidence-line evidence-line--conditional" aria-hidden="true"></span><strong>조건부 확인</strong> · 조건 label이 있는 원본 근거</li>
+    <li><span class="evidence-line evidence-line--inferred" aria-hidden="true"></span><strong>추론</strong> · 근거와 추론 이유 표시</li>
+    <li><span class="evidence-line evidence-line--unknown" aria-hidden="true"></span><strong>확인 필요</strong> · 아직 확정하지 않은 관계</li>
+  </ul>
+</section>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../index.html">프로젝트 지도</a></footer>
+  <script src="../assets/site-data.js" defer></script>
+  <script src="../assets/site.js" defer></script>
+</body>
+</html>

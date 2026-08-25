@@ -1,0 +1,252 @@
+{
+  "baseline": {
+    "backendFiles": 88,
+    "backendLines": 8787,
+    "files": 124,
+    "frontendFiles": 36,
+    "frontendLines": 4381,
+    "lines": 13168
+  },
+  "checks": {
+    "links": "PASS",
+    "offline": "PASS",
+    "progress": "PASS",
+    "search": "PASS",
+    "sourceFidelity": "PASS"
+  },
+  "linkCount": 903,
+  "pages": 39,
+  "progress": {
+    "excluded": 9,
+    "missing": 0,
+    "processed": 28,
+    "remaining": 96
+  },
+  "sources": [
+    {
+      "bytes": 7642,
+      "lineEnding": "LF",
+      "lines": 217,
+      "outputPath": "files/DSM_Back/prisma/schema.prisma.html",
+      "path": "DSM_Back/prisma/schema.prisma",
+      "sha256": "ed3f2f92debd1b66d2594d6e1499c2bc1c55fa45d1f46716d966cfbe4eebd585"
+    },
+    {
+      "bytes": 1353,
+      "lineEnding": "LF",
+      "lines": 58,
+      "outputPath": "files/DSM_Back/src/app.bootstrap.ts.html",
+      "path": "DSM_Back/src/app.bootstrap.ts",
+      "sha256": "da821cd5a02ff6ab6b7026c9215eee62ba335a96b5915a6d44bdcf7289b0beb9"
+    },
+    {
+      "bytes": 1145,
+      "lineEnding": "LF",
+      "lines": 35,
+      "outputPath": "files/DSM_Back/src/app.module.ts.html",
+      "path": "DSM_Back/src/app.module.ts",
+      "sha256": "b0c0d56242f47f2f799411c6d10419f0e712ceb2ab9c4967eed600639c653b6f"
+    },
+    {
+      "bytes": 2168,
+      "lineEnding": "LF",
+      "lines": 67,
+      "outputPath": "files/DSM_Back/src/auth/auth.controller.spec.ts.html",
+      "path": "DSM_Back/src/auth/auth.controller.spec.ts",
+      "sha256": "500d661e80d701d68bd7aeb83903dbf65f222f09df2491660e8f3114ed6026f4"
+    },
+    {
+      "bytes": 1395,
+      "lineEnding": "LF",
+      "lines": 50,
+      "outputPath": "files/DSM_Back/src/auth/auth.controller.ts.html",
+      "path": "DSM_Back/src/auth/auth.controller.ts",
+      "sha256": "5f4fee1097b5c9b8eae69f0d4ceed7dbf37699df785ec5266939cb0d544123ff"
+    },
+    {
+      "bytes": 427,
+      "lineEnding": "LF",
+      "lines": 13,
+      "outputPath": "files/DSM_Back/src/auth/auth.module.ts.html",
+      "path": "DSM_Back/src/auth/auth.module.ts",
+      "sha256": "9fe5446e15dc2026dcaddcbaee6275b99675d76ace2bc99b6c21bb8e3ebf3bfc"
+    },
+    {
+      "bytes": 10752,
+      "lineEnding": "LF",
+      "lines": 347,
+      "outputPath": "files/DSM_Back/src/auth/auth.service.spec.ts.html",
+      "path": "DSM_Back/src/auth/auth.service.spec.ts",
+      "sha256": "287e7be1b28dbc76f64b7f37c576eb2da3c50ff5296b2972d3449a466e1e5c04"
+    },
+    {
+      "bytes": 7729,
+      "lineEnding": "LF",
+      "lines": 254,
+      "outputPath": "files/DSM_Back/src/auth/auth.service.ts.html",
+      "path": "DSM_Back/src/auth/auth.service.ts",
+      "sha256": "c812eab98194dfdd07b21d093832d5bdb773944e1b426f8eed1766874e75e17a"
+    },
+    {
+      "bytes": 145,
+      "lineEnding": "LF",
+      "lines": 7,
+      "outputPath": "files/DSM_Back/src/auth/dto/refresh-token.dto.ts.html",
+      "path": "DSM_Back/src/auth/dto/refresh-token.dto.ts",
+      "sha256": "b5dc294e2555a08aa46f60d71c692e1ca79dc56500c21833bb0775ad40dfca07"
+    },
+    {
+      "bytes": 278,
+      "lineEnding": "LF",
+      "lines": 13,
+      "outputPath": "files/DSM_Back/src/auth/dto/social-login.dto.ts.html",
+      "path": "DSM_Back/src/auth/dto/social-login.dto.ts",
+      "sha256": "0cff13ea50e0b3d8f7efe2acfa5a54c006fb1f6fb566bc5444145dcf1f6c482f"
+    },
+    {
+      "bytes": 83,
+      "lineEnding": "LF",
+      "lines": 4,
+      "outputPath": "files/DSM_Back/src/auth/dto/token-response.dto.ts.html",
+      "path": "DSM_Back/src/auth/dto/token-response.dto.ts",
+      "sha256": "29556a69a36fb8f3af698ec0cbd4bd113c58655318e6dc22ca05b88bb941f463"
+    },
+    {
+      "bytes": 1384,
+      "lineEnding": "LF",
+      "lines": 49,
+      "outputPath": "files/DSM_Back/src/auth/guards/jwt-auth.guard.ts.html",
+      "path": "DSM_Back/src/auth/guards/jwt-auth.guard.ts",
+      "sha256": "be7e0acb2b6ab9a8c1b7ddaa76376670ee8a45aa71b4b80dacfbc28e01992be5"
+    },
+    {
+      "bytes": 63,
+      "lineEnding": "LF",
+      "lines": 4,
+      "outputPath": "files/DSM_Back/src/auth/types/jwt-payload.type.ts.html",
+      "path": "DSM_Back/src/auth/types/jwt-payload.type.ts",
+      "sha256": "0de410f72d9c9bc1733495347d356ac03a6b877c10a69973eb4b8687488f7d3f"
+    },
+    {
+      "bytes": 137,
+      "lineEnding": "LF",
+      "lines": 6,
+      "outputPath": "files/DSM_Back/src/auth/types/social-profile.type.ts.html",
+      "path": "DSM_Back/src/auth/types/social-profile.type.ts",
+      "sha256": "986bd26802fed5034345bb7d565cd9ed73ba3d537f486f288c2efe389930dc1f"
+    },
+    {
+      "bytes": 303,
+      "lineEnding": "LF",
+      "lines": 11,
+      "outputPath": "files/DSM_Back/src/main.ts.html",
+      "path": "DSM_Back/src/main.ts",
+      "sha256": "8c9a8baf7ada139eb50b5c78041ca91dcdbf8d5475c4011fe988ed6f080f7217"
+    },
+    {
+      "bytes": 906,
+      "lineEnding": "LF",
+      "lines": 30,
+      "outputPath": "files/DSM_Back/src/notifications/notification-schedule.constants.ts.html",
+      "path": "DSM_Back/src/notifications/notification-schedule.constants.ts",
+      "sha256": "b68aa0fe7a37aeba135dfc52aab1afb9599ed552c600c43ca9e704e06fee9761"
+    },
+    {
+      "bytes": 10085,
+      "lineEnding": "LF",
+      "lines": 323,
+      "outputPath": "files/DSM_Back/src/notifications/notifications.service.spec.ts.html",
+      "path": "DSM_Back/src/notifications/notifications.service.spec.ts",
+      "sha256": "b7ca9379a81661138517a755e4d32eef8fec61120cb72d3388253d726a5a5a0b"
+    },
+    {
+      "bytes": 2852,
+      "lineEnding": "LF",
+      "lines": 104,
+      "outputPath": "files/DSM_Back/src/notifications/notifications.service.ts.html",
+      "path": "DSM_Back/src/notifications/notifications.service.ts",
+      "sha256": "2a627f82159dee087c7ab20e78a197ecd2b79bcedab58fd3fa9cb8e0b6239acb"
+    },
+    {
+      "bytes": 448,
+      "lineEnding": "LF",
+      "lines": 20,
+      "outputPath": "files/DSM_Back/src/prisma/prisma.service.ts.html",
+      "path": "DSM_Back/src/prisma/prisma.service.ts",
+      "sha256": "ec0238d98da7fdb4a7b4d0d94b366918dbcea2233daa85916e127dd3b0e88762"
+    },
+    {
+      "bytes": 2259,
+      "lineEnding": "LF",
+      "lines": 77,
+      "outputPath": "files/DSM_Back/src/scores/scores.policy.ts.html",
+      "path": "DSM_Back/src/scores/scores.policy.ts",
+      "sha256": "c61ee68c82cd0cabc0e09691845095cb40de47e96c828e850bf9f34a91910e70"
+    },
+    {
+      "bytes": 5987,
+      "lineEnding": "LF",
+      "lines": 170,
+      "outputPath": "files/DSM_Back/src/scores/scores.service.spec.ts.html",
+      "path": "DSM_Back/src/scores/scores.service.spec.ts",
+      "sha256": "a370e97346acf147b9f378a2ed1eac6013e6858e30b35d6a85b3eda3f45f29d4"
+    },
+    {
+      "bytes": 2692,
+      "lineEnding": "LF",
+      "lines": 93,
+      "outputPath": "files/DSM_Back/src/scores/scores.service.ts.html",
+      "path": "DSM_Back/src/scores/scores.service.ts",
+      "sha256": "8af25f5dce0beb76da96a8e8b7c4a1cd5e5a91db073b6ccb6dada31e060bbd65"
+    },
+    {
+      "bytes": 551,
+      "lineEnding": "LF",
+      "lines": 36,
+      "outputPath": "files/DSM_Back/src/tasks/dto/create-task.dto.ts.html",
+      "path": "DSM_Back/src/tasks/dto/create-task.dto.ts",
+      "sha256": "9cd7c9cb46d630d717c2d8245da96f3e0a15bb6d2fcf2f3861a9198f18407dac"
+    },
+    {
+      "bytes": 659,
+      "lineEnding": "LF",
+      "lines": 42,
+      "outputPath": "files/DSM_Back/src/tasks/dto/update-task.dto.ts.html",
+      "path": "DSM_Back/src/tasks/dto/update-task.dto.ts",
+      "sha256": "ed482425bb7db32a54e12d6d6f8f623980a6eced1a5c1bfc9e7f1dff1e01b5f6"
+    },
+    {
+      "bytes": 1816,
+      "lineEnding": "LF",
+      "lines": 71,
+      "outputPath": "files/DSM_Back/src/tasks/tasks.controller.ts.html",
+      "path": "DSM_Back/src/tasks/tasks.controller.ts",
+      "sha256": "cef61f5325bc3b988cdee1ad877bf228e3dce571fbaa4ca985925d8eb74a5479"
+    },
+    {
+      "bytes": 30473,
+      "lineEnding": "LF",
+      "lines": 879,
+      "outputPath": "files/DSM_Back/src/tasks/tasks.service.spec.ts.html",
+      "path": "DSM_Back/src/tasks/tasks.service.spec.ts",
+      "sha256": "dea102c305ae269b22ec73d349229f56d7933f47e439f62d98fe44dba79273af"
+    },
+    {
+      "bytes": 8923,
+      "lineEnding": "LF",
+      "lines": 277,
+      "outputPath": "files/DSM_Back/src/tasks/tasks.service.ts.html",
+      "path": "DSM_Back/src/tasks/tasks.service.ts",
+      "sha256": "818c2135c63e0eb4448ac3718b6d237899e765c69323c35cb4660db224880954"
+    },
+    {
+      "bytes": 1699,
+      "lineEnding": "LF",
+      "lines": 59,
+      "outputPath": "files/DSM_Back/test/app.e2e-spec.ts.html",
+      "path": "DSM_Back/test/app.e2e-spec.ts",
+      "sha256": "40e0dd34bece7c17633901099f7317af99b9abe3844cbe6469c096c71a00149f"
+    }
+  ],
+  "status": "PASS"
+}

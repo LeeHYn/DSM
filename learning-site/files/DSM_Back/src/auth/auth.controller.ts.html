@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM_Back/src/auth/auth.controller.ts 원본과 학습 설명">
+  <title>auth.controller.ts · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../../../../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../../../../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../../../../index.html">프로젝트 지도</a><a class="nav-link" href="../../../../architecture.html">아키텍처</a><a class="nav-link" href="../../../../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../../../../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../../../../index.html#files" aria-current="page">파일</a><a class="nav-link" href="../../../../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="file-page" data-file-page data-source-path="DSM_Back/src/auth/auth.controller.ts">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><a href="../../../../index.html#files">파일</a><span aria-hidden="true">/</span></li><li><span aria-current="page">DSM_Back/src/auth/auth.controller.ts</span></li></ol></nav>
+  <header class="file-heading">
+    <div><p class="eyebrow">SOURCE STUDY</p><h1>auth.controller.ts</h1><p class="file-path">DSM_Back/src/auth/auth.controller.ts</p></div>
+    <div class="file-heading__actions"><p class="file-meta">TypeScript · 50줄 · 핵심 파일</p><button class="icon-button desktop-read-toggle" type="button" data-read-toggle>읽음</button></div>
+  </header>
+  <nav class="file-tabs" aria-label="파일 학습 탭"><button type="button" data-file-tab="child">12세 설명</button><button type="button" data-file-tab="junior" aria-selected="true">주니어 설명</button><button type="button" data-file-tab="source">원본 코드</button><button type="button" data-file-tab="risk">위험·확인</button><button type="button" data-file-tab="exercise">연습</button></nav>
+  <div class="mobile-mode" aria-label="모바일 학습 화면"><button type="button" data-mobile-mode="code" aria-pressed="true">코드</button><button type="button" data-mobile-mode="explanation" aria-pressed="false">설명</button><button type="button" data-contents-open>이 파일에서 볼 것</button></div>
+  <aside class="contents-sheet" data-contents-sheet hidden><button type="button" data-contents-close>접기</button><h2>이 파일에서 볼 것</h2><ul><li>POST /auth/login</li><li>POST /auth/refresh</li><li>guarded POST /auth/logout</li><li>guarded GET /auth/me</li><li>{ userId } response</li></ul></aside>
+  <section class="file-overview" aria-labelledby="position-role"><h2 id="position-role">A. 위치와 역할</h2><p>login, refresh, guarded logout과 me HTTP 요청을 DTO·JWT identity와 함께 AuthService 경계로 전달한다.</p><dl><div><dt>SHA-256</dt><dd><code>5f4fee1097b5c9b8eae69f0d4ceed7dbf37699df785ec5266939cb0d544123ff</code></dd></div><div><dt>bytes</dt><dd>1395</dd></div><div><dt>line ending</dt><dd>LF</dd></div></dl></section>
+  <section class="focus-card" aria-labelledby="focus-title"><h2 id="focus-title">B. 먼저 볼 것</h2><ul><li>POST /auth/login</li><li>POST /auth/refresh</li><li>guarded POST /auth/logout</li><li>guarded GET /auth/me</li><li>{ userId } response</li></ul><div class="symbol-index"><h3>심볼</h3><ul><li><a href="#source-title">class · AuthController <span>line 20</span></a></li><li><a href="#source-title">method · constructor <span>line 21</span></a></li></ul></div></section>
+  <div class="file-study">
+    <div class="file-study__code" data-mobile-panel="code"><h2 class="visually-hidden">C. 원본 코드</h2><section class="source-panel" aria-labelledby="source-title">
+  <div class="source-panel__head">
+    <h2 id="source-title">원본 코드 · 변경 없음</h2>
+    <button type="button" data-copy-source>원본 코드 복사</button>
+  </div>
+  <div class="source-grid">
+    <span class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50</span>
+    <pre><code data-source-code data-path="DSM_Back/src/auth/auth.controller.ts" data-sha256="5f4fee1097b5c9b8eae69f0d4ceed7dbf37699df785ec5266939cb0d544123ff" data-bytes="1395" data-lines="50" data-line-ending="LF"><span class="tok tok--keyword">import</span><span class="tok tok--plain"> {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/common&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { Request } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;express&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { AuthService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./auth.service&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { SocialLoginDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/social-login.dto&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { RefreshTokenDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/refresh-token.dto&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { TokenResponseDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/token-response.dto&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { JwtAuthGuard } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./guards/jwt-auth.guard&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { JwtPayload } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./types/jwt-payload.type&#39;</span><span class="tok tok--plain">;
+
+</span><span class="tok tok--decorator">@Controller</span><span class="tok tok--plain">(</span><span class="tok tok--string">&#39;auth&#39;</span><span class="tok tok--plain">)
+</span><span class="tok tok--keyword">export</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">class</span><span class="tok tok--plain"> AuthController {
+  constructor(</span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> authService: AuthService) {}
+
+  </span><span class="tok tok--decorator">@Post</span><span class="tok tok--plain">(</span><span class="tok tok--string">&#39;login&#39;</span><span class="tok tok--plain">)
+  </span><span class="tok tok--decorator">@HttpCode</span><span class="tok tok--plain">(HttpStatus.OK)
+  login(</span><span class="tok tok--decorator">@Body</span><span class="tok tok--plain">() dto: SocialLoginDto): Promise&lt;TokenResponseDto&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.authService.socialLogin(dto.provider, dto.token);
+  }
+
+  </span><span class="tok tok--decorator">@Post</span><span class="tok tok--plain">(</span><span class="tok tok--string">&#39;refresh&#39;</span><span class="tok tok--plain">)
+  </span><span class="tok tok--decorator">@HttpCode</span><span class="tok tok--plain">(HttpStatus.OK)
+  refresh(</span><span class="tok tok--decorator">@Body</span><span class="tok tok--plain">() dto: RefreshTokenDto): Promise&lt;TokenResponseDto&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.authService.refreshTokens(dto.refreshToken);
+  }
+
+  </span><span class="tok tok--decorator">@Post</span><span class="tok tok--plain">(</span><span class="tok tok--string">&#39;logout&#39;</span><span class="tok tok--plain">)
+  </span><span class="tok tok--decorator">@HttpCode</span><span class="tok tok--plain">(HttpStatus.NO_CONTENT)
+  </span><span class="tok tok--decorator">@UseGuards</span><span class="tok tok--plain">(JwtAuthGuard)
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> logout(
+    </span><span class="tok tok--decorator">@Req</span><span class="tok tok--plain">() req: Request &amp; { user: JwtPayload },
+    </span><span class="tok tok--decorator">@Body</span><span class="tok tok--plain">() dto: RefreshTokenDto,
+  ): Promise&lt;void&gt; {
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.authService.logout(req.user.sub, dto.refreshToken);
+  }
+
+  </span><span class="tok tok--decorator">@Get</span><span class="tok tok--plain">(</span><span class="tok tok--string">&#39;me&#39;</span><span class="tok tok--plain">)
+  </span><span class="tok tok--decorator">@UseGuards</span><span class="tok tok--plain">(JwtAuthGuard)
+  me(</span><span class="tok tok--decorator">@Req</span><span class="tok tok--plain">() req: Request &amp; { user: JwtPayload }): { userId: string } {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> { userId: req.user.sub };
+  }
+}
+</span></code></pre>
+  </div>
+</section></div>
+    <aside class="explanation-panel" data-mobile-panel="explanation" aria-labelledby="explanation-title">
+      <div class="panel-label">AI 설명 · 원본 밖</div>
+      <h2 id="explanation-title">D. 설명</h2>
+      <section data-explanation="child"><h3>12세 설명</h3><p>로그인과 갱신 신청서를 받아 담당자에게 넘기고, 출입증이 확인된 사람에게만 내 번호를 알려주는 창구다.</p></section>
+      <section data-explanation="junior"><h3>주니어 설명</h3><p>controller는 SocialLoginDto와 RefreshTokenDto를 service 인자로 전달한다. logout과 me에 JwtAuthGuard를 붙이며, current checkout의 me 응답은 userId 하나뿐이다.</p></section>
+      <section><h2>E. 관계와 근거</h2><ul class="evidence-list"><li><a href="./auth.controller.ts.html#source-title">DSM_Back/src/auth/auth.controller.ts · login</a><span>social login route</span></li><li><a href="./auth.controller.ts.html#source-title">DSM_Back/src/auth/auth.controller.ts · refresh</a><span>refresh route</span></li><li><a href="./auth.controller.ts.html#source-title">DSM_Back/src/auth/auth.controller.ts · me</a><span>current identity response</span></li></ul></section>
+      <section><h2>F. 위험·확인</h2><ul><li>/auth/me가 profile 전체를 반환한다고 과장하지 않는다.</li></ul></section>
+      <section><h2>G. 연습과 다음 단계</h2><details><summary>login 요청 뒤 token 발급까지 순서를 배열하세요.</summary><p>DTO 검증 → provider 확인 → socialAccount 조회 → 기존/신규 user 분기 → token 발급이다.</p></details><h3>관련 파일</h3><ul><li><a href="./auth.service.ts.html">DSM_Back/src/auth/auth.service.ts</a></li><li><a href="./guards/jwt-auth.guard.ts.html">DSM_Back/src/auth/guards/jwt-auth.guard.ts</a></li><li><a href="./auth.controller.spec.ts.html">DSM_Back/src/auth/auth.controller.spec.ts</a></li></ul></section>
+    </aside>
+  </div>
+  <nav class="mobile-progress" aria-label="파일 진행"><a href="./auth.module.ts.html">이전</a><button type="button" data-read-toggle>읽음</button><a href="./auth.service.ts.html">다음</a></nav>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../../../../index.html">프로젝트 지도</a></footer>
+  <script src="../../../../assets/site-data.js" defer></script>
+  <script src="../../../../assets/site.js" defer></script>
+</body>
+</html>
