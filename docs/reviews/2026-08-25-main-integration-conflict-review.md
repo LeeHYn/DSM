@@ -202,6 +202,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 5 canonical baseline | Initial Prisma `P1012` stopped safely; approved amendment `68557d7`; retry backend 23 suites/214 tests and frontend 18 suites/162 tests, typecheck/lint, Android 365-task build all exit `0`; product canonical-identical | PASS |
 | Canonical product suite | Runs after the canonical merge | PENDING |
 | Offline branch suite | `codex/offline-learning-site` at `2cbb088`; one commit beyond `43145b6`; 4-path memory allowlist; Node 66/66; full verifier `PASS`, 28 sources; independent review clean | PASS |
+| Task 7 AI-control policy/history | Exact `c79a042` design `d652711`, plan `3b81151`, system prompt `3fdd556`; commits `1bacf47` and `1d36d70`; product diff 0; independent review clean | PASS |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
 | Final independent review | Task 14 | PENDING |
 
@@ -257,6 +258,25 @@ Fresh final evidence:
 - `main` and `origin/main`: unchanged at `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`; integration branch remained `3daa28441fcf610b1ff89fb8eea8dac870e45881` during the offline review.
 
 Independent reviewer `/root/task6_reviewer`, mode `discovery-review`, exact writable allowlist `none`, verified all extraction units, refs, ancestry, four-path allowlist, ignored environment file, report and clean status. Findings: none. Verdict: `APPROVED`.
+
+## Task 7 compatible AI-control policy/history port
+
+The two reviewed history documents were preserved from `c79a042b3c1e115fc0b092a8bddcd3e6723439d6` in a focused two-file commit:
+
+- `1bacf47f130568081a79124f7e79c404b41e0af2` — `docs: preserve AI control integration records`
+- design blob `d6527119396b044f9b0d414159cfadad4a29b1ac`
+- plan blob `3b81151f6fb489e54f33ee1f440b1ddba01f32a4`
+
+The compatible v5.1 controller guidance was then ported alone:
+
+- `1d36d7023c8e62365711c8c298f5c200e6eee3b0` — `docs: port compatible agent guidance`
+- `.ai/system_prompt.md` blob `3fdd55608c475b352ac90dff57d22f3438a03f14`, exact to `c79a042`
+
+The prompt retains the compression backup boundaries, all seven subagent assignment fields, Context Compiler protocol, adversarial verification workflow, `ACCEPTED_RISK`, one-to-two-file limit, explicit approval wait gate, and five CCTV fields. References to `.ai/memory/memory.md` and `.ai/archive/` explicitly forbid their automatic creation; neither path exists in the Git tree or worktree.
+
+Task 7 changed exactly the two history documents and one system prompt. `DSM_Back` and `DSM_Front` changed paths were `0`; `git diff --check` passed; the worktree was clean; `main` and `origin/main` remained `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
+
+Independent reviewer `/root/task7_reviewer`, mode `discovery-review`, exact writable allowlist `none`, verified all six contract groups and returned findings none, verdict `APPROVED`.
 
 ## Deferred items
 

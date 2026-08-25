@@ -21,6 +21,9 @@
   - [x] base `43145b6` → commit `2cbb088`, ancestry `0 1`, 정확한 memory 4-path allowlist
   - [x] ignored `expo-env.d.ts` 환경 복원·LF verifier materialization 후 Node 66/66·28-source `PASS`
   - [x] independent discovery review — findings 없음, `APPROVED`
+- [x] Task 7 `c79a042` AI-control history·compatible v5.1 guidance port
+  - [x] commits `1bacf47` / `1d36d70`, source blob exact, product diff 0
+  - [x] independent discovery review — findings 없음, `APPROVED`
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
 
