@@ -27,10 +27,12 @@ DSM 앱의 백엔드/프론트엔드를 단계적으로 구축합니다.
 - `superpowers:writing-plans`로 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`를 작성했다. 단일 master plan은 16 tasks·70 checkbox로 canonical non-squash merge, offline 전용 worktree/branch, `fb54b5d` exact extraction, `c79a042` 문서 선별, backend 후보 판정, 조건부 forward migration, disposable PostgreSQL 검증, 전체 validation과 독립 review를 순서화한다.
 - fresh 자체 검증에서 필수 계약 문자열 22개, 균형 code fence 98개, placeholder 부재, `git diff --check`, dirty path 3개 allowlist와 `DSM_Back`·`DSM_Front` 제품 diff 부재가 PASS했다.
 - Node.js `24.13.0`, npm `11.6.2`는 spec 요구 `24.19.0`/`11.19.0`과 달라 implementation preflight blocker다.
+- plan commit 뒤 fresh PowerShell 검증에서 `node --version`은 `v24.13.0`, 기본 `npm --version`은 `C:\Users\jemie\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js` 접근 실패로 `MODULE_NOT_FOUND`가 됐고, 명시적 `C:\Program Files\nodejs\npm.cmd --version`만 `11.6.2`를 반환했다. 기본 명령 실패와 version mismatch 모두 implementation `BLOCKED` 근거이며 우회 명령으로 PASS 처리하지 않는다.
 - Docker daemon 미기동과 Java/Android SDK 미확인은 계획 실행 전 추가 environment blocker다. runtime·executor 설치/기동은 사용자가 제공하거나 별도로 승인한 환경 단계에서만 처리한다.
 - 현재 단계는 implementation plan 작성·자체 검증 완료와 별도 실행 승인 대기다. 승인 전 offline branch 생성, product merge, SDD preflight, push, PR, main 수정은 금지한다.
 - 승인된 implementation-plan commit class는 local commit `587e934` `docs: add main integration plan`이며 exact allowlist는 `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md` 하나다.
 - 이어지는 closure commit class의 exact allowlist는 subject `docs(memory): record plan approval gate`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- post-commit runtime evidence closure의 exact allowlist는 subject `docs(memory): record runtime blocker`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # 완료된 마일스톤
 1. 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기

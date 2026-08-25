@@ -17,6 +17,7 @@
 - [x] 상세 implementation plan 작성·자체 검토·local commit `587e934` (16 tasks·70 checks, 필수 계약 22개, placeholder 없음, 제품 diff 없음)
 - [ ] 상세 implementation plan 사용자 검토·실행 승인
 - [ ] exact Node `24.19.0`·npm `11.19.0`, Docker daemon, Java/Android SDK gate 통과
+  - [x] 현재 blocker 재현: Node `v24.13.0`; 기본 `npm`은 user-global `npm-cli.js` 접근 실패; system `npm.cmd`도 `11.6.2`
 - [ ] 승인 뒤 tracked SDD ignore preflight와 integration 실행
 - [ ] offline branch와 main integration branch 검증
 - [ ] 별도 승인 후 push·PR 또는 local merge 결정
