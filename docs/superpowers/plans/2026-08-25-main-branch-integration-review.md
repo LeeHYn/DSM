@@ -1113,10 +1113,15 @@ Expected: ignored ledger, no whitespace or unexplained status, reviewed stat, ca
 - Modify: `.ai/memory/plan.md`
 - Modify: `.ai/memory/context.md`
 - Modify: `.ai/memory/checklist.md`
+- Modify: `.ai/memory/README.md` (approved compression routing and byte/hash snapshot only)
 
 **Interfaces:**
 - Consumes: actual branch rulings and validation outputs
 - Produces: truthful main-integration memory with no offline/product conflation
+
+- [ ] **Step 0: Apply the approved four-path memory amendment**
+
+The user requested `.ai/memory` compression and then approved the exact phrase `Task 13 amendment 승인` on 2026-08-27. Extend Task 13 from three active-state files to exactly four tracked files by including `.ai/memory/README.md` only for recovery routing, compression byte counts, active SHA-256 values, UTF-8 verification, and current Task 12/13 status. Preserve the ignored byte-exact `*.20260827.original.md` recovery files without staging or modifying them. Do not edit `error-resolution-playbook.md`, product files, configuration, or any other memory file.
 
 - [ ] **Step 1: Update plan and context as a two-file step**
 
@@ -1126,9 +1131,13 @@ Record only the actual canonical merge, ported capabilities, commit subjects, ex
 
 Mark only observed `PASS` items complete. A required `BLOCKED` row keeps integration review incomplete. `NOT_APPLICABLE` is allowed only for the false integration-migration trigger.
 
-- [ ] **Step 3: Commit the three reconciled memory files**
+- [ ] **Step 3: Refresh and verify README as a one-file step**
 
-Run `git diff --check`, confirm exactly three paths, and commit `docs(memory): record integration review results`.
+After the active three files are final, recompute their exact byte counts and SHA-256 values, update the README snapshot, and verify each active/recovery Markdown file with strict UTF-8 decoding. Confirm the three ignored 2026-08-27 backups retain the exact byte/hash values recorded in README and remain ignored.
+
+- [ ] **Step 4: Commit the four reconciled memory files**
+
+Run `git diff --check`, confirm the staged set is exactly `.ai/memory/README.md`, `.ai/memory/plan.md`, `.ai/memory/context.md`, and `.ai/memory/checklist.md`, and commit `docs(memory): record integration review results`.
 
 ---
 
