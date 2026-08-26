@@ -14,7 +14,9 @@ describe('20260825 integration backend migration', () => {
   );
 
   it('deduplicates active schedules before creating the exact partial unique index', () => {
-    const updateOffset = migration.indexOf('UPDATE "NotificationSchedule" AS schedule');
+    const updateOffset = migration.indexOf(
+      'UPDATE "NotificationSchedule" AS schedule',
+    );
     const indexOffset = migration.indexOf(
       'CREATE UNIQUE INDEX "NotificationSchedule_one_active_per_task"',
     );
@@ -22,7 +24,9 @@ describe('20260825 integration backend migration', () => {
     expect(updateOffset).toBeGreaterThanOrEqual(0);
     expect(indexOffset).toBeGreaterThan(updateOffset);
     expect(migration).toContain('ORDER BY "createdAt" DESC, "id" DESC');
-    expect(migration).toContain('"failureReason" = \'DEDUPED_ACTIVE_SCHEDULE\'');
+    expect(migration).toContain(
+      '"failureReason" = \'DEDUPED_ACTIVE_SCHEDULE\'',
+    );
     expect(migration).toContain('ON "NotificationSchedule" ("taskId")');
     expect(
       migration.match(/WHERE "status" IN \('PENDING', 'PROCESSING'\)/g),
