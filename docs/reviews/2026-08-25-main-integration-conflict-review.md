@@ -205,6 +205,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 7 AI-control policy/history | Exact `c79a042` design `d652711`, plan `3b81151`, system prompt `3fdd556`; commits `1bacf47` and `1d36d70`; product diff 0; independent review clean | PASS |
 | Task 8 selective foundation classification | Four commits and ten rows covering eleven capabilities classified with evidence/cost; only the partial active-schedule index conditionally `PORT` to Task 9 | PASS |
 | Task 9 active-schedule invariant | Commit `56c0575`; exact forward migration + contract test; targeted Jest 1/1, Prisma validate/generate, URL removal and build exit `0`; independent review clean | PASS |
+| Task 10 setup/architecture handoff | Four reconciled `c79a042` document candidates; exact runtime/ref/migration/ruling facts; PowerShell fail-fast P2 fixed and independently `RECHECKED` | PASS |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
 | Final independent review | Task 14 | PENDING |
 
@@ -316,6 +317,21 @@ The amended retry used Node `v24.19.0` and npm `11.19.0`:
 
 Commit `56c0575` (`feat(back): enforce one active notification schedule`) deterministically keeps the newest active schedule by `createdAt DESC, id DESC`, cancels older active rows with the exact failure reason, and creates the exact loud-failing partial unique index without `IF NOT EXISTS`. Independent discovery review found no findings and returned `APPROVED`; schema, provider/API, dependencies and all four canonical migrations remained unchanged. No `.env`, Docker, credential, existing/shared/remote database or DB connection command was used. Actual PostgreSQL application and canonical-prefix upgrade behavior remain exclusively in Task 11's disposable containers.
 
+## Task 10 external-PC and architecture reconciliation
+
+Read-only investigation mapped all four `c79a042` candidates to the actual integrated tree. The tracked frontend setup uses JDK 17 while the successful integration evidence used JDK 21.0.12.1; the reconciled documents preserve that distinction instead of silently selecting one. Commit `3216ac3` fixes the master plan's invalid ripgrep `-E` encoding option to the intended regular-expression `-e` form.
+
+The exact Task 10 document commits are:
+
+- `28b440c` `docs: update external PC setup plan` — setup design and plan only.
+- `af97e63` `docs: reconcile integration architecture and handoff` — current architecture and root handoff only.
+
+The documents distinguish unpublished local integration/offline refs from unchanged remotes, require Node `24.19.0`/npm `11.19.0`, use React Native CLI Android-only commands, list the four canonical migrations plus Task 9's delta, preserve every Task 8 ruling, and keep secrets, real databases, push/PR, deployment and `main` changes outside scope. Stale-term, private-key marker and whitespace checks passed.
+
+Initial independent review found one P2: native command blocks promised fail-fast behavior but did not guard every external exit or actually evaluate the URL cleanup check. Fix commit `0556097` added guards, Prisma `try/finally`, evaluated `Test-Path`, and separate Metro/Android terminals. Its re-review remained `FAILED` because `$LASTEXITCODE` alone can stay unchanged when a native command is unresolved on Windows PowerShell. Fix commit `04f5980` now passes immediate `$?` plus `$LASTEXITCODE` to every one of 60 guard calls. Independent reproductions returned `MISSING_COMMAND_GUARD=PASS` and `NATIVE_NONZERO_GUARD=PASS`; scoped fix-recheck marked the original P2 `ADDRESSED`, found no new P0/P1, and returned `RECHECKED`.
+
+Actual execution on a different PC and Task 11 disposable PostgreSQL validation remain future evidence gates; Task 10 performed no product test/build, DB, Docker, network, push, PR, or deployment action.
+
 ## Deferred items
 
 - Task 8 classified every Foundation capability. Redis/cache, realtime, users APIs, `NotificationMode`, daily finalization and the UTC-day 20-Task implementation are deferred; legacy notification/Expo/refresh-account implementations are superseded; only the active-schedule partial index advances conditionally to Task 9.
@@ -327,7 +343,7 @@ Commit `56c0575` (`feat(back): enforce one active notification schedule`) determ
 - Path-level overlap can undercount semantic overlap through renamed or independently reimplemented behavior.
 - The exact Node runtime is user-scoped; every validation shell must prepend `NODEJS_HOME` because system-wide Node remains `v24.13.0` after UAC cancellation.
 - Existing container `dsm-back-dev-db-1` is out of scope and must not be stopped, removed, reused, or connected to.
-- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification and Task 9's two-file invariant port are complete. Task 11 disposable migration application and the final full validation matrix remain pending their later task gates.
+- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification, Task 9's invariant port and Task 10 document reconciliation are complete. Task 11 disposable migration application and the final full validation matrix remain pending their later task gates.
 - Reproducing the offline verifier in a new Windows worktree requires the ignored three-line Expo declaration and LF materialization for the 28 source/page pairs because the global Git checkout policy is `core.autocrlf=true`; these are environment prerequisites, not branch deltas.
 
 ## Review verdict
