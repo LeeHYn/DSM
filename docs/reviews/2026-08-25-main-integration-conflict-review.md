@@ -200,7 +200,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 3 topology | Exact merge bases, counts, unique commit lists, path classifications | PASS |
 | Task 4 canonical merge | Merge `a639ac2`, exact canonical second parent, conflicts `4/4`, canonical-identical product tree, offline intersection `0`, independent review with no findings | PASS |
 | Task 5 canonical baseline | Initial Prisma `P1012` stopped safely; approved amendment `68557d7`; retry backend 23 suites/214 tests and frontend 18 suites/162 tests, typecheck/lint, Android 365-task build all exit `0`; product canonical-identical | PASS |
-| Canonical product suite | Runs after the canonical merge | PENDING |
+| Canonical product suite | Task 12 runtime/install/schema/build and backend Jest 24 suites/215 tests PASS; non-fixing backend lint found two Prettier errors in the Task 9 contract test; remaining matrix rows stopped | BLOCKED |
 | Offline branch suite | `codex/offline-learning-site` at `2cbb088`; one commit beyond `43145b6`; 4-path memory allowlist; Node 66/66; full verifier `PASS`, 28 sources; independent review clean | PASS |
 | Task 7 AI-control policy/history | Exact `c79a042` design `d652711`, plan `3b81151`, system prompt `3fdd556`; commits `1bacf47` and `1d36d70`; product diff 0; independent review clean | PASS |
 | Task 8 selective foundation classification | Four commits and ten rows covering eleven capabilities classified with evidence/cost; only the partial active-schedule index conditionally `PORT` to Task 9 | PASS |
@@ -345,6 +345,17 @@ The mandatory `finally` path stopped and removed only the two captured disposabl
 - Retry result: exact Node `v24.19.0` and npm `11.19.0`; empty PostgreSQL 17 applied/status-checked exactly five migrations; the fresh canonical extraction applied/status-checked exactly four migrations; seed inserted `1/1/2` rows; the forward delta produced exactly five applied migrations; the post-migration `DO` probe proved deterministic dedupe, the exact partial unique index, active duplicate rejection and allowed cancelled rows. The script exited `0`.
 - Retry cleanup: mandatory `finally` stopped only the two captured task container IDs. Both exact task names and process `DATABASE_URL` were absent afterward; a separate read-only check showed only the preserved out-of-scope `dsm-back-dev-db-1`. Original and `r2` ignored extraction evidence remain, while the temporary execution script was removed. `main` and `origin/main` remain `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
 - Independent reviewer verdict: `APPROVED`, no findings. It verified amendment and memory commit allowlists, byte-equivalent canonical extraction contents, all raw migration/seed/probe/cleanup evidence, protected refs and absence of tracked execution residue.
+
+## Task 12 complete-matrix blocker
+
+Task 12 started from clean tracked status at `2f96c77`. Exact Node `v24.19.0` and npm `11.19.0`, backend clean install (`882` packages), Prisma validate/generate with the already approved process-scoped parse-only URL and immediate URL removal, Nest build, and full Jest (`24` suites, `215` tests) all exited `0`.
+
+The next required non-fixing command, `npx eslint "{src,apps,libs,test}/**/*.ts"`, exited `1`. Both errors are `prettier/prettier` in `DSM_Back/src/notifications/notification-migration.contract.spec.ts`: line 17 requires the long `migration.indexOf` argument to wrap, and line 25 requires the long failure-reason `toContain` argument to wrap. A separate non-writing `prettier --check` reproduced the same single-file failure and stdout formatting showed only those two wraps. The file originated in Task 9 commit `56c0575`; Task 9 ran its targeted Jest, Prisma and build gates but not the final full non-fixing lint.
+
+Required-check stop semantics applied. Frontend install/tests/types/lint, Android build, lock-root check, offline checks and final Git/SDD integrity were not run. No `--fix`, source mutation, DB connection, existing/shared/remote DB access, push, PR or deployment occurred; tracked status remains clean and `DATABASE_URL` is absent.
+
+- Ruling: stop after the first required Task 12 failure rather than auto-format a product test outside the validation-only Task 12 allowlist — cost if wrong: the remaining matrix is delayed, but silently changing a reviewed Task 9 file would exceed the approved scope and weaken change attribution.
+- Proposed amendment: allow only the two Prettier-prescribed line wraps in `DSM_Back/src/notifications/notification-migration.contract.spec.ts`, commit that one file separately, verify exact-file Prettier/Jest and full backend non-fixing lint, then rerun Task 12's complete matrix from the runtime gate. No behavioral, migration, dependency, DB, remote or deployment change is included.
 
 ## Deferred items
 
