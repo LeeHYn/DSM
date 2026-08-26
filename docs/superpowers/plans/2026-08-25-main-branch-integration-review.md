@@ -849,7 +849,7 @@ Run stale-term searches against both files, check exact canonical/ref/runtime fa
 ### Task 11: Validate migrations in the two disposable PostgreSQL 17 containers
 
 **Files:**
-- Create/Modify (ignored): SDD ledger and canonical Prisma extraction
+- Create/Modify (ignored): SDD ledger and canonical Prisma extraction (`canonical-prisma*` first-attempt evidence and fresh `canonical-prisma-r2*` retry targets)
 - Create (ignored): `.superpowers/sdd/2026-08-25-main-branch-integration-review/pre-migration-seed.sql`
 - Create (ignored): `.superpowers/sdd/2026-08-25-main-branch-integration-review/post-migration-probe.sql`
 - Verify: `DSM_Back/prisma/**`
@@ -893,13 +893,13 @@ Expected: both exit 0.
 
 - [ ] **Step 4: Run the conditional canonical-prefix upgrade**
 
-If Task 9 did not create an integration migration, record `NOT_APPLICABLE` and skip only this step. Otherwise first prove the ignored extraction targets do not exist; if either exists, record `BLOCKED` rather than deleting or reusing it. From the integration root run:
+If Task 9 did not create an integration migration, record `NOT_APPLICABLE` and skip only this step. The first attempt's `canonical-prisma.zip` and `canonical-prisma/` are immutable failure evidence: preserve them and do not delete or reuse them. For the approved retry, first prove the fresh ignored `canonical-prisma-r2.zip` and `canonical-prisma-r2/` targets do not exist; if either exists, record `BLOCKED`. From the integration root run:
 
 ```powershell
-Test-Path -LiteralPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma.zip'
-Test-Path -LiteralPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma'
-git archive --format=zip --output=.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma.zip 2a4e9916765b505037e1c533735d84cd9f251ccf DSM_Back/prisma
-Expand-Archive -LiteralPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma.zip' -DestinationPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma'
+Test-Path -LiteralPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma-r2.zip'
+Test-Path -LiteralPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma-r2'
+git archive --format=zip --output=.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma-r2.zip 2a4e9916765b505037e1c533735d84cd9f251ccf DSM_Back/prisma
+Expand-Archive -LiteralPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma-r2.zip' -DestinationPath '.superpowers/sdd/2026-08-25-main-branch-integration-review/canonical-prisma-r2'
 $upgradeContainerId = docker run --rm -d --name dsm-integration-migrate-upgrade -e POSTGRES_USER=dsm_integration -e POSTGRES_PASSWORD=dsm_integration_password -e POSTGRES_DB=dsm_integration -p 127.0.0.1:55433:5432 postgres:17-alpine
 $upgradeReady = $false
 foreach ($attempt in 1..30) {
@@ -914,8 +914,8 @@ Expected: both `Test-Path` calls initially return `False`, extraction succeeds, 
 
 ```powershell
 $env:DATABASE_URL = 'postgresql://dsm_integration:dsm_integration_password@127.0.0.1:55433/dsm_integration?schema=public'
-npx prisma migrate deploy --schema ..\.superpowers\sdd\2026-08-25-main-branch-integration-review\canonical-prisma\DSM_Back\prisma\schema.prisma
-npx prisma migrate status --schema ..\.superpowers\sdd\2026-08-25-main-branch-integration-review\canonical-prisma\DSM_Back\prisma\schema.prisma
+npx prisma migrate deploy --schema ..\.superpowers\sdd\2026-08-25-main-branch-integration-review\canonical-prisma-r2\DSM_Back\prisma\schema.prisma
+npx prisma migrate status --schema ..\.superpowers\sdd\2026-08-25-main-branch-integration-review\canonical-prisma-r2\DSM_Back\prisma\schema.prisma
 ```
 
 Expected: exactly the four canonical migrations deploy and status exits 0.
@@ -929,7 +929,7 @@ INSERT INTO "User" ("id", "nickname", "updatedAt")
 VALUES ('integration-user', 'integration-migration-user', CURRENT_TIMESTAMP);
 
 INSERT INTO "Task" ("id", "title", "startAt", "endAt", "difficulty", "userId", "updatedAt")
-VALUES ('integration-task', 'integration migration probe', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour', 'EASY', 'integration-user', CURRENT_TIMESTAMP);
+VALUES ('integration-task', 'integration migration probe', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour', 'LOW', 'integration-user', CURRENT_TIMESTAMP);
 
 INSERT INTO "NotificationSchedule" ("id", "taskId", "userId", "scheduledAt", "status", "createdAt", "updatedAt")
 VALUES
