@@ -86,6 +86,7 @@
 | `ER-20260816-002` | `VERIFIED` | Jest, transform cache, isolated cache | focused test는 통과하지만 기존 cache를 쓴 full suite에서 Keychain mock이 어긋남 |
 | `ER-20260816-003` | `VERIFIED` | Metro, Windows Temp, cache, `EPERM` | Metro cache deserialize 실패 뒤 bundle이 멈추거나 reset이 권한 오류로 종료됨 |
 | `ER-20260817-001` | `VERIFIED` | Android, Google OAuth, debug signer, Credential Manager, `[16]` | 계정 선택 뒤 `Account reauth failed`로 ID token 전에 Login으로 복귀함 |
+| `ER-20260827-001` | `VERIFIED` | Prisma migration, PostgreSQL enum, disposable seed | migration upgrade seed가 존재하지 않는 enum literal로 중단됨 |
 
 ## 해결 record
 
@@ -1319,6 +1320,32 @@
   [Android Gradle config](../../DSM_Front/android/app/build.gradle),
   [release audit](../audits/20260817-release-audit-full-project/README.md)
 - `lastVerifiedAt`: `2026-08-17`
+
+### ER-20260827-001 — Prisma upgrade seed의 PostgreSQL enum literal 불일치
+
+- `resolutionId`: `ER-20260827-001`
+- `status`: `VERIFIED`
+- 증상/signature: canonical migration prefix까지 적용된 PostgreSQL에서 upgrade seed가
+  `invalid input value for enum`과 psql exit `3`으로 중단되고 forward migration과 invariant probe가 실행되지 않는다.
+- 적용 조건: Prisma schema와 초기 migration이 PostgreSQL enum을 정의하고, canonical-prefix upgrade를
+  disposable database와 고정 seed로 검증하는 경우.
+- root cause: 검증 계획의 seed literal이 canonical enum 정의와 대조되지 않아 존재하지 않는 값을 사용했다.
+- 해결 절차:
+  1. 오류에 표시된 enum을 Prisma schema와 enum 생성 migration 양쪽에서 확인한다.
+  2. seed를 그 교집합의 유효 literal로 최소 수정한다.
+  3. 실패한 canonical extraction은 증거로 보존하고, 사전 부재가 확인된 새 extraction 경로와 새 disposable container를 사용한다.
+  4. empty final chain, canonical prefix, seed, forward delta, invariant probe를 처음부터 다시 실행하고 captured container ID만 정리한다.
+- 검증: PostgreSQL 17에서 empty chain 5개와 canonical prefix 4개를 각각 deploy/status 확인했다.
+  유효 enum seed가 `1/1/2` rows로 적용된 뒤 forward chain 5개와 dedupe/index invariant probe가 exit `0`;
+  두 task container 이름과 process `DATABASE_URL`은 종료 후 부재했다. 독립 reviewer verdict는 `APPROVED`였다.
+- 재발 방지/금지: enum 값을 관용 이름으로 추측하지 않는다. 실패한 ignored extraction을 삭제·덮어쓰기·재사용하지 않고,
+  기존/shared/remote database에서 재현하지 않는다.
+- 적용 불가 또는 잔여 위험: enum을 사용하지 않거나 seed 없이 검증하는 migration에는 적용하지 않는다.
+  disposable 검증은 실제 운영 database history의 확인이나 배포 승인을 대체하지 않는다.
+- 근거: [Task 11 plan](../../docs/superpowers/plans/2026-08-25-main-branch-integration-review.md),
+  [Prisma schema](../../DSM_Back/prisma/schema.prisma),
+  [forward migration](../../DSM_Back/prisma/migrations/20260825_integration_backend_deltas/migration.sql)
+- `lastVerifiedAt`: `2026-08-27`
 
 ## 새 record 템플릿
 
