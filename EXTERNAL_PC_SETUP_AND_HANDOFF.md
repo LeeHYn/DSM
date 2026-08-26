@@ -50,11 +50,19 @@ The offline site is absent from `DSM_Back`, `DSM_Front`, and the integration pro
 In every npm shell:
 
 ```powershell
+function Assert-ExternalExit([string]$Step, [int]$ExitCode) {
+  if ($ExitCode -ne 0) { throw "$Step failed with exit code $ExitCode" }
+}
+
 node --version
+Assert-ExternalExit 'read Node version' $LASTEXITCODE
 npm --version
+Assert-ExternalExit 'read npm version' $LASTEXITCODE
 ```
 
 Expected: `v24.19.0` and `11.19.0`. If another installation resolves, prepend the approved Node directory to that process's `PATH`; do not weaken machine-wide script policy.
+
+Keep this PowerShell process open for Sections 6–14; their command blocks call the `Assert-ExternalExit` helper defined above.
 
 ## 6. Local-only and secret state
 
@@ -66,21 +74,26 @@ Run in `C:\dsm-integration-review\DSM_Back`:
 
 ```powershell
 npm ci --no-audit --no-fund
+Assert-ExternalExit 'backend npm ci' $LASTEXITCODE
 $validationDatabaseUrl = 'postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public'
 $env:DATABASE_URL = $validationDatabaseUrl
-npm run prisma:validate
-if ($LASTEXITCODE -ne 0) {
-  $validateExit = $LASTEXITCODE
+try {
+  npm run prisma:validate
+  Assert-ExternalExit 'Prisma validate' $LASTEXITCODE
+  npm run prisma:generate
+  Assert-ExternalExit 'Prisma generate' $LASTEXITCODE
+} finally {
   Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
-  exit $validateExit
 }
-npm run prisma:generate
-$generateExit = $LASTEXITCODE
-Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
-if ($generateExit -ne 0) { exit $generateExit }
+$databaseUrlStillPresent = Test-Path Env:DATABASE_URL
+$databaseUrlStillPresent
+if ($databaseUrlStillPresent) { throw 'DATABASE_URL cleanup failed' }
 npm run build
+Assert-ExternalExit 'backend build' $LASTEXITCODE
 npm test -- --runInBand --no-cache
+Assert-ExternalExit 'backend test' $LASTEXITCODE
 npx eslint "{src,apps,libs,test}/**/*.ts"
+Assert-ExternalExit 'backend non-fixing lint' $LASTEXITCODE
 ```
 
 Expected: all exit `0`, and `Test-Path Env:DATABASE_URL` is `False` after generate. The URL is parse-only; port `1` fails closed. Do not run migration application, database push, migration-status, or another database connection command. Do not use the backend lint script because it auto-fixes.
@@ -91,15 +104,20 @@ Run in `C:\dsm-integration-review\DSM_Front`:
 
 ```powershell
 npm ci --no-audit --no-fund
+Assert-ExternalExit 'frontend npm ci' $LASTEXITCODE
 npm test -- --no-cache
+Assert-ExternalExit 'frontend test' $LASTEXITCODE
 npm run typecheck
+Assert-ExternalExit 'frontend typecheck' $LASTEXITCODE
 npm run lint
+Assert-ExternalExit 'frontend lint' $LASTEXITCODE
 ```
 
 Run in `C:\dsm-integration-review\DSM_Front\android`:
 
 ```powershell
 .\gradlew.bat assembleDebug --no-daemon
+Assert-ExternalExit 'Android assembleDebug' $LASTEXITCODE
 ```
 
 The app is React Native 0.83.10 Community CLI and Android only. `android/` is tracked native source. Public local configuration names are `API_BASE_URL` and `GOOGLE_WEB_CLIENT_ID`; neither may contain a client secret or credential. Only after an approved local smoke, tracked runtime commands are `npm run start` and `npm run android`.
@@ -122,17 +140,24 @@ Run only in `C:\dsm-offline-learning-site`:
 
 ```powershell
 node --test "tools/learning-site/tests/*.test.mjs"
+Assert-ExternalExit 'offline Node tests' $LASTEXITCODE
 node tools/learning-site/verify.mjs --root C:\dsm-offline-learning-site --out C:\dsm-offline-learning-site\learning-site --batch batch-b --full --report C:\dsm-offline-learning-site\learning-site\verification-report.json
+Assert-ExternalExit 'offline full verifier' $LASTEXITCODE
 ```
 
 Expected: 66 tests, zero failures, verifier `PASS`, and 28 sources. Then run:
 
 ```powershell
 git rev-list --left-right --count 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD
+Assert-ExternalExit 'offline ancestry count' $LASTEXITCODE
 git log --format="%H %s" 43145b6e0407c3c539ca66deb1813ddbc2e97ec8..HEAD
+Assert-ExternalExit 'offline commit log' $LASTEXITCODE
 git diff --name-only 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD
+Assert-ExternalExit 'offline allowlist diff' $LASTEXITCODE
 git diff --check 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD
+Assert-ExternalExit 'offline diff check' $LASTEXITCODE
 git status --short
+Assert-ExternalExit 'offline status' $LASTEXITCODE
 ```
 
 Expected: `0 1`, one focused memory commit, four approved `.ai/memory` paths, and no tracked dirt. Environment-only ignored files and line-ending materialization must not become branch content.
@@ -161,13 +186,21 @@ Remaining order: Task 10 document review, Task 11 disposable migration validatio
 
 ```powershell
 git status --short --branch
+Assert-ExternalExit 'integration status' $LASTEXITCODE
 git log --oneline --decorate -20
+Assert-ExternalExit 'integration log' $LASTEXITCODE
 git rev-parse HEAD
+Assert-ExternalExit 'integration HEAD' $LASTEXITCODE
 git rev-parse main
+Assert-ExternalExit 'integration main ref' $LASTEXITCODE
 git rev-parse origin/main
+Assert-ExternalExit 'integration origin/main ref' $LASTEXITCODE
 git rev-parse origin/codex/integration-main-review
+Assert-ExternalExit 'integration remote baseline' $LASTEXITCODE
 git rev-list --left-right --count origin/codex/integration-main-review...HEAD
+Assert-ExternalExit 'integration ahead/behind' $LASTEXITCODE
 git diff --check
+Assert-ExternalExit 'integration diff check' $LASTEXITCODE
 Get-ChildItem -LiteralPath DSM_Back/prisma/migrations -Directory | Sort-Object Name | Select-Object -ExpandProperty Name
 ```
 

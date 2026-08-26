@@ -23,12 +23,22 @@
 Run read-only Git checks in the clone:
 
 ```powershell
+function Assert-ExternalExit([string]$Step, [int]$ExitCode) {
+  if ($ExitCode -ne 0) { throw "$Step failed with exit code $ExitCode" }
+}
+
 git fetch --prune origin
+Assert-ExternalExit 'git fetch' $LASTEXITCODE
 git rev-parse main
+Assert-ExternalExit 'resolve main' $LASTEXITCODE
 git rev-parse origin/main
+Assert-ExternalExit 'resolve origin/main' $LASTEXITCODE
 git rev-parse origin/codex/front-secure-session-rest-client
+Assert-ExternalExit 'resolve canonical product ref' $LASTEXITCODE
 git worktree list --porcelain
+Assert-ExternalExit 'list worktrees' $LASTEXITCODE
 git status --short --branch
+Assert-ExternalExit 'read clone status' $LASTEXITCODE
 ```
 
 Expected protected values are the two exact SHAs in Global constraints. Fetch changes only remote-tracking metadata; it does not authorize checkout, merge, pull, push, or branch deletion. If a pinned ref moved, stop and reconcile the reviewed integration plan before continuing.
@@ -37,10 +47,14 @@ In every npm verification shell, prepend the exact Node directory to `PATH`, the
 
 ```powershell
 node --version
+Assert-ExternalExit 'read Node version' $LASTEXITCODE
 npm --version
+Assert-ExternalExit 'read npm version' $LASTEXITCODE
 ```
 
 Expected: `v24.19.0` and `11.19.0`.
+
+Keep this PowerShell process open for Tasks 2–6; their command blocks call the `Assert-ExternalExit` helper defined above.
 
 ## Task 2: Verify the integration worktree
 
@@ -64,21 +78,26 @@ Run in `C:\dsm-integration-review\DSM_Back`:
 
 ```powershell
 npm ci --no-audit --no-fund
+Assert-ExternalExit 'backend npm ci' $LASTEXITCODE
 $validationDatabaseUrl = 'postgresql://dsm_validation:dsm_validation@127.0.0.1:1/dsm_validation?schema=public'
 $env:DATABASE_URL = $validationDatabaseUrl
-npm run prisma:validate
-if ($LASTEXITCODE -ne 0) {
-  $validateExit = $LASTEXITCODE
+try {
+  npm run prisma:validate
+  Assert-ExternalExit 'Prisma validate' $LASTEXITCODE
+  npm run prisma:generate
+  Assert-ExternalExit 'Prisma generate' $LASTEXITCODE
+} finally {
   Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
-  exit $validateExit
 }
-npm run prisma:generate
-$generateExit = $LASTEXITCODE
-Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
-if ($generateExit -ne 0) { exit $generateExit }
+$databaseUrlStillPresent = Test-Path Env:DATABASE_URL
+$databaseUrlStillPresent
+if ($databaseUrlStillPresent) { throw 'DATABASE_URL cleanup failed' }
 npm run build
+Assert-ExternalExit 'backend build' $LASTEXITCODE
 npm test -- --runInBand --no-cache
+Assert-ExternalExit 'backend test' $LASTEXITCODE
 npx eslint "{src,apps,libs,test}/**/*.ts"
+Assert-ExternalExit 'backend non-fixing lint' $LASTEXITCODE
 ```
 
 Expected: every command exits `0` and `Test-Path Env:DATABASE_URL` is `False` after generate. The URL is parse-only and port `1` fails closed. Do not run Prisma migration, database push, migration-status, or any other database connection command in this task. The repository lint script is not used because it includes automatic fixes.
@@ -89,24 +108,38 @@ Run in `C:\dsm-integration-review\DSM_Front`:
 
 ```powershell
 npm ci --no-audit --no-fund
+Assert-ExternalExit 'frontend npm ci' $LASTEXITCODE
 npm test -- --no-cache
+Assert-ExternalExit 'frontend test' $LASTEXITCODE
 npm run typecheck
+Assert-ExternalExit 'frontend typecheck' $LASTEXITCODE
 npm run lint
+Assert-ExternalExit 'frontend lint' $LASTEXITCODE
 ```
 
 Then run in `C:\dsm-integration-review\DSM_Front\android`:
 
 ```powershell
 .\gradlew.bat assembleDebug --no-daemon
+Assert-ExternalExit 'Android assembleDebug' $LASTEXITCODE
 ```
 
 This is a React Native 0.83.10 Community CLI Android project. No Web or iOS launch path is part of this handoff. Local SDK/JDK paths and signing material remain outside Git.
 
 Create only local untracked configuration from safe placeholders. The current public variable names are `API_BASE_URL` and `GOOGLE_WEB_CLIENT_ID`; never place a client secret, token, keystore value, or credential in frontend configuration. For an explicitly approved local smoke after the validation gate, the tracked scripts are:
 
+In terminal A, keep Metro running:
+
 ```powershell
 npm run start
+if ($LASTEXITCODE -ne 0) { throw "Metro start failed with exit code $LASTEXITCODE" }
+```
+
+After Metro is ready, run in terminal B:
+
+```powershell
 npm run android
+if ($LASTEXITCODE -ne 0) { throw "Android run failed with exit code $LASTEXITCODE" }
 ```
 
 ## Task 5: Verify the separate offline learning branch
@@ -115,7 +148,9 @@ Require `C:\dsm-offline-learning-site` on `codex/offline-learning-site`, with ba
 
 ```powershell
 node --test "tools/learning-site/tests/*.test.mjs"
+Assert-ExternalExit 'offline Node tests' $LASTEXITCODE
 node tools/learning-site/verify.mjs --root C:\dsm-offline-learning-site --out C:\dsm-offline-learning-site\learning-site --batch batch-b --full --report C:\dsm-offline-learning-site\learning-site\verification-report.json
+Assert-ExternalExit 'offline full verifier' $LASTEXITCODE
 ```
 
 Expected: 66 tests, zero failures, report status `PASS`, and 28 sources. Environment-only ignored files and line-ending materialization may be required as documented by the integration ledger, but they must not become branch content.
@@ -124,10 +159,15 @@ Prove ancestry and the four-path memory allowlist:
 
 ```powershell
 git rev-list --left-right --count 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD
+Assert-ExternalExit 'offline ancestry count' $LASTEXITCODE
 git log --format="%H %s" 43145b6e0407c3c539ca66deb1813ddbc2e97ec8..HEAD
+Assert-ExternalExit 'offline commit log' $LASTEXITCODE
 git diff --name-only 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD
+Assert-ExternalExit 'offline allowlist diff' $LASTEXITCODE
 git diff --check 43145b6e0407c3c539ca66deb1813ddbc2e97ec8...HEAD
+Assert-ExternalExit 'offline diff check' $LASTEXITCODE
 git status --short
+Assert-ExternalExit 'offline status' $LASTEXITCODE
 ```
 
 Expected: `0 1`, one focused memory commit, exactly the four approved `.ai/memory` paths, and no tracked dirt.
@@ -138,11 +178,17 @@ In the integration worktree, record without changing state:
 
 ```powershell
 git status --short --branch
+Assert-ExternalExit 'integration status' $LASTEXITCODE
 git log --oneline --decorate -20
+Assert-ExternalExit 'integration log' $LASTEXITCODE
 git rev-parse HEAD
+Assert-ExternalExit 'integration HEAD' $LASTEXITCODE
 git rev-parse main
+Assert-ExternalExit 'integration main ref' $LASTEXITCODE
 git rev-parse origin/main
+Assert-ExternalExit 'integration origin/main ref' $LASTEXITCODE
 git diff --check
+Assert-ExternalExit 'integration diff check' $LASTEXITCODE
 Get-ChildItem -LiteralPath DSM_Back/prisma/migrations -Directory | Sort-Object Name | Select-Object -ExpandProperty Name
 ```
 
