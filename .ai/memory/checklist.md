@@ -42,7 +42,7 @@
   - [x] stale/runtime/ref/migration/ruling/secret-marker/diff checks PASS
   - [x] review P2 fail-fast finding — fix `0556097` 불완전, fix `04f5980`에서 missing/native failure 모두 차단
   - [x] scoped fix-recheck `RECHECKED`, 신규 P0/P1 없음, report closure `fa47ba8`
-- [/] Task 11 named disposable PostgreSQL 17 migration validation — amendment 승인·재시도 준비 완료
+- [x] Task 11 named disposable PostgreSQL 17 migration validation
   - [x] task container names·original ignored targets absent preflight
   - [x] empty-chain five migrations deploy/status PASS
   - [x] canonical-prefix four migrations deploy/status PASS
@@ -50,7 +50,10 @@
   - [x] both task containers removed·names absent·URL absent·existing container untouched
   - [x] amendment: seed `LOW`, new `canonical-prisma-r2*` paths, full retry (`332e3ad`)
   - [x] 사용자 `ㄱ`으로 직전 Task 11 amendment 실행 승인
-  - [ ] fresh two-container full retry·final delta·invariant probe
+  - [x] fresh two-container full retry: empty 5·canonical 4·seed 1/1/2·forward 5·invariant probe PASS
+  - [x] captured IDs only cleanup·task names absent·URL absent·existing DB preserved
+  - [x] independent reviewer findings none `APPROVED`; report `f30dcd2`; playbook `4c25b67`
+- [/] Task 12 complete validation matrix — 실행 준비
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
 

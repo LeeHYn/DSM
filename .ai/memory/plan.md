@@ -37,6 +37,8 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - **Task 11 amendment 승인·반영 (2026-08-27)**: 사용자의 `ㄱ`을 직전 `Task 11 amendment` 실행 승인으로 확인했다. seed literal은 `LOW`, 첫 실패 이력의 ignored `canonical-prisma.zip`/`canonical-prisma`는 삭제·재사용하지 않고, absent가 확인된 `canonical-prisma-r2.zip`/`canonical-prisma-r2`와 그 schema path로 전체 Task 11을 새 container run에서 재시도한다. plan amendment commit은 `332e3ad`; existing/shared/remote DB, push, PR, `main` 변경, 배포는 계속 금지한다.
 - Task 11 amendment memory commit의 exact allowlist는 subject `docs(memory): approve migration retry`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - Task 11 blocker memory commit의 exact allowlist는 subject `docs(memory): record migration validation block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- **Task 11 완료**: exact Node `v24.19.0`/npm `11.19.0`에서 empty chain 5개, canonical prefix 4개, corrected `LOW` seed `1/1/2`, forward chain 5개, invariant `DO` probe가 모두 exit `0`. finally는 captured task container ID 두 개만 제거했고 exact names와 `DATABASE_URL` absent, 기존 `dsm-back-dev-db-1` present, original/r2 ignored evidence preserved다. independent reviewer는 findings 없이 `APPROVED`; report closure `f30dcd2`, reusable resolution `ER-20260827-001` commit `4c25b67`이다.
+- Task 11 final memory closure commit의 exact allowlist는 subject `docs(memory): close migration validation`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다. 다음 실행은 Task 12 complete validation matrix이며 remote/push/PR/deploy와 existing/shared/remote DB 금지는 유지한다.
 
 # Memory SSOT
 
