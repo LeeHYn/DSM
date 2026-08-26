@@ -2,223 +2,123 @@
 
 ## Main branch integration review — 2026-08-26
 
-- [x] 사용자 구조·명세·Subagent-Driven 실행 승인
-- [x] exact runtime/executor gate와 six pinned refs 검증
-- [x] SDD ignore preflight·ledger 생성
-- [x] Task 3 branch/overlap/checkpoint inventory·독립 review
-- [x] Task 4 네 충돌 경로 plan amendment 승인·검증·commits `e9e265a` / `aaef828` / `fa2fc88` / `5079b0e`
-- [x] Task 4 canonical `2a4e9916765b505037e1c533735d84cd9f251ccf` local non-squash merge `a639ac2`·독립 review clean·closure `0141b9f`
-- [x] Task 5 canonical baseline validation
-  - [x] backend `npm ci --no-audit --no-fund` exit `0` (882 packages)
-  - [x] 최초 backend `prisma:validate` — `DATABASE_URL` 누락 Prisma `P1012`, exit `1`, 안전 중단 이력
-  - [x] 승인 보정 뒤 backend validate/generate·URL 제거·build·23 suites/214 tests·non-fixing lint PASS
-  - [x] frontend 18 suites/162 tests·typecheck·lint 0 errors/18 warnings·Android 365-task build PASS
-  - [x] tracked dirty 0·canonical 제품 diff 0·URL absent·main refs 불변
-  - [x] process-scoped parse-only `DATABASE_URL` plan amendment 사용자 승인
-  - [x] 승인된 plan amendment 반영·검증·commit `68557d7` (16 tasks·71 checks, URL 1회, 정리 2회)
-  - [x] 독립 review P2 SSOT closure finding — fix rounds 1~3, 원 finding `ADDRESSED`, 신규 breakage 없음, `APPROVED`
-- [x] 별도 `codex/offline-learning-site` branch/worktree 생성·memory extraction·검증
-  - [x] base `43145b6` → commit `2cbb088`, ancestry `0 1`, 정확한 memory 4-path allowlist
-  - [x] ignored `expo-env.d.ts` 환경 복원·LF verifier materialization 후 Node 66/66·28-source `PASS`
-  - [x] independent discovery review — findings 없음, `APPROVED`
-- [x] Task 7 `c79a042` AI-control history·compatible v5.1 guidance port
-  - [x] commits `1bacf47` / `1d36d70`, source blob exact, product diff 0
-  - [x] independent discovery review — findings 없음, `APPROVED`
-- [x] Task 8 foundation capability classification
-  - [x] 네 foundation commits·11 capabilities 비교, active-schedule partial index만 조건부 `PORT`
-  - [x] ranking-snapshot unique invariant P2 누락 보정 commit `c070880`·fix-recheck `RECHECKED`
-- [x] Task 9 active-schedule database invariant
-  - [x] canonical migration 4개·index 부재·pre-deployment authority 확인
-  - [x] migration SQL·contract test exact 2-file 작업, targeted Jest 1/1 PASS
-  - [x] 최초 Prisma validate `DATABASE_URL` 부재 P1012 exit 1·generate/build/DB 명령 미실행
-  - [x] process-scoped parse-only URL amendment 사용자 승인
-  - [x] plan amendment commit `0e19c5f` (16 tasks·71 checks, URL 총 2회, 정리 총 4회)
-  - [x] validate/generate 뒤 URL absent·build·canonical migration delta 1개
-  - [x] product commit `56c0575` exact 2 paths·independent discovery review `APPROVED`
-  - [x] conflict report closure `660c714`; 실제 PostgreSQL 적용은 Task 11에 유지
-- [x] Task 10 external-PC/current-architecture reconciliation
-  - [x] read-only investigator가 네 `c79a042` 후보·현재 tree·JDK 17/21 nuance 대조
-  - [x] plan syntax fix `3216ac3`; setup pair `28b440c`; architecture/handoff pair `af97e63`
-  - [x] stale/runtime/ref/migration/ruling/secret-marker/diff checks PASS
-  - [x] review P2 fail-fast finding — fix `0556097` 불완전, fix `04f5980`에서 missing/native failure 모두 차단
-  - [x] scoped fix-recheck `RECHECKED`, 신규 P0/P1 없음, report closure `fa47ba8`
-- [x] Task 11 named disposable PostgreSQL 17 migration validation
-  - [x] task container names·original ignored targets absent preflight
-  - [x] empty-chain five migrations deploy/status PASS
-  - [x] canonical-prefix four migrations deploy/status PASS
-  - [x] seed `EASY` invalid enum root cause (`LOW|MEDIUM|HIGH`) 확정
-  - [x] both task containers removed·names absent·URL absent·existing container untouched
-  - [x] amendment: seed `LOW`, new `canonical-prisma-r2*` paths, full retry (`332e3ad`)
-  - [x] 사용자 `ㄱ`으로 직전 Task 11 amendment 실행 승인
-  - [x] fresh two-container full retry: empty 5·canonical 4·seed 1/1/2·forward 5·invariant probe PASS
-  - [x] captured IDs only cleanup·task names absent·URL absent·existing DB preserved
-  - [x] independent reviewer findings none `APPROVED`; report `f30dcd2`; playbook `4c25b67`
-- [/] Task 12 complete validation matrix — backend lint BLOCKED
-  - [x] runtime·backend clean install·Prisma validate/generate URL cleanup·build PASS
-  - [x] backend full Jest 24 suites/215 tests PASS
-  - [x] non-fixing ESLint reproduced: Task 9 contract test Prettier wraps 2 errors
-  - [x] stop semantics·tracked clean·URL absent
-  - [ ] 사용자 `Task 12 amendment 승인`
-  - [ ] approved two-wrap fix·separate commit·complete matrix full retry
-- [ ] 나머지 integration tasks·전체 validation·최종 독립 review
-- [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
+- [x] 사용자 spec·plan·Subagent-Driven 실행 승인; exact runtime/refs/SDD ledger preflight
+- [x] Task 3 inventory·review; Task 4 canonical merge `a639ac2`·byte-identical product·review clean
+- [x] Task 5 canonical baseline
+  - [x] approved parse-only URL amendment `68557d7`
+  - [x] Backend install 882·Prisma/build·23 suites/214 tests·lint PASS
+  - [x] Front 18/162·type·lint 0 errors/18 warnings·Android 365 tasks PASS
+  - [x] URL absent·tracked clean·canonical product diff 0·review `APPROVED`
+- [x] offline sibling `C:\dsm-offline-learning-site` / `codex/offline-learning-site` / `2cbb088`
+  - [x] base `43145b6`, memory source `fb54b5d`, ancestry `0 1`, exact memory 4 paths
+  - [x] Node 66/66, verifier 28-source `PASS`, review clean
+- [x] Task 7 AI-control history port; Task 8 foundation classification/recheck
+- [x] Task 9 active-schedule invariant `56c0575`: migration+contract test, validate/generate/build, review `APPROVED`
+- [x] Task 10 setup/architecture handoff; fail-fast fix `04f5980`, fix-recheck `RECHECKED`
+- [x] Task 11 disposable PostgreSQL 17
+  - [x] amendment `332e3ad`: seed `LOW`, fresh `canonical-prisma-r2*`, original evidence preserved
+  - [x] empty 5·canonical 4·seed 1/1/2·forward 5·invariant probe PASS
+  - [x] captured containers only cleanup·names/URL absent·existing DB preserved
+  - [x] reviewer `APPROVED`; report `f30dcd2`; playbook `ER-20260827-001`/`4c25b67`; memory `2f96c77`
+- [x] Task 12 complete validation matrix
+  - [x] Node `v24.19.0`/npm `11.19.0`; backend install·Prisma/URL cleanup·build PASS
+  - [x] Backend Jest 24 suites/215 tests PASS
+  - [x] non-fixing ESLint/Prettier 재현: contract test lines 17·25 wraps 2건
+  - [x] required-check stop·tracked clean·URL absent; blocker report `6ef5dab`, memory `0cf4031`
+  - [x] 사용자 exact `Task 12 amendment 승인`
+  - [x] plan `046d67f`/`0ecbf2d`; 1-file style `69d3154`; Prettier/focused Jest/full lint PASS
+  - [x] full retry: Backend 24/215, Front 18/162+type/lint, Android 365, lock/offline/Git/SDD PASS
+- [x] Task 13 active integration memory reconciliation
+  - [x] 사용자 exact `Task 13 amendment 승인`; 4-path plan `80ab65b`
+  - [x] plan/context actual-state 대조; checklist observed PASS only
+  - [x] README byte/hash·strict UTF-8·ignored recovery backup 검증
+  - [x] exact 4-path `docs(memory): record integration review results` closure
+- [ ] Task 14 final conflict report·independent review
+- [ ] 별도 승인 전 push·PR·`main` 변경·shared/remote DB·배포 금지
+- [x] `.ai/memory` 2026-08-27 압축·정리
+  - [x] 사용자 직접 요청; `ER-20260720-014` 적용; unsafe CLI/외부 전송 금지
+  - [x] active 3 pre-image byte-exact date backup
+  - [x] `plan.md`·`context.md`·`checklist.md` current-state local compression
+  - [x] README bytes/hash/ratio·strict UTF-8·semantic/gate 검증
 
 ## 완료
 
-- [x] M1~M5: 계획·NestJS/Expo 초기화·Prisma/PostgreSQL 기반
-- [x] M6 Auth: Google/Kakao, JWT access/refresh, bcrypt, logout, guard, `/auth/me`
-- [x] M7 Task CRUD
-- [x] M8 Category CRUD + user/default/foreign-owner 경계
-- [x] M9 Refresh O(1): `<recordId>.<secret>`, PK lookup + 1 bcrypt compare
-- [x] M10 DailyScore: UTC recompute, cap 900, 6 tiers
-- [x] M11 Ranking: DAILY/WEEKLY/TOTAL, percentile, leaderboard, snapshot
-- [x] M12A: FCM token lifecycle + Task-`NotificationSchedule` 원자 동기화
-- [x] M12B backend·local DB·change-gate
-  - [x] per-device delivery, ADC provider, Cron, lease/heartbeat, finalize/retry
-  - [x] durable send marker + terminal `UNKNOWN` at-most-once
-  - [x] cross-user token/FID 409 + account-neutral payload
-  - [x] F-007 완화 + 사용자 `ACCEPTED_RISK`; 나머지 findings `RECHECKED`
-- [x] Front secure session·REST client Task 1~33
-  - [x] onboarding/CORS/API validators/public·authenticated clients
-  - [x] Native SecureStore verified clear + Web memory store
-  - [x] session state/context/routing + login/onboarding/recovery/logout UI
-  - [x] refresh single-flight·generation/epoch fences·onboarding single-flight
-  - [x] refresh-token family + refresh/logout user-row lock
-  - [x] Web export 11 routes·responsive QA·auth change-gate
-- [x] 지원 체계: agent roles, context compiler, verification workflow, playbook, Docker local DB, Obsidian routing
+- [x] M1~M11: setup, Auth, Task, Category, refresh O(1), DailyScore, Ranking
+- [x] M12A FCM token lifecycle + Task-`NotificationSchedule` atomic sync
+- [x] M12B backend·local DB·change-gate; F-007 `ACCEPTED_RISK`/`MITIGATION_ONLY`, other findings `RECHECKED`
+- [x] Front secure session·REST client Task 1~33, Web QA·auth change-gate
+- [x] Android-only RN migration, Google provider/session actual smoke, F-016/F-025 `RECHECKED`
+- [x] support: roles, context compiler, verification workflow, playbook, Docker local DB, Obsidian routing
 
 ## 현재 진행 상태
 
-- [/] M12 notification
-  - [x] 12A 기반
-  - [x] 12B backend·local DB·change-gate
-  - [ ] Native actual device/provider-token evidence
-  - [ ] 12C authenticated current-state client
-  - [ ] 실제 ADC·FCM sandbox/test device
-- [x] Front secure session·REST client 제품·Web QA·auth change-gate
-- [/] Android Google provider login
-  - [x] Tasks 1~7 local 구현·검증
-  - [x] Google OAuth consent/Web+Android client
-  - [x] EAS project·development env·signing·cloud APK `FINISHED`
-  - [x] Android Studio local 환경
-    - [x] host SDK/JDK/NDK·Gradle sync·debug APK
-    - [x] API 36 system image·`Medium_Phone` AVD 설치·연결
-  - [ ] backend `GOOGLE_CLIENT_ID` 동일 Web audience 영구 release provisioning
-  - [x] disposable local backend process에 동일 Web audience 연결(값 비출력·비영구)
-  - [x] current pure-RN debug APK emulator install·launch·Google 계정 인증 화면 진입
-  - [x] 사용자 Google 계정 UI 완료
-  - [x] provider smoke 실패 증거 확보: `[16] Account reauth failed`, backend/Keychain 이전
-  - [x] current debug package/SHA Android OAuth 불일치 확인·별도 matching client 생성·독립 recheck
-  - [x] emulator Google login→backend exchange→reload/refresh→verified logout actual session smoke
-  - [ ] Task 10 authentication change-gate·final sync
+- [/] Main integration: Task 13 PASS → Task 14
+- [/] M12 notification: 12A/12B done; 12C·actual ADC/FCM sandbox pending
+- [x] Front secure session product·Web QA·auth gate
+- [/] Android Google
+  - [x] Android Studio SDK/JDK/AVD, pure-RN APK/Metro/login render
+  - [x] same-project current debug signer OAuth client·actual login/reload/refresh/logout
+  - [ ] permanent release `GOOGLE_CLIENT_ID`/signer provisioning
+  - [ ] final product authentication change-gate sync
+- [/] full-project release audit: confirmed 22, unknown 2, rechecked 2; release-ready 아님
 - [ ] PR·merge·배포
 
 ## Android Google 완료 증거
 
-- [x] application ID `com.dsm.dailyup`
-- [x] provider dependencies + React Native 0.83 Android compatibility
-- [x] blank-safe Web client-ID config boundary TDD
-- [x] native Google ID-token adapter TDD
-- [x] login UI → `SessionController.signIn('GOOGLE', token)` 연결 TDD
-- [x] Android package/autolinking/public env 계약
-- [x] EAS internal development APK profile
-- [x] Android-only local gate: Jest 18 suites/162 tests, TypeScript, lint 0 errors(warnings 18), Community CLI autolinking/Expo runtime leakage
-- [x] EAS signing SHA-1을 사용한 Android OAuth client 생성; 값 기록 금지 준수
-- [x] Web OAuth client를 EAS development env에 저장; 완전값 기록 금지 준수
-- [x] EAS Android development build archive 확인
-- [x] worktree `C:\DEV\fsr` 이동으로 Windows Ninja/CMake path 오류 해결
-- [x] Expo runtime/CLI/Router/SecureStore/dev-client 제거; React Navigation/Keychain/Config/Community CLI 전환
-- [x] Web/iOS target과 Expo 전용 source/assets/config 제거
-- [x] pure React Native `assembleDebug`: `BUILD SUCCESSFUL in 19m 1s`, 365 tasks
-- [x] Android Studio Gradle sync·`Run app` build/install·Metro `index.js`·로그인 화면 확인
-- [x] Android project Git 추적 경계: build/cache/local.properties/`*.keystore` 제외
-- [x] release의 debug signing 재사용 제거; final incremental `assembleDebug` 365 tasks 통과
-- [x] independent review P1/P2 조치: new-PC debug OAuth 등록 runbook, cold-start bootstrapping, exact Node/npm-ci 계약
-- [x] legacy `eas.json`·미사용 `dsmfront:` BROWSABLE scheme 제거
-- [x] local APK 231,200,412 bytes + SHA-256 검증
-- [x] Android Studio 호스트 SDK 설치·AVD 연결
-- [x] actual Google token exchange·Keychain reload·refresh rotation·verified logout evidence
+- [x] application ID `com.dsm.dailyup`; native dependencies/config boundary/adapter/login TDD
+- [x] Community CLI autolinking; Expo runtime/CLI/Router/SecureStore/dev-client·Web/iOS 제거
+- [x] Android native 52 files tracked; build/cache/local/keystore excluded
+- [x] Front Jest 18/162·type·lint 0 errors/18 warnings; Gradle 365 tasks
+- [x] current debug signer OAuth client under approval; complete values not recorded
+- [x] Google token→backend→Keychain reload/rotation→logout→post-logout Login smoke
+- [x] remote clean checkout reproduction; F-016/F-025 independent recheck
 
 ## 2026-08-17 full-project release audit
 
-- [x] Backend unit 214, e2e 2, build, ESLint, Prisma validate
-- [x] Frontend Jest 162, typecheck, ESLint, npm tree, Community CLI config
-- [x] disposable PostgreSQL 17 migration 4개·backend health
-- [x] fresh assembleDebug 365 tasks·signer/install/launch/Metro/login render
-- [x] 3개 free-exploration lens + 독립 validator 2명 + disagreement tie-break
-- [x] audit ledger 26행 JSON parse·ID/fingerprint/hash·static schema contract
-- [x] `F-025` external Android OAuth fix: independent validators 2명 `SURVIVED`, fix-recheck `RECHECKED`
-- [x] `F-016` Android Git handoff: native 52개 추적·feature branch push·clean checkout build·independent fix-recheck `RECHECKED`
-- [/] audit open: confirmed 22, unknown 2, rechecked 2; release-ready 아님
-- [/] P1 5건 remediation + 독립 recheck — `F-016` 완료, 4건 남음
-- [ ] P2/UNKNOWN remediation·scope evidence
-- [ ] 서로 다른 2개 자유 탐색 round에서 신규 confirmed P0~P2 0건 연속
+- [x] Backend unit 214/e2e 2/build/lint/Prisma; Front 162/type/lint/npm tree; DB/Android gates
+- [x] 3 exploration lenses, validators/tie-break, 26-row ledger integrity
+- [x] `F-016` Android Git handoff `RECHECKED`
+- [x] `F-025` external OAuth fix `RECHECKED`
+- [/] P1 remediation: `F-016` done; `F-006`, `F-003`, `F-005`, `F-017` remain
+- [ ] UNKNOWN `F-013`/`F-015`, P2/P3, two consecutive zero-new-confirmed-P0~P2 rounds
 
 ## 다음 실행 순서
 
-1. [x] Google Cloud same-project의 current debug package/SHA Android OAuth 불일치 확인·matching client 생성
-2. [x] emulator Google account 인증·로그인 재시도
-3. [x] login→reload/bootstrap→profile→refresh rotation→logout verified-clear smoke
-4. [/] release-audit confirmed P1 5건 중 `F-016` 완료, 4건 plan·승인·수정·recheck 남음
-   - [x] `F-016` Android Git handoff
-     - [x] 설계·memory plan 작성 및 사용자 승인
-     - [x] 구현 계획 작성
-     - [x] dirty worktree provenance·commit 경계 검수
-     - [x] ignore·secret·diff boundary 검증
-     - [x] frontend Jest 18/162·typecheck·lint 0 errors·Community CLI gate
-     - [x] Android Studio JDK 17 Gradle build: 281 tasks, `BUILD SUCCESSFUL in 6m 10s`
-     - [x] 의도별 staged diff 검수·commit
-     - [x] current feature branch push·remote HEAD 일치
-     - [x] clean checkout `npm ci`·Jest 162·typecheck·lint·Community CLI·`assembleDebug` 재현 검증
-     - [x] independent fix-recheck `RECHECKED`·audit/memory closure
-   - [/] 다음 P1 `F-006` data-integrity change-gate
-     - [x] 과거·미래 Task 유지, UTC `startAt` 날짜당 active Task 20개, same-day `completedAt` score eligibility 정책 승인
-     - [x] formal design spec 작성·self-review
-     - [ ] written-spec review 뒤 implementation plan·별도 승인
-     - [ ] exact 2-file stages TDD·disposable PostgreSQL migration/concurrency 검증
-     - [ ] implementation-independent fix-recheck·audit closure
-5. [ ] UNKNOWN 2건 readiness/notification scope 증거 확정
-6. [ ] 나머지 P2/P3 처리·release-audit 종료 조건 충족
-7. [ ] M12C
-   - [ ] notification permission
-   - [ ] logout/account-switch Firebase Installation/token rotation
-   - [ ] data-only signal 수신
-   - [ ] authenticated current-state fetch/display
-   - [ ] cancelled/completed/deleted Task 표시 금지
-8. [ ] Firebase test project/device ADC·FCM sandbox
-9. [ ] evidence 후 `FCM_DISPATCH_ENABLED` 활성 판단
-10. [ ] M13 WebSocket → M14 Redis/batch
+1. [x] exact `Task 12 amendment 승인`
+2. [x] contract test 2 wraps only·format/Jest/full lint·separate commit
+3. [x] Task 12 full matrix restart
+4. [x] Task 13 memory 4-path 범위·reconciliation
+5. [ ] Task 14 final report/review
+6. [/] separate product `F-006` written-spec review
+   - [x] UTC `startAt` day max 20 active; same-day `completedAt` score policy/spec
+   - [ ] implementation plan·approval·exact 2-file TDD stages
+   - [ ] disposable PostgreSQL repair/concurrency·independent fix-recheck
+7. [ ] remaining P1/UNKNOWN/P2-P3·audit close
+8. [ ] M12C → Firebase sandbox → dispatch → WebSocket → Redis/batch
 
 ## 계속 유지할 gate
 
-- [x] Native device session smoke 전 M12C 진입 완료 표시 금지 — smoke 확보, M12C는 여전히 미시작
-- [ ] credential·token·SHA-1·client ID 완전값 출력·Git·memory 기록 금지
-- [ ] 실제 Firebase credential/message send는 별도 승인 전 금지
-- [ ] remote/prod DB migration·reset·drop 별도 승인 전 금지
-- [ ] Git stage·commit·push·PR·merge·deploy 명시 승인 전 금지
-- [ ] F-007 `ACCEPTED_RISK`/`MITIGATION_ONLY`를 `RECHECKED`·해결로 표시 금지
-- [ ] 고위험 변경은 `change-gate`; release 전 `release-audit`
+- [ ] credential/token/SHA/client ID complete values output/Git/memory 금지
+- [ ] Firebase credential/send, remote/prod DB/reset/drop, deploy는 별도 승인
+- [ ] Git stage/commit/push/PR/merge는 현재 명시 승인 범위만; force/main direct push 금지
+- [ ] F-007 `ACCEPTED_RISK`/`MITIGATION_ONLY`를 해결 표시 금지
+- [ ] 고위험 변경=`change-gate`; release=`release-audit`; exact 1~2 files
 
 ## 보류·별도 triage
 
-- [ ] dependency audit 32건(critical 0; Backend 15, Frontend 17)
-- [ ] actual multi-connection PostgreSQL refresh/logout interleaving
-- [ ] Task parser hash/non-string 명시 test
-- [ ] Apple Sign In actual verification
-- [ ] revoked refresh-token reuse hook
-- [ ] UTC midnight score Cron
+- [ ] dependency audit 32(critical 0; Backend 15, Frontend 17)
+- [ ] actual multi-connection refresh/logout interleaving; Firebase delivery/F-007 race
+- [ ] Task parser edge tests, Apple, revoked-token hook, UTC midnight Cron
+- [ ] release signing/.env/OAuth provisioning; template branding
 - [ ] Redis/batch·WebSocket·automatic ranking snapshot
 
 ## `.ai/memory` 압축·정리 — 2026-08-16
 
-- [x] active memory·Git·Android APK actual 상태 대조
-- [x] `caveman-compress` 안전 감사 — `ER-20260720-014` locale 손상 조건 재확인
-- [x] 기존 `*.original.md` 비접근·비덮어쓰기
-- [x] local-only 계획·exact 1~2-file stages 사용자 승인
-- [x] `plan.20260816.original.md` byte-exact backup + `plan.md` 압축·갱신
-- [x] `context.20260816.original.md` byte-exact backup + `context.md` 압축·갱신
-- [x] `checklist.20260816.original.md` byte-exact backup + `checklist.md` 압축·갱신
-- [x] `README.md` backup hash·크기·압축률·routing 갱신
-- [x] `error-resolution-playbook.md`의 `ER-20260720-014` 현재 소스 재검증 반영
-- [x] strict UTF-8·backup hash·Markdown·gate·secret·stale path·playbook 정합성
-- [x] exact allowlist·`git diff --check`·Git status 최종 확인
+- [x] 2026-08-27 active memory·Git·current blocker 대조
+- [x] unsafe `caveman-compress` audit: `ER-20260720-014` 일치, direct run/외부 upload 금지
+- [x] `plan.20260827.original.md` byte-exact backup
+- [x] `context.20260827.original.md` byte-exact backup
+- [x] `checklist.20260827.original.md` byte-exact backup
+- [x] active 3 local `apply_patch` compression; playbook read-only
+- [x] README snapshot update
+- [x] strict UTF-8, backup hash, heading/gate/secret/Git validation
