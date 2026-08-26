@@ -9,8 +9,6 @@
 | `checklist.md` | `[ ]|[/]|[x]` 공정 상태 | 모든 작업 시작/종료 | main |
 | `error-resolution-playbook.md` | 검증된 오류 해결 지식 | 오류 발견·진단·수정 전 | main; sub-agent는 match 보고 |
 
-Current release audit: [`20260817-release-audit-full-project`](../audits/20260817-release-audit-full-project/README.md). Confirmed/unknown 상태와 독립 validation의 canonical source는 해당 `findings.jsonl`이다.
-
 ## Recovery files
 
 - `*.original.md`: local recovery snapshot. Git ignored. 일반 검색·handoff·context compiler·재압축 제외.
@@ -52,15 +50,11 @@ Current release audit: [`20260817-release-audit-full-project`](../audits/2026081
 
 | File | Pre-image bytes | Active bytes | 감소 | Active SHA-256 |
 |---|---:|---:|---:|---|
-| `plan.md` | 31,419 | 12,239 | 61.0% | `7A17D75102D96DB4981265E4ABE649E3A247908AC7B8400B52765E0DBBC0F2D7` |
+| `plan.md` | 31,419 | 12,268 | 61.0% | `A2345FBC6184D8C297681D24AD12CCCC616DFF6E3F4C0847F0489C68DC7026F8` |
 | `context.md` | 13,165 | 8,650 | 34.3% | `B11D947C92DC99D6315FC69D5C4C9A57AB0DE0A1A94E2C5118B9F2BC9AEFF69B` |
 | `checklist.md` | 14,798 | 7,221 | 51.2% | `CCEF5DA190F619FCC34CECFF394ECC3BDB4632BA4FFAED9461389A11F467607D` |
-| **active 3 total** | **59,382** | **28,110** | **52.7%** | — |
+| **active 3 total** | **59,382** | **28,139** | **52.6%** | — |
 
-- 2026-08-27 pre-image backups: `plan.20260827.original.md` 31,419 bytes / `DC6CD396AC900785A657BF801CCB728585732A70090E8B9BDA9E7AB4D0B0F24B`; `context.20260827.original.md` 13,165 / `012625AEB93E7D115FEF610EDFFA3B7359A6526405D7230A9E98498D4AC7889A`; `checklist.20260827.original.md` 14,798 / `BBE3BB5B1685AD836E21DF20F47F24F91C12A06CF243F2170C94C95D4CC6C5E1`. Source/backup hashes matched before rewrite; backups are ignored recovery-only.
-- `caveman-compress` still uses locale-default `read_text(errors="ignore")`/`write_text()` and matches `ER-20260720-014`; direct CLI and external Claude upload were not used. Compression was local `apply_patch` after byte-exact backup.
-- All 17/11/10 original Markdown headings remain exact in `plan.md`/`context.md`/`checklist.md`. Generic validator rejects intentional duplicate-history removal because inline-code occurrence counts differ; project semantic validation instead confirms current refs, Task 11 evidence, Task 12 approval/PASS evidence, offline separation, safety gates and linked SSOT.
-- Active/recovery/playbook Markdown strict UTF-8. `git diff --check`, backup ignore rules and secret/private-key/JWT/Bearer scan PASS; Task 13 tracked scope는 active `README.md`·`plan.md`·`context.md`·`checklist.md` 4개뿐이다.
-- `error-resolution-playbook.md` remained read-only: index/body both 53 records (`VERIFIED` 52 + `MITIGATION_ONLY` 1), including `ER-20260827-001`.
-- Active integration status: Task 11 PASS/review clean; Task 12 full matrix PASS; Task 13 exact 4-path memory closure; Task 14 pending. `main`/`origin/main`, offline branch, existing DB and all remote/deploy boundaries remain unchanged.
-- Separate product audit remains confirmed 22·unknown 2·rechecked 2; `F-016`/`F-025` RECHECKED, `F-006` written-spec review pending.
+- 2026-08-27 pre-image backups: `plan.20260827.original.md` 31,419 bytes / `DC6CD396AC900785A657BF801CCB728585732A70090E8B9BDA9E7AB4D0B0F24B`; `context.20260827.original.md` 13,165 / `012625AEB93E7D115FEF610EDFFA3B7359A6526405D7230A9E98498D4AC7889A`; `checklist.20260827.original.md` 14,798 / `BBE3BB5B1685AD836E21DF20F47F24F91C12A06CF243F2170C94C95D4CC6C5E1`. Backups are ignored recovery-only.
+- Active/recovery Markdown strict UTF-8 verification PASS.
+- Active integration status: Task 12 full matrix PASS; Task 13 exact 4-path memory closure.
