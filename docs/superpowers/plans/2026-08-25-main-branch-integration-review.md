@@ -1029,6 +1029,7 @@ Stop only the two captured IDs. Because both used `--rm` and no volume, verify b
 ### Task 12: Run the complete validation matrix
 
 **Files:**
+- Modify: `DSM_Back/src/notifications/notification-migration.contract.spec.ts` (approved formatting-only amendment)
 - Verify: final integration tree
 - Verify: offline worktree
 - Modify (ignored): SDD ledger
@@ -1037,6 +1038,12 @@ Stop only the two captured IDs. Because both used `--rm` and no volume, verify b
 **Interfaces:**
 - Consumes: all accepted commits and both local branches
 - Produces: one `PASS`/`BLOCKED`/triggered `NOT_APPLICABLE` row for every spec validation
+
+- [ ] **Step 0: Apply the approved formatting-only amendment**
+
+The first Task 12 run already established RED: the exact non-fixing backend ESLint command exited `1`, and a non-writing exact-file Prettier check reproduced only two wrap errors at lines 17 and 25 of `DSM_Back/src/notifications/notification-migration.contract.spec.ts`. The user approved `Task 12 amendment 승인` on 2026-08-27. Change only those two Prettier-prescribed line wraps; do not change assertions, strings, migration SQL, product behavior, dependencies, or any other source/test file.
+
+Verify the exact file with non-writing Prettier, its focused Jest contract test, the full non-fixing backend ESLint command, `git diff --check`, and `git diff --ignore-all-space --exit-code -- DSM_Back/src/notifications/notification-migration.contract.spec.ts`. The whitespace-ignored diff must be empty. Stage and commit only that test file with `style(back): format migration contract test`; leave the user-authorized active-memory compression changes unstaged and preserved. Then restart the complete Task 12 matrix from the runtime gate rather than reusing partial results.
 
 - [ ] **Step 1: Re-run the exact runtime, backend, frontend, and Android commands**
 
