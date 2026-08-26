@@ -36,6 +36,13 @@
   - [x] validate/generate 뒤 URL absent·build·canonical migration delta 1개
   - [x] product commit `56c0575` exact 2 paths·independent discovery review `APPROVED`
   - [x] conflict report closure `660c714`; 실제 PostgreSQL 적용은 Task 11에 유지
+- [x] Task 10 external-PC/current-architecture reconciliation
+  - [x] read-only investigator가 네 `c79a042` 후보·현재 tree·JDK 17/21 nuance 대조
+  - [x] plan syntax fix `3216ac3`; setup pair `28b440c`; architecture/handoff pair `af97e63`
+  - [x] stale/runtime/ref/migration/ruling/secret-marker/diff checks PASS
+  - [x] review P2 fail-fast finding — fix `0556097` 불완전, fix `04f5980`에서 missing/native failure 모두 차단
+  - [x] scoped fix-recheck `RECHECKED`, 신규 P0/P1 없음, report closure `fa47ba8`
+- [ ] Task 11 named disposable PostgreSQL 17 empty-chain·canonical-prefix migration validation
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
 

@@ -29,6 +29,9 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - Task 9 product commit은 migration SQL과 contract test 두 파일만 별도 stage/commit한다. plan-amendment memory closure commit도 `.ai/memory/plan.md`와 `.ai/memory/checklist.md`만 사용하며 제품 파일과 섞지 않는다.
 - **Task 9 완료**: commit `56c0575`는 exact migration SQL과 contract test 두 파일만 추가한다. Node `v24.19.0`/npm `11.19.0`에서 targeted Jest 1/1, Prisma validate/generate, `DATABASE_URL` 제거, Nest build가 모두 exit `0`; canonical 대비 migration delta는 새 파일 하나뿐이다. 독립 discovery reviewer는 findings 없이 `APPROVED`했고 report closure는 `660c714`다. 실제 PostgreSQL 적용·canonical-prefix upgrade는 Task 11 disposable containers에 남으며 Task 9에서는 DB에 접속하지 않았다.
 - Task 9 final memory closure commit의 exact allowlist는 subject `docs(memory): close migration invariant`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- **Task 10 완료**: `c79a042` 네 문서 후보를 현재 local integration/offline topology, Node `24.19.0`/npm `11.19.0`, RN CLI Android-only, 다섯 migration, Task 8 판정과 no-push/no-DB 경계로 재조정했다. plan syntax fix `3216ac3`, setup pair `28b440c`, architecture/handoff pair `af97e63`, report closure `fa47ba8`다.
+- **Task 10 review closure**: 초기 P2는 PowerShell 외부 명령의 fail-fast·URL cleanup 검증 누락이었다. fix `0556097`은 `$LASTEXITCODE`만 검사해 unresolved command 경로가 남아 `FAILED`; fix `04f5980`은 60개 호출 모두 immediate `$?`와 native exit를 함께 검사한다. missing-command/native-exit 재현 PASS, Prisma `try/finally`·actual `Test-Path` 유지, scoped verdict `RECHECKED`, 신규 P0/P1 없음.
+- Task 10 final memory closure commit의 exact allowlist는 subject `docs(memory): close handoff reconciliation`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다. 다음 실행은 Task 11의 두 named disposable PostgreSQL 17 containers이며 existing `dsm-back-dev-db-1`은 계속 금지한다.
 
 # Memory SSOT
 
