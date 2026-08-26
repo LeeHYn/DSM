@@ -27,13 +27,15 @@
 - [x] Task 8 foundation capability classification
   - [x] 네 foundation commits·11 capabilities 비교, active-schedule partial index만 조건부 `PORT`
   - [x] ranking-snapshot unique invariant P2 누락 보정 commit `c070880`·fix-recheck `RECHECKED`
-- [/] Task 9 active-schedule database invariant
+- [x] Task 9 active-schedule database invariant
   - [x] canonical migration 4개·index 부재·pre-deployment authority 확인
   - [x] migration SQL·contract test exact 2-file 작업, targeted Jest 1/1 PASS
   - [x] 최초 Prisma validate `DATABASE_URL` 부재 P1012 exit 1·generate/build/DB 명령 미실행
   - [x] process-scoped parse-only URL amendment 사용자 승인
   - [x] plan amendment commit `0e19c5f` (16 tasks·71 checks, URL 총 2회, 정리 총 4회)
-  - [ ] validate/generate 뒤 URL absent·build·migration diff·독립 review·closure
+  - [x] validate/generate 뒤 URL absent·build·canonical migration delta 1개
+  - [x] product commit `56c0575` exact 2 paths·independent discovery review `APPROVED`
+  - [x] conflict report closure `660c714`; 실제 PostgreSQL 적용은 Task 11에 유지
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
 
