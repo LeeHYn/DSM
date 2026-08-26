@@ -826,7 +826,7 @@ Required commands in the rewritten plan: backend/frontend `npm ci`, backend Pris
 Run:
 
 ```powershell
-rg -n -E "Expo SDK 55|expo-router|9ee7b97|Node.js 22\+|npm run ios|reset-project" docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md docs/superpowers/plans/2026-08-08-external-pc-setup-and-handoff.md
+rg -n -e "Expo SDK 55|expo-router|9ee7b97|Node.js 22\+|npm run ios|reset-project" docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md docs/superpowers/plans/2026-08-08-external-pc-setup-and-handoff.md
 rg -n -F "24.19.0" docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md docs/superpowers/plans/2026-08-08-external-pc-setup-and-handoff.md
 rg -n -F "11.19.0" docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md docs/superpowers/plans/2026-08-08-external-pc-setup-and-handoff.md
 git diff --check -- docs/superpowers/specs/2026-08-08-external-pc-setup-and-handoff-design.md docs/superpowers/plans/2026-08-08-external-pc-setup-and-handoff.md
