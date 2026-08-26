@@ -23,6 +23,10 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - Task 5 plan-amendment closure commit의 exact allowlist는 subject `docs(memory): record baseline validation amendment`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - Task 5 PASS report commit의 exact allowlist는 subject `docs: record baseline validation pass`, path `docs/reviews/2026-08-25-main-integration-conflict-review.md` 하나다. PASS memory closure commit의 exact allowlist는 subject `docs(memory): record baseline validation pass`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - Task 5 final review closure commit의 exact allowlist는 subject `docs(memory): close baseline validation review`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
+- **Task 8 완료**: foundation 네 commit의 capability를 현재 canonical tree와 비교해 legacy notification/Expo/refresh-account-delete 구현은 `SUPERSEDED`, Redis/realtime/users API/`NotificationMode`/daily finalization/UTC-day 20-Task 구현과 ranking-snapshot unique invariant는 `DEFER`로 분류했다. 현재 없는 `NotificationSchedule_one_active_per_task` partial index만 Task 9의 조건부 `PORT`다. reviewer P2 누락은 commit `c070880`에서 보정했고 fix-recheck는 `RECHECKED`다.
+- **Task 9 amendment 승인 (2026-08-26)**: targeted migration contract test는 최초 실행에서 1 suite/1 test PASS했으나, 다음 exact `npm run prisma:validate`는 clean 환경의 `DATABASE_URL` 부재로 Prisma `P1012`, exit `1`이어서 안전 중단했다. 사용자가 정확히 `Task 9 amendment 승인`으로 Task 5와 같은 process-scoped parse-only URL 보정과 Task 9 재개를 승인했다.
+- **Task 9 amendment 반영 완료**: implementation plan Task 9 Step 5에 loopback port `1` URL 설정, validate 실패 시 정리·중단, generate 직후 정리·exit 전달, DB 연결 명령 금지를 추가했다. 16 tasks·71 checks, URL 총 2회·정리 총 4회, 단일 plan path와 `git diff --check`를 검증하고 commit `0e19c5f` `docs: amend migration validation environment`로 기록했다. 실제 DB 연결, shared/remote DB, push, PR, `main` 변경, 배포는 승인 범위 밖이다.
+- Task 9 product commit은 migration SQL과 contract test 두 파일만 별도 stage/commit한다. plan-amendment memory closure commit도 `.ai/memory/plan.md`와 `.ai/memory/checklist.md`만 사용하며 제품 파일과 섞지 않는다.
 
 # Memory SSOT
 
