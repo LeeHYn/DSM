@@ -206,7 +206,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 8 selective foundation classification | Four commits and ten rows covering eleven capabilities classified with evidence/cost; only the partial active-schedule index conditionally `PORT` to Task 9 | PASS |
 | Task 9 active-schedule invariant | Commit `56c0575`; exact forward migration + contract test; targeted Jest 1/1, Prisma validate/generate, URL removal and build exit `0`; independent review clean | PASS |
 | Task 10 setup/architecture handoff | Four reconciled `c79a042` document candidates; exact runtime/ref/migration/ruling facts; PowerShell fail-fast P2 fixed and independently `RECHECKED` | PASS |
-| Task 11 migration validation | Empty five-migration chain PASS; canonical four-migration prefix PASS; seed blocked by invalid planned enum literal; both task containers removed | BLOCKED |
+| Task 11 migration validation | Amendment `332e3ad`; empty five-migration chain, canonical four-migration prefix, corrected seed, forward five-migration chain and invariant probe PASS; cleanup PASS; independent review clean | PASS |
 | Final independent review | Task 14 | PENDING |
 
 ## Task 5 baseline blocker and amended retry
@@ -330,9 +330,9 @@ The documents distinguish unpublished local integration/offline refs from unchan
 
 Initial independent review found one P2: native command blocks promised fail-fast behavior but did not guard every external exit or actually evaluate the URL cleanup check. Fix commit `0556097` added guards, Prisma `try/finally`, evaluated `Test-Path`, and separate Metro/Android terminals. Its re-review remained `FAILED` because `$LASTEXITCODE` alone can stay unchanged when a native command is unresolved on Windows PowerShell. Fix commit `04f5980` now passes immediate `$?` plus `$LASTEXITCODE` to every one of 60 guard calls. Independent reproductions returned `MISSING_COMMAND_GUARD=PASS` and `NATIVE_NONZERO_GUARD=PASS`; scoped fix-recheck marked the original P2 `ADDRESSED`, found no new P0/P1, and returned `RECHECKED`.
 
-Actual execution on a different PC and Task 11 disposable PostgreSQL validation remain future evidence gates; Task 10 performed no product test/build, DB, Docker, network, push, PR, or deployment action.
+Actual execution on a different PC remains a future evidence gate; Task 10 performed no product test/build, DB, Docker, network, push, PR, or deployment action.
 
-## Task 11 migration validation blocker
+## Task 11 migration validation blocker and approved retry
 
 Preflight proved both task container names and all original ignored extraction/SQL targets absent. The first disposable PostgreSQL 17 container deployed all five migrations from empty and reported the schema up to date. The second container deployed exactly the four canonical migrations from the extracted `2a4e991` Prisma tree and also reported the schema up to date.
 
@@ -341,12 +341,15 @@ The planned pre-delta seed then failed with psql exit `3`: `TaskDifficulty='EASY
 The mandatory `finally` path stopped and removed only the two captured disposable container IDs. Both exact task names are absent, `DATABASE_URL` is absent, protected refs are unchanged, and `dsm-back-dev-db-1` was neither stopped nor accessed. The failed run's ignored `canonical-prisma.zip` and `canonical-prisma` remain preserved; the plan forbids deleting or reusing them.
 
 - Ruling: stop Task 11 after the invalid enum seed and preserve first-run artifacts — cost if wrong: a disposable rerun is delayed, but deleting/reusing evidence would violate the approved precondition and could hide the original failure.
-- Proposed amendment: replace only `EASY` with canonical `LOW`, use initially absent `canonical-prisma-r2.zip` and `canonical-prisma-r2` for the retry, update the retry schema path, and retain the same finally cleanup and no-existing-database boundary. User approval is required before modifying the plan/seed or rerunning containers.
+- Approved amendment: the user approved the retry, commit `332e3ad` replaced only the seed enum with canonical `LOW` and switched extraction/schema references to initially absent `canonical-prisma-r2.zip` and `canonical-prisma-r2`. Approval-memory commit `720961d` preserved the no-existing-database, no-push/PR/deploy and original-evidence boundaries.
+- Retry result: exact Node `v24.19.0` and npm `11.19.0`; empty PostgreSQL 17 applied/status-checked exactly five migrations; the fresh canonical extraction applied/status-checked exactly four migrations; seed inserted `1/1/2` rows; the forward delta produced exactly five applied migrations; the post-migration `DO` probe proved deterministic dedupe, the exact partial unique index, active duplicate rejection and allowed cancelled rows. The script exited `0`.
+- Retry cleanup: mandatory `finally` stopped only the two captured task container IDs. Both exact task names and process `DATABASE_URL` were absent afterward; a separate read-only check showed only the preserved out-of-scope `dsm-back-dev-db-1`. Original and `r2` ignored extraction evidence remain, while the temporary execution script was removed. `main` and `origin/main` remain `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`.
+- Independent reviewer verdict: `APPROVED`, no findings. It verified amendment and memory commit allowlists, byte-equivalent canonical extraction contents, all raw migration/seed/probe/cleanup evidence, protected refs and absence of tracked execution residue.
 
 ## Deferred items
 
 - Task 8 classified every Foundation capability. Redis/cache, realtime, users APIs, `NotificationMode`, daily finalization and the UTC-day 20-Task implementation are deferred; legacy notification/Expo/refresh-account implementations are superseded; only the active-schedule partial index advances conditionally to Task 9.
-- An intended existing database history remains unavailable; Task 9 used the explicit four-name pre-deployment baseline, while actual application and upgrade acceptance remain gated to Task 11 disposable databases.
+- An intended existing database history remains unavailable; Task 9 used the explicit four-name pre-deployment baseline, while Task 11 now proves empty-chain and canonical-prefix upgrade acceptance only on disposable PostgreSQL 17 databases.
 - The seven `c79a042` candidates remain unselected until current-tree reconciliation.
 
 ## Residual risks
@@ -354,7 +357,7 @@ The mandatory `finally` path stopped and removed only the two captured disposabl
 - Path-level overlap can undercount semantic overlap through renamed or independently reimplemented behavior.
 - The exact Node runtime is user-scoped; every validation shell must prepend `NODEJS_HOME` because system-wide Node remains `v24.13.0` after UAC cancellation.
 - Existing container `dsm-back-dev-db-1` is out of scope and must not be stopped, removed, reused, or connected to.
-- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification, Task 9's invariant port and Task 10 document reconciliation are complete. Task 11 is blocked after empty-chain/canonical-prefix PASS by an invalid seed enum literal; the final matrix remains pending.
+- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification, Task 9's invariant port, Task 10 document reconciliation and Task 11 disposable migration validation are complete. The final matrix remains pending.
 - Reproducing the offline verifier in a new Windows worktree requires the ignored three-line Expo declaration and LF materialization for the 28 source/page pairs because the global Git checkout policy is `core.autocrlf=true`; these are environment prerequisites, not branch deltas.
 
 ## Review verdict
