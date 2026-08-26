@@ -53,7 +53,13 @@
   - [x] fresh two-container full retry: empty 5·canonical 4·seed 1/1/2·forward 5·invariant probe PASS
   - [x] captured IDs only cleanup·task names absent·URL absent·existing DB preserved
   - [x] independent reviewer findings none `APPROVED`; report `f30dcd2`; playbook `4c25b67`
-- [/] Task 12 complete validation matrix — 실행 준비
+- [/] Task 12 complete validation matrix — backend lint BLOCKED
+  - [x] runtime·backend clean install·Prisma validate/generate URL cleanup·build PASS
+  - [x] backend full Jest 24 suites/215 tests PASS
+  - [x] non-fixing ESLint reproduced: Task 9 contract test Prettier wraps 2 errors
+  - [x] stop semantics·tracked clean·URL absent
+  - [ ] 사용자 `Task 12 amendment 승인`
+  - [ ] approved two-wrap fix·separate commit·complete matrix full retry
 - [ ] 나머지 integration tasks·전체 validation·최종 독립 review
 - [ ] 별도 사용자 승인 전 push·PR·`main` 변경·shared DB 접근·배포 금지
 

@@ -39,6 +39,9 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - Task 11 blocker memory commit의 exact allowlist는 subject `docs(memory): record migration validation block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 - **Task 11 완료**: exact Node `v24.19.0`/npm `11.19.0`에서 empty chain 5개, canonical prefix 4개, corrected `LOW` seed `1/1/2`, forward chain 5개, invariant `DO` probe가 모두 exit `0`. finally는 captured task container ID 두 개만 제거했고 exact names와 `DATABASE_URL` absent, 기존 `dsm-back-dev-db-1` present, original/r2 ignored evidence preserved다. independent reviewer는 findings 없이 `APPROVED`; report closure `f30dcd2`, reusable resolution `ER-20260827-001` commit `4c25b67`이다.
 - Task 11 final memory closure commit의 exact allowlist는 subject `docs(memory): close migration validation`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다. 다음 실행은 Task 12 complete validation matrix이며 remote/push/PR/deploy와 existing/shared/remote DB 금지는 유지한다.
+- **Task 12 BLOCKED (2026-08-27)**: clean `2f96c77`에서 runtime, backend clean install 882 packages, Prisma validate/generate와 URL cleanup, build, full Jest 24 suites/215 tests는 exit `0`. 다음 required non-fixing ESLint가 Task 9 contract test의 line 17·25 두 `prettier/prettier` wrap 오류로 exit `1`; non-writing `prettier --check`도 같은 단일 파일을 재현했다. required-check stop으로 frontend/Android/lock/offline/final Git rows는 미실행이며 tracked status clean, URL absent다.
+- **Task 12 amendment 후보**: `DSM_Back/src/notifications/notification-migration.contract.spec.ts` 한 파일에서 Prettier가 지정한 두 line wrap만 적용하고 별도 style commit한다. exact-file Prettier/Jest와 full backend non-fixing lint를 확인한 뒤 Task 12 전체 matrix를 runtime부터 재실행한다. 사용자 `Task 12 amendment 승인` 전 source/plan 수정과 remaining matrix 실행 금지; behavior/migration/dependency/DB/remote/deploy 변경은 범위 밖이다.
+- Task 12 blocker memory commit의 exact allowlist는 subject `docs(memory): record validation matrix block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # Memory SSOT
 
