@@ -204,6 +204,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Offline branch suite | `codex/offline-learning-site` at `2cbb088`; one commit beyond `43145b6`; 4-path memory allowlist; Node 66/66; full verifier `PASS`, 28 sources; independent review clean | PASS |
 | Task 7 AI-control policy/history | Exact `c79a042` design `d652711`, plan `3b81151`, system prompt `3fdd556`; commits `1bacf47` and `1d36d70`; product diff 0; independent review clean | PASS |
 | Task 8 selective foundation classification | Four commits and ten rows covering eleven capabilities classified with evidence/cost; only the partial active-schedule index conditionally `PORT` to Task 9 | PASS |
+| Task 9 active-schedule invariant | Commit `56c0575`; exact forward migration + contract test; targeted Jest 1/1, Prisma validate/generate, URL removal and build exit `0`; independent review clean | PASS |
 | Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
 | Final independent review | Task 14 | PENDING |
 
@@ -298,10 +299,27 @@ Read-only investigator `/root/task8_investigator` compared commits `d977633`, `6
 
 No contrary current contract requires automatically porting a `DEFER` row. Redis/realtime and midnight cron remain backlog ideas, not approved public/operational contracts. The extra 20-Task capability is preserved as a separate F-006 obligation. The absent ranking-snapshot unique invariant is explicitly deferred with automatic finalization because no reviewed migration/behavior sequence exists. The only accepted Task 8 product delta is the absent partial active-schedule invariant, and it must proceed solely through Task 9.
 
+## Task 9 active-schedule invariant
+
+The exact index was absent and the canonical pre-deployment history contained only `20260716_init`, `20260720_notification_delivery_outcome_policy`, `20260725_user_onboarding_completed_at`, and `20260810_refresh_token_session_family`. Task 9 therefore added only `DSM_Back/prisma/migrations/20260825_integration_backend_deltas/migration.sql` and `DSM_Back/src/notifications/notification-migration.contract.spec.ts`.
+
+The first targeted Jest run passed (`1` suite, `1` test), then exact `npm run prisma:validate` stopped with Prisma `P1012` because clean Task 9 had no `DATABASE_URL`. Generate, build, Git commit, Docker and every DB command remained unrun. The user explicitly approved `Task 9 amendment 승인`; plan commit `0e19c5f` applies the same process-scoped parse-only loopback-port-`1` URL contract as Task 5, removes it on validate failure or immediately after generate, and forbids every DB-connecting Prisma command.
+
+The amended retry used Node `v24.19.0` and npm `11.19.0`:
+
+- `npm test -- --runInBand --no-cache notification-migration.contract.spec.ts`: exit `0`, `1` suite / `1` test.
+- `npm run prisma:validate`: exit `0`.
+- `npm run prisma:generate`: exit `0`, Prisma Client v6.19.3; `DATABASE_URL_PRESENT_AFTER_GENERATE=False`.
+- `npm run build`: exit `0`.
+- `git diff --name-only 2a4e9916765b505037e1c533735d84cd9f251ccf -- DSM_Back/prisma/migrations`: only `DSM_Back/prisma/migrations/20260825_integration_backend_deltas/migration.sql` after exact staging.
+- `git diff --cached --check`: exit `0`; staged paths were the migration and contract test only.
+
+Commit `56c0575` (`feat(back): enforce one active notification schedule`) deterministically keeps the newest active schedule by `createdAt DESC, id DESC`, cancels older active rows with the exact failure reason, and creates the exact loud-failing partial unique index without `IF NOT EXISTS`. Independent discovery review found no findings and returned `APPROVED`; schema, provider/API, dependencies and all four canonical migrations remained unchanged. No `.env`, Docker, credential, existing/shared/remote database or DB connection command was used. Actual PostgreSQL application and canonical-prefix upgrade behavior remain exclusively in Task 11's disposable containers.
+
 ## Deferred items
 
 - Task 8 classified every Foundation capability. Redis/cache, realtime, users APIs, `NotificationMode`, daily finalization and the UTC-day 20-Task implementation are deferred; legacy notification/Expo/refresh-account implementations are superseded; only the active-schedule partial index advances conditionally to Task 9.
-- Intended database migration history is unavailable; migration-affecting acceptance remains gated and may be deferred.
+- An intended existing database history remains unavailable; Task 9 used the explicit four-name pre-deployment baseline, while actual application and upgrade acceptance remain gated to Task 11 disposable databases.
 - The seven `c79a042` candidates remain unselected until current-tree reconciliation.
 
 ## Residual risks
@@ -309,7 +327,7 @@ No contrary current contract requires automatically porting a `DEFER` row. Redis
 - Path-level overlap can undercount semantic overlap through renamed or independently reimplemented behavior.
 - The exact Node runtime is user-scoped; every validation shell must prepend `NODEJS_HOME` because system-wide Node remains `v24.13.0` after UAC cancellation.
 - Existing container `dsm-back-dev-db-1` is out of scope and must not be stopped, removed, reused, or connected to.
-- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port and Task 8 selective classification are complete. Task 9 disposable migration validation and the final full validation matrix remain pending their later task gates.
+- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification and Task 9's two-file invariant port are complete. Task 11 disposable migration application and the final full validation matrix remain pending their later task gates.
 - Reproducing the offline verifier in a new Windows worktree requires the ignored three-line Expo declaration and LF materialization for the 28 source/page pairs because the global Git checkout policy is `core.autocrlf=true`; these are environment prerequisites, not branch deltas.
 
 ## Review verdict
