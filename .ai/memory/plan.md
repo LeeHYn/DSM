@@ -32,6 +32,10 @@ DSM full-stack을 단계 구현한다. 기능·test·문서·승인·검증 이�
 - **Task 10 완료**: `c79a042` 네 문서 후보를 현재 local integration/offline topology, Node `24.19.0`/npm `11.19.0`, RN CLI Android-only, 다섯 migration, Task 8 판정과 no-push/no-DB 경계로 재조정했다. plan syntax fix `3216ac3`, setup pair `28b440c`, architecture/handoff pair `af97e63`, report closure `fa47ba8`다.
 - **Task 10 review closure**: 초기 P2는 PowerShell 외부 명령의 fail-fast·URL cleanup 검증 누락이었다. fix `0556097`은 `$LASTEXITCODE`만 검사해 unresolved command 경로가 남아 `FAILED`; fix `04f5980`은 60개 호출 모두 immediate `$?`와 native exit를 함께 검사한다. missing-command/native-exit 재현 PASS, Prisma `try/finally`·actual `Test-Path` 유지, scoped verdict `RECHECKED`, 신규 P0/P1 없음.
 - Task 10 final memory closure commit의 exact allowlist는 subject `docs(memory): close handoff reconciliation`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다. 다음 실행은 Task 11의 두 named disposable PostgreSQL 17 containers이며 existing `dsm-back-dev-db-1`은 계속 금지한다.
+- **Task 11 BLOCKED (2026-08-27)**: empty disposable DB의 five-migration deploy/status와 upgrade disposable DB의 canonical four-migration deploy/status는 PASS했다. 다음 exact seed가 canonical `TaskDifficulty`에 없는 `EASY`를 사용해 psql exit `3`으로 중단됐다; canonical 값은 `LOW|MEDIUM|HIGH`다. final delta와 invariant probe는 미실행이다.
+- **Task 11 cleanup PASS**: finally가 captured container ID 두 개만 stop/`--rm`했고 exact task names absent, `DATABASE_URL` absent, protected refs 불변이다. `dsm-back-dev-db-1`은 접근·변경하지 않았다. blocker report commit은 `be753fc`다.
+- **Task 11 amendment 후보**: seed literal만 `LOW`로 고치고, 첫 실패 이력의 ignored `canonical-prisma.zip`/`canonical-prisma`는 삭제·재사용하지 않는다. absent가 확인된 `canonical-prisma-r2.zip`/`canonical-prisma-r2`와 그 schema path로 전체 Task 11을 새 container run에서 재시도한다. plan/seed 수정과 rerun은 사용자 `Task 11 amendment 승인` 전 금지한다.
+- Task 11 blocker memory commit의 exact allowlist는 subject `docs(memory): record migration validation block`, paths `.ai/memory/plan.md`, `.ai/memory/checklist.md` 두 개다.
 
 # Memory SSOT
 
