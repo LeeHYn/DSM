@@ -206,7 +206,7 @@ Independent reviewer `/root/task4_reviewer` used exact writable allowlist `none`
 | Task 8 selective foundation classification | Four commits and ten rows covering eleven capabilities classified with evidence/cost; only the partial active-schedule index conditionally `PORT` to Task 9 | PASS |
 | Task 9 active-schedule invariant | Commit `56c0575`; exact forward migration + contract test; targeted Jest 1/1, Prisma validate/generate, URL removal and build exit `0`; independent review clean | PASS |
 | Task 10 setup/architecture handoff | Four reconciled `c79a042` document candidates; exact runtime/ref/migration/ruling facts; PowerShell fail-fast P2 fixed and independently `RECHECKED` | PASS |
-| Migration validation | Runs only in named disposable PostgreSQL 17 containers | PENDING |
+| Task 11 migration validation | Empty five-migration chain PASS; canonical four-migration prefix PASS; seed blocked by invalid planned enum literal; both task containers removed | BLOCKED |
 | Final independent review | Task 14 | PENDING |
 
 ## Task 5 baseline blocker and amended retry
@@ -332,6 +332,17 @@ Initial independent review found one P2: native command blocks promised fail-fas
 
 Actual execution on a different PC and Task 11 disposable PostgreSQL validation remain future evidence gates; Task 10 performed no product test/build, DB, Docker, network, push, PR, or deployment action.
 
+## Task 11 migration validation blocker
+
+Preflight proved both task container names and all original ignored extraction/SQL targets absent. The first disposable PostgreSQL 17 container deployed all five migrations from empty and reported the schema up to date. The second container deployed exactly the four canonical migrations from the extracted `2a4e991` Prisma tree and also reported the schema up to date.
+
+The planned pre-delta seed then failed with psql exit `3`: `TaskDifficulty='EASY'` is invalid. Both the canonical schema and `20260716_init` define only `LOW`, `MEDIUM`, and `HIGH`. The failure is therefore an exact seed-plan defect, not a product migration failure. The integration delta and post-migration invariant probe did not run.
+
+The mandatory `finally` path stopped and removed only the two captured disposable container IDs. Both exact task names are absent, `DATABASE_URL` is absent, protected refs are unchanged, and `dsm-back-dev-db-1` was neither stopped nor accessed. The failed run's ignored `canonical-prisma.zip` and `canonical-prisma` remain preserved; the plan forbids deleting or reusing them.
+
+- Ruling: stop Task 11 after the invalid enum seed and preserve first-run artifacts — cost if wrong: a disposable rerun is delayed, but deleting/reusing evidence would violate the approved precondition and could hide the original failure.
+- Proposed amendment: replace only `EASY` with canonical `LOW`, use initially absent `canonical-prisma-r2.zip` and `canonical-prisma-r2` for the retry, update the retry schema path, and retain the same finally cleanup and no-existing-database boundary. User approval is required before modifying the plan/seed or rerunning containers.
+
 ## Deferred items
 
 - Task 8 classified every Foundation capability. Redis/cache, realtime, users APIs, `NotificationMode`, daily finalization and the UTC-day 20-Task implementation are deferred; legacy notification/Expo/refresh-account implementations are superseded; only the active-schedule partial index advances conditionally to Task 9.
@@ -343,7 +354,7 @@ Actual execution on a different PC and Task 11 disposable PostgreSQL validation 
 - Path-level overlap can undercount semantic overlap through renamed or independently reimplemented behavior.
 - The exact Node runtime is user-scoped; every validation shell must prepend `NODEJS_HOME` because system-wide Node remains `v24.13.0` after UAC cancellation.
 - Existing container `dsm-back-dev-db-1` is out of scope and must not be stopped, removed, reused, or connected to.
-- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification, Task 9's invariant port and Task 10 document reconciliation are complete. Task 11 disposable migration application and the final full validation matrix remain pending their later task gates.
+- Task 5 canonical product/Android baseline, Task 6 offline validation, Task 7 policy/history port, Task 8 selective classification, Task 9's invariant port and Task 10 document reconciliation are complete. Task 11 is blocked after empty-chain/canonical-prefix PASS by an invalid seed enum literal; the final matrix remains pending.
 - Reproducing the offline verifier in a new Windows worktree requires the ignored three-line Expo declaration and LF materialization for the 28 source/page pairs because the global Git checkout policy is `core.autocrlf=true`; these are environment prerequisites, not branch deltas.
 
 ## Review verdict
