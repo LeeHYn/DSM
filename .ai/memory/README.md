@@ -50,11 +50,11 @@
 
 | File | Pre-image bytes | Active bytes | 감소 | Active SHA-256 |
 |---|---:|---:|---:|---|
-| `plan.md` | 31,419 | 12,268 | 61.0% | `A2345FBC6184D8C297681D24AD12CCCC616DFF6E3F4C0847F0489C68DC7026F8` |
-| `context.md` | 13,165 | 8,650 | 34.3% | `B11D947C92DC99D6315FC69D5C4C9A57AB0DE0A1A94E2C5118B9F2BC9AEFF69B` |
-| `checklist.md` | 14,798 | 7,221 | 51.2% | `CCEF5DA190F619FCC34CECFF394ECC3BDB4632BA4FFAED9461389A11F467607D` |
-| **active 3 total** | **59,382** | **28,139** | **52.6%** | — |
+| `plan.md` | 31,419 | 12,828 | 59.2% | `BF2D136878F40973D7DA551019784DA56399C57563FC184021E492C323203665` |
+| `context.md` | 13,165 | 9,003 | 31.6% | `AA84F443972E324AD2FA05A28265E03EC7B28C34CE8495FDF6032672EA4A5E4C` |
+| `checklist.md` | 14,798 | 7,640 | 48.4% | `D6859674C4FD6321FDC7B24FE7468F4AD1D8474B807C99991C2C91B4042181F7` |
+| **active 3 total** | **59,382** | **29,471** | **50.4%** | — |
 
 - 2026-08-27 pre-image backups: `plan.20260827.original.md` 31,419 bytes / `DC6CD396AC900785A657BF801CCB728585732A70090E8B9BDA9E7AB4D0B0F24B`; `context.20260827.original.md` 13,165 / `012625AEB93E7D115FEF610EDFFA3B7359A6526405D7230A9E98498D4AC7889A`; `checklist.20260827.original.md` 14,798 / `BBE3BB5B1685AD836E21DF20F47F24F91C12A06CF243F2170C94C95D4CC6C5E1`. Backups are ignored recovery-only.
 - Active/recovery Markdown strict UTF-8 verification PASS.
-- Active integration status: Task 12 full matrix PASS; Task 13 exact 4-path memory closure.
+- Active integration status: Task 12 full matrix PASS; Task 13 memory reconciliation, Task 14 independent review, and Task 15 local handoff complete. Integration/offline branches remain local-only pending a new publish/PR/merge approval.

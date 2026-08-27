@@ -1,6 +1,6 @@
 # 목표
 
-DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. 현재 우선순위는 `codex/integration-main-review`의 승인된 main 통합 검토다. Task 12 전체 matrix는 PASS했으며 Task 13~14와 최종 독립 review 전 통합 완료를 주장하지 않는다. 별도 제품 release-audit는 `F-006`부터 독립 계획·승인으로 재개한다.
+DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `codex/integration-main-review`의 승인된 main 통합 검토는 Task 12 matrix, Task 13 memory, Task 14 independent review와 Task 15 local handoff까지 완료했다. 두 결과 브랜치는 local-only이며 publish·PR·`main` merge는 새 승인 전 금지다. 별도 제품 release-audit는 `F-006`부터 독립 계획·승인으로 재개한다.
 
 # Main branch integration review — 2026-08-26
 
@@ -14,8 +14,8 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. �
 - Task 12 BLOCKED: clean `2f96c77`에서 Node `v24.19.0`/npm `11.19.0`, backend install 882, Prisma validate/generate+URL cleanup, build, Jest 24 suites/215 tests PASS. non-fixing ESLint는 `DSM_Back/src/notifications/notification-migration.contract.spec.ts` lines 17·25의 `prettier/prettier` wrap 2건으로 exit 1; non-writing Prettier check 재현. 이후 frontend/Android/lock/offline/Git rows 미실행, tracked clean·URL absent.
 - Task 12 amendment·PASS: exact 승인 후 plan `046d67f`/`0ecbf2d`, test-only style `69d3154`. Prettier/focused Jest/full lint PASS 뒤 runtime부터 전체 재실행: Backend 24/215, Front 18/162+type/lint, Android 365, lock roots, offline 66/66+28-source, Git/SDD 모두 PASS. Task 11 DB empty/upgrade evidence 포함; product/dependency/remote 변경 없음. blocker history `6ef5dab`/`0cf4031`; 당시 Task 12 실행 중 memory compression 4파일은 unstaged로 보존했음.
 - Task 13: 사용자 exact `Task 13 amendment 승인`; plan `80ab65b`로 compression README를 4번째 exact path로 허용. active plan/context/checklist를 실제 Task 12 PASS와 대조하고 README byte/hash·UTF-8·ignored recovery backup을 검증해 `docs(memory): record integration review results`로 closure한다.
-- Task 14 security amendment: 사용자 exact `Task 14 security amendment 승인 — .codex/config.toml 제거`. unpinned `npx -y caveman-shrink`가 audited lock 밖 registry code를 실행하는 finding을 해결하기 위해 `.codex/config.toml`만 삭제하고 별도 security commit으로 유지한다. manifest/lock/product 대체 수정 금지; path/reference/lock diff 검증 후 independent re-review가 clean일 때만 report를 별도 commit한다.
-- 이후: Task 14 conflict report/final independent review. push·PR·`main` 변경·shared/remote DB·배포는 별도 승인 전 금지.
+- Task 14 complete: 사용자 exact `Task 14 security amendment 승인 — .codex/config.toml 제거`; plan `2815f6d`, unpinned launcher 단독 삭제 `4533c0c`, final report `c9e9ba9`. manifest/lock/product diff 0, 모든 original finding `ADDRESSED`, 신규 P0-P2 없음, Spec/Quality/Whole-branch `APPROVED`.
+- Task 15 complete: integration/offline summaries, offline `0 1`·4-path allowlist, six pinned remote refs, canonical ancestry와 clean/diff checks 재확인. active memory exact 4-path closure 뒤 final status를 확인하며 push·PR·`main` 변경·shared/remote DB·배포는 별도 승인 전 금지.
 
 # Memory SSOT
 
@@ -76,9 +76,8 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. �
 
 # 다음 실행 계획
 
-1. Task 14 final report·independent review.
-2. 별도 제품 audit 재개 시 `F-006` → 남은 P1 `F-003`/`F-005`/`F-017` → UNKNOWN `F-013`/`F-015` → P2/P3·2회 zero-new-P0~P2.
-3. audit 종료 후 M12C → Firebase sandbox → dispatch 판단 → WebSocket → Redis/batch.
+1. 별도 제품 audit 재개 시 `F-006` → 남은 P1 `F-003`/`F-005`/`F-017` → UNKNOWN `F-013`/`F-015` → P2/P3·2회 zero-new-P0~P2.
+2. audit 종료 후 M12C → Firebase sandbox → dispatch 판단 → WebSocket → Redis/batch.
 
 # F-016 Android Git handoff 계획 — 2026-08-17
 
@@ -101,7 +100,7 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. �
 
 # 잔여 위험·보류
 
-- Integration Task 12 PASS; Task 13 memory reconciled; Task 14 미실행.
+- Integration Task 12 PASS; Task 13 memory reconciled; Task 14 approved/committed; Task 15 local handoff complete. Branches remain local-only.
 - release signing·release `.env`/OAuth provisioning 미구성; production 미검증. external OAuth state 삭제·변경 시 current-PC smoke 재발 가능.
 - Task/Score/Ranking Android UI prototype·fixed data. `F-006`, `F-026`, actual multi-connection refresh/logout, Firebase delivery/F-007 race 미해결.
 - launcher/splash/app name template branding, dependency audit 32, Task parser hash/non-string, Apple, revoked-token reuse hook, UTC midnight Cron 보류.

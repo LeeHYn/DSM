@@ -33,7 +33,12 @@
   - [x] plan/context actual-state 대조; checklist observed PASS only
   - [x] README byte/hash·strict UTF-8·ignored recovery backup 검증
   - [x] exact 4-path `docs(memory): record integration review results` closure
-- [ ] Task 14 final conflict report·independent review
+- [x] Task 14 final conflict report·independent review
+  - [x] security plan `2815f6d`; `.codex/config.toml` 단독 삭제 `4533c0c`
+  - [x] exact-command/security fix re-review clean; final report `c9e9ba9`
+- [x] Task 15 final clean local handoff·memory sync
+  - [x] integration/offline summaries·offline `0 1`·4-path allowlist
+  - [x] six pinned remote refs·canonical ancestry·no-publish gate
 - [ ] 별도 승인 전 push·PR·`main` 변경·shared/remote DB·배포 금지
 - [x] `.ai/memory` 2026-08-27 압축·정리
   - [x] 사용자 직접 요청; `ER-20260720-014` 적용; unsafe CLI/외부 전송 금지
@@ -52,7 +57,7 @@
 
 ## 현재 진행 상태
 
-- [/] Main integration: Task 13 PASS → Task 14
+- [x] Main integration local review/handoff complete; branches unpublished
 - [/] M12 notification: 12A/12B done; 12C·actual ADC/FCM sandbox pending
 - [x] Front secure session product·Web QA·auth gate
 - [/] Android Google
@@ -88,13 +93,14 @@
 2. [x] contract test 2 wraps only·format/Jest/full lint·separate commit
 3. [x] Task 12 full matrix restart
 4. [x] Task 13 memory 4-path 범위·reconciliation
-5. [ ] Task 14 final report/review
-6. [/] separate product `F-006` written-spec review
+5. [x] Task 14 final report/review
+6. [x] Task 15 final local handoff·memory sync
+7. [/] separate product `F-006` written-spec review
    - [x] UTC `startAt` day max 20 active; same-day `completedAt` score policy/spec
    - [ ] implementation plan·approval·exact 2-file TDD stages
    - [ ] disposable PostgreSQL repair/concurrency·independent fix-recheck
-7. [ ] remaining P1/UNKNOWN/P2-P3·audit close
-8. [ ] M12C → Firebase sandbox → dispatch → WebSocket → Redis/batch
+8. [ ] remaining P1/UNKNOWN/P2-P3·audit close
+9. [ ] M12C → Firebase sandbox → dispatch → WebSocket → Redis/batch
 
 ## 계속 유지할 gate
 

@@ -2,12 +2,13 @@
 
 ## Main integration review — 2026-08-26
 
-- active: `C:\dsm-integration-review` / `codex/integration-main-review`; pre-memory-closure HEAD `80ab65b`, Task 13 exact 4-path memory closure. `main`·`origin/main` fixed `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`; canonical `2a4e9916765b505037e1c533735d84cd9f251ccf`.
+- active: `C:\dsm-integration-review` / `codex/integration-main-review`; Task 14 final-report HEAD `c9e9ba9`, Task 15 exact 4-path memory closure/local handoff complete. `main`·`origin/main` fixed `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`; canonical `2a4e9916765b505037e1c533735d84cd9f251ccf`.
 - plan/spec/report: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`, `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`, `docs/reviews/2026-08-25-main-integration-conflict-review.md`.
-- completed: canonical merge through Task 13 memory reconciliation. Task 11 disposable PostgreSQL evidence: empty 5, canonical 4, corrected seed 1/1/2, forward 5, invariant probe, captured-container cleanup; independent review `APPROVED`.
+- completed: canonical merge through Task 14 final independent review. Task 11 disposable PostgreSQL evidence: empty 5, canonical 4, corrected seed 1/1/2, forward 5, invariant probe, captured-container cleanup; independent review `APPROVED`.
 - Task 12 PASS: exact 승인 뒤 plan `046d67f`/`0ecbf2d`, test-only style `69d3154`. Node `v24.19.0`/npm `11.19.0`; Backend install 882·Prisma/URL cleanup·build·24/215·lint; Front install 988·18/162·type·lint; Android 365; lock roots; offline 66/66·28-source; Git/SDD 모두 PASS.
 - Task 13: exact approval, plan `80ab65b`; active 3 actual-state reconciliation과 README compression routing/hash snapshot을 exact 4-path closure로 처리. ignored byte-exact recovery backup과 playbook은 불변.
-- next gate: Task 14 report/final independent review.
+- Task 14: security plan `2815f6d`, `.codex/config.toml` 단독 삭제 `4533c0c`, report `c9e9ba9`; exact-command/security/verdict re-review clean, original findings all `ADDRESSED`, 신규 P0-P2 없음, Whole-branch `APPROVED`.
+- handoff: integration/offline summaries, six pinned remote refs, canonical ancestry, offline `0 1`·four-path allowlist verified; branches remain local and publish 선택은 새 승인 필요.
 - offline sibling: `C:\dsm-offline-learning-site` / `codex/offline-learning-site` / `2cbb088`, base `43145b6`, memory source `fb54b5d`; 66 tests·28-source verifier PASS. Integration과 분리.
 - push·PR·`main` change·shared/remote DB·deploy 금지. 기존 `dsm-back-dev-db-1` 접근/변경 금지.
 - 별도 product audit: `20260817-release-audit-full-project` 26건(confirmed 22, unknown 2, rechecked 2), release-ready 아님. `F-016`/`F-025` RECHECKED; `F-006` written-spec review가 다음 제품 gate.
@@ -70,9 +71,8 @@
 
 ## 다음 작업·잔여 위험
 
-1. Task 14 report/final independent review.
-2. Product audit later: F-006 → P1 F-003/F-005/F-017 → UNKNOWN F-013/F-015 → P2/P3 + two zero-new-P0~P2 rounds.
-3. M12C → Firebase sandbox → dispatch decision → WebSocket → Redis/batch.
+1. Product audit later: F-006 → P1 F-003/F-005/F-017 → UNKNOWN F-013/F-015 → P2/P3 + two zero-new-P0~P2 rounds.
+2. M12C → Firebase sandbox → dispatch decision → WebSocket → Redis/batch.
 
 - release signing/.env/OAuth provisioning, production, actual multi-connection refresh/logout, Firebase delivery/F-007 race unverified.
 - Task/Score/Ranking Android UI prototype, template branding, dependency 32, Apple, parser edge tests, revoked-token hook, UTC Cron pending.
