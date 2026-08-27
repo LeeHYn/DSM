@@ -1145,11 +1145,14 @@ Run `git diff --check`, confirm the staged set is exactly `.ai/memory/README.md`
 
 **Files:**
 - Modify: `docs/reviews/2026-08-25-main-integration-conflict-review.md`
+- Delete: `.codex/config.toml` (approved Task 14 security amendment only)
 - Modify (ignored): SDD ledger
 
 **Interfaces:**
 - Consumes: final committed integration branch, offline branch, complete validation ledger
 - Produces: final evidence package and independent verdict
+
+**Approved security amendment (2026-08-27):** The user approved the exact phrase `Task 14 security amendment 승인 — .codex/config.toml 제거`. Remove only the tracked `.codex/config.toml`, because it invokes mutable registry code through unpinned `npx -y caveman-shrink` outside both audited dependency locks. Do not replace it, add a package dependency, change a manifest/lockfile, or modify product code. Commit this deletion separately as `chore: remove unpinned MCP launcher`, with a body explaining that repository startup must not execute mutable registry code outside audited locks. Before the independent re-review, verify that the path is absent, no tracked runtime/config reference to `caveman-shrink` remains, the four package manifest/lockfiles are unchanged from canonical, and `git diff --check` passes. Keep the report uncommitted until the independent reviewer returns no blocking finding.
 
 - [ ] **Step 1: Finalize the report**
 
