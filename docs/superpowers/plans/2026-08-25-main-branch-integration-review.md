@@ -1176,10 +1176,17 @@ When the reviewer returns no blocking finding and every required row is `PASS`, 
 
 **Files:**
 - Verify: both local branches/worktrees and all pinned remote refs
+- Modify: `.ai/memory/README.md`
+- Modify: `.ai/memory/plan.md`
+- Modify: `.ai/memory/context.md`
+- Modify: `.ai/memory/checklist.md`
+- Modify (ignored): SDD ledger
 
 **Interfaces:**
 - Consumes: final report/reviewer verdict
 - Produces: user-facing local handoff and a new approval gate; no GitHub mutation
+
+**Approved Task 15 memory closure (2026-08-27):** After the controller explicitly reported that active-memory completion remained for Task 15, the user approved continuation with `ㄱ`. Reconcile the active three files to Task 14/15 actual state and update the README byte/hash snapshot as one exact four-path closure. Preserve ignored recovery backups and `error-resolution-playbook.md` unchanged. Verify strict UTF-8, exact active bytes/SHA-256, unchanged backup bytes/SHA-256, `git diff --check`, and an independent read-only memory review; then commit only the four memory paths with `docs(memory): close main integration review`. Run the final branch/ref/offline summaries after that commit so the handoff is based on the actual final HEAD.
 
 - [ ] **Step 1: Capture final branch summaries**
 
