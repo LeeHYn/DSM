@@ -4,26 +4,17 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `
 
 # Main branch integration review — 2026-08-26
 
-- SSOT: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`(16 tasks·74 checks), `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`, `docs/reviews/2026-08-25-main-integration-conflict-review.md`.
-- worktree/branch: `C:\dsm-integration-review` / `codex/integration-main-review`. `main`·`origin/main`은 `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`, canonical은 `2a4e9916765b505037e1c533735d84cd9f251ccf`; 변경 금지.
-- Task 4: canonical non-squash merge `a639ac2`, exact second parent·byte-identical product, independent review clean, closure `0141b9f`.
-- Task 5: approved parse-only loopback-port-1 URL로 canonical baseline 재검증. Backend 23 suites/214 tests·Prisma/build/lint, Front 18/162·type/lint, Android 365 tasks PASS; URL absent·product diff 0. plan `68557d7`, final review closure `b6b56df`.
-- offline deliverable: `C:\dsm-offline-learning-site` / `codex/offline-learning-site` / `2cbb088`; base `43145b6`, source `fb54b5d`, `396fc0a` 제외. ancestry `0 1`, memory 4-path allowlist, Node 66/66, verifier 28-source `PASS`, review clean. integration branch와 분리 유지.
-- Task 7~10: AI-control history port `1bacf47`/`1d36d70`; foundation classification(only active-schedule partial index `PORT`); migration+contract test `56c0575`; current setup/architecture reconciliation과 fail-fast fix `04f5980`. 각 review closure 완료.
-- Task 11: amendment `332e3ad`로 seed `EASY→LOW`, original extraction 보존·fresh `canonical-prisma-r2*` 사용. PostgreSQL 17 empty 5, canonical 4, seed 1/1/2, forward 5, invariant probe 모두 PASS; captured containers only cleanup·URL absent·기존 `dsm-back-dev-db-1` 보존. reviewer `APPROVED`, report `f30dcd2`, playbook `ER-20260827-001`/`4c25b67`, memory closure `2f96c77`.
-- Task 12 BLOCKED: clean `2f96c77`에서 Node `v24.19.0`/npm `11.19.0`, backend install 882, Prisma validate/generate+URL cleanup, build, Jest 24 suites/215 tests PASS. non-fixing ESLint는 `DSM_Back/src/notifications/notification-migration.contract.spec.ts` lines 17·25의 `prettier/prettier` wrap 2건으로 exit 1; non-writing Prettier check 재현. 이후 frontend/Android/lock/offline/Git rows 미실행, tracked clean·URL absent.
-- Task 12 amendment·PASS: exact 승인 후 plan `046d67f`/`0ecbf2d`, test-only style `69d3154`. Prettier/focused Jest/full lint PASS 뒤 runtime부터 전체 재실행: Backend 24/215, Front 18/162+type/lint, Android 365, lock roots, offline 66/66+28-source, Git/SDD 모두 PASS. Task 11 DB empty/upgrade evidence 포함; product/dependency/remote 변경 없음. blocker history `6ef5dab`/`0cf4031`; 당시 Task 12 실행 중 memory compression 4파일은 unstaged로 보존했음.
-- Task 13: 사용자 exact `Task 13 amendment 승인`; plan `80ab65b`로 compression README를 4번째 exact path로 허용. active plan/context/checklist를 실제 Task 12 PASS와 대조하고 README byte/hash·UTF-8·ignored recovery backup을 검증해 `docs(memory): record integration review results`로 closure한다.
-- Task 14 complete: 사용자 exact `Task 14 security amendment 승인 — .codex/config.toml 제거`; plan `2815f6d`, unpinned launcher 단독 삭제 `4533c0c`, final report `c9e9ba9`. manifest/lock/product diff 0, 모든 original finding `ADDRESSED`, 신규 P0-P2 없음, Spec/Quality/Whole-branch `APPROVED`.
-- Task 15 complete: integration/offline summaries, offline `0 1`·4-path allowlist, six pinned remote refs, canonical ancestry와 clean/diff checks 재확인. active memory exact 4-path closure 뒤 final status를 확인하며 push·PR·`main` 변경·shared/remote DB·배포는 별도 승인 전 금지.
+- SSOT: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`(16 tasks·74 checks), `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`, `docs/reviews/2026-08-25-main-integration-conflict-review.md`. Worktree `C:\dsm-integration-review`, branch `codex/integration-main-review`; `main`/`origin/main` `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`, canonical `2a4e9916765b505037e1c533735d84cd9f251ccf` 불변.
+- Task 4~5: non-squash merge `a639ac2`(exact second parent·byte-identical), closure `0141b9f`; parse-only URL plan `68557d7`, Backend 23 suites/214 tests+Prisma/build/lint, Front 18/162+type/lint, Android 365, URL absent·product diff 0, closure `b6b56df`.
+- offline: `C:\dsm-offline-learning-site`/`codex/offline-learning-site`/`2cbb088`; base `43145b6`, source `fb54b5d`, `396fc0a` 제외, ancestry `0 1`, memory 4 paths, Node 66/66, 28-source `PASS`; integration과 분리.
+- Task 7~11: AI-control `1bacf47`/`1d36d70`; active-schedule partial index만 `PORT`; migration+contract `56c0575`; handoff/fail-fast `04f5980`. Amendment `332e3ad`로 seed `EASY→LOW`, fresh `canonical-prisma-r2*`; PostgreSQL 17 empty 5/canonical 4/seed 1·1·2/forward 5/invariant PASS, captured-only cleanup·URL absent·`dsm-back-dev-db-1` 보존. Review `APPROVED`, report `f30dcd2`, `ER-20260827-001`/`4c25b67`, closure `2f96c77`.
+- Task 12: 최초 backend install 882·Prisma/build·24/215 PASS 뒤 contract spec lines 17·25 wrap 2건으로 lint BLOCKED(`6ef5dab`/`0cf4031`). Exact amendment, plans `046d67f`/`0ecbf2d`, test-only `69d3154` 후 Backend 24/215, Front 18/162+type/lint, Android 365, lock roots, offline 66/66+28-source, Git/SDD PASS; Node `v24.19.0`/npm `11.19.0`, product/dependency/remote 변경 없음.
+- Task 13~15: memory plan `80ab65b`; Task 14 plan `2815f6d`, `.codex/config.toml` 삭제 `4533c0c`, report `c9e9ba9`, original findings `ADDRESSED`, 신규 P0-P2 없음, Spec/Quality/Whole-branch `APPROVED`. Task 15는 offline `0 1`·4 paths, six pinned refs, canonical ancestry, clean/diff와 exact 4-path memory closure를 재확인; final HEAD `30441ca`. Branches local-only, publish·PR·`main`/shared DB/deploy는 새 승인 필요.
 
 # Memory SSOT
 
-- `plan.md`: 목표·계약·승인·다음 계획.
-- `context.md`: 구현·환경·검증·위험 snapshot.
-- `checklist.md`: `[ ]|[/]|[x]` 진행 상태.
-- `error-resolution-playbook.md`: 오류 signature/root cause별 검증 지식. 오류 작업 전 검색하고 조건 일치 `VERIFIED`만 현재 checkout에서 재검증.
-- `README.md`: active/recovery routing·압축 snapshot. `*.original.md`는 local recovery이며 Git·일반 검색·handoff·재압축 제외.
+- `plan.md`=목표·계약·승인·다음 계획; `context.md`=구현·환경·검증·위험; `checklist.md`=`[ ]|[/]|[x]` 상태.
+- `error-resolution-playbook.md`는 오류 signature/root cause별 `VERIFIED` 지식이며 현재 checkout에서 재검증. `README.md`는 routing·compression snapshot; `*.original.md`는 Git·검색·handoff·재압축 제외 local recovery.
 - 상세 source: `.ai/docs/2026-07-15-current-project-architecture.md`, `.ai/audits/20260716-change-gate-notification-12b/findings.jsonl`, `.ai/audits/20260725-change-gate-front-secure-session/findings.jsonl`, `.ai/audits/20260817-release-audit-full-project/findings.jsonl`.
 
 # 현재 상태 — 2026-08-17
@@ -112,6 +103,14 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `
 - pre-image는 `plan.20260827.original.md`, `context.20260827.original.md`, `checklist.20260827.original.md`에 byte-exact local backup. Git·일반 검색·handoff·재압축 제외.
 - `error-resolution-playbook.md` verified records는 read-only 보존. `README.md`가 bytes/hash/ratio·strict UTF-8·semantic 검증 기록.
 - 제품/source/test/config, DB, Docker, Firebase, remote refs는 범위 밖.
+
+# `.ai/memory` post-Task15 재압축 — 2026-08-27
+
+- 사용자 승인 후 main agent가 local `apply_patch`로 수행; `ER-20260720-014` 때문에 `caveman-compress` CLI·외부 전송 금지.
+- HEAD `30441ca` pre-image는 `plan.20260827-30441ca.original.md`, `context.20260827-30441ca.original.md`, `checklist.20260827-30441ca.original.md`에 byte-exact·ignored 보존; 기존 backup과 playbook 불변.
+- exact writable: 새 backup 3개+active 3+`README.md`; 제품/DB/Docker/Firebase/remote/offline 및 Git stage/commit/push/PR/merge 제외. Heading·inline code·경로·명령·SHA·날짜·버전·수치·gate 보존, Task 12~15 중복만 병합.
+- 완료: 새 backup SHA 일치·ignored, active 3 32,501→27,289 bytes(16.0%), README 갱신. Strict UTF-8, heading, Task 12~15/offline/F-006/security·no-publish anchors, secret pattern 0, exact 4-path diff, playbook 불변, `git diff --check` PASS.
+- 2026-08-30 사용자가 active memory exact 4-path local commit을 승인했다. 대상은 `plan.md`, `context.md`, `checklist.md`, `README.md`; ignored backup·제품·playbook 제외, push/PR/merge 없음. Commit message: `docs(memory): refresh integration handoff state`.
 
 # 완료 기준
 

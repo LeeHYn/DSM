@@ -2,49 +2,17 @@
 
 ## Main branch integration review — 2026-08-26
 
-- [x] 사용자 spec·plan·Subagent-Driven 실행 승인; exact runtime/refs/SDD ledger preflight
-- [x] Task 3 inventory·review; Task 4 canonical merge `a639ac2`·byte-identical product·review clean
-- [x] Task 5 canonical baseline
-  - [x] approved parse-only URL amendment `68557d7`
-  - [x] Backend install 882·Prisma/build·23 suites/214 tests·lint PASS
-  - [x] Front 18/162·type·lint 0 errors/18 warnings·Android 365 tasks PASS
-  - [x] URL absent·tracked clean·canonical product diff 0·review `APPROVED`
-- [x] offline sibling `C:\dsm-offline-learning-site` / `codex/offline-learning-site` / `2cbb088`
-  - [x] base `43145b6`, memory source `fb54b5d`, ancestry `0 1`, exact memory 4 paths
-  - [x] Node 66/66, verifier 28-source `PASS`, review clean
-- [x] Task 7 AI-control history port; Task 8 foundation classification/recheck
-- [x] Task 9 active-schedule invariant `56c0575`: migration+contract test, validate/generate/build, review `APPROVED`
-- [x] Task 10 setup/architecture handoff; fail-fast fix `04f5980`, fix-recheck `RECHECKED`
-- [x] Task 11 disposable PostgreSQL 17
-  - [x] amendment `332e3ad`: seed `LOW`, fresh `canonical-prisma-r2*`, original evidence preserved
-  - [x] empty 5·canonical 4·seed 1/1/2·forward 5·invariant probe PASS
-  - [x] captured containers only cleanup·names/URL absent·existing DB preserved
-  - [x] reviewer `APPROVED`; report `f30dcd2`; playbook `ER-20260827-001`/`4c25b67`; memory `2f96c77`
-- [x] Task 12 complete validation matrix
-  - [x] Node `v24.19.0`/npm `11.19.0`; backend install·Prisma/URL cleanup·build PASS
-  - [x] Backend Jest 24 suites/215 tests PASS
-  - [x] non-fixing ESLint/Prettier 재현: contract test lines 17·25 wraps 2건
-  - [x] required-check stop·tracked clean·URL absent; blocker report `6ef5dab`, memory `0cf4031`
-  - [x] 사용자 exact `Task 12 amendment 승인`
-  - [x] plan `046d67f`/`0ecbf2d`; 1-file style `69d3154`; Prettier/focused Jest/full lint PASS
-  - [x] full retry: Backend 24/215, Front 18/162+type/lint, Android 365, lock/offline/Git/SDD PASS
-- [x] Task 13 active integration memory reconciliation
-  - [x] 사용자 exact `Task 13 amendment 승인`; 4-path plan `80ab65b`
-  - [x] plan/context actual-state 대조; checklist observed PASS only
-  - [x] README byte/hash·strict UTF-8·ignored recovery backup 검증
-  - [x] exact 4-path `docs(memory): record integration review results` closure
-- [x] Task 14 final conflict report·independent review
-  - [x] security plan `2815f6d`; `.codex/config.toml` 단독 삭제 `4533c0c`
-  - [x] exact-command/security fix re-review clean; final report `c9e9ba9`
-- [x] Task 15 final clean local handoff·memory sync
-  - [x] integration/offline summaries·offline `0 1`·4-path allowlist
-  - [x] six pinned remote refs·canonical ancestry·no-publish gate
+- [x] spec·plan·SDD 승인/preflight; Task 3 review; Task 4 merge `a639ac2` byte-identical/review clean
+- [x] Task 5 plan `68557d7`: Backend install 882·Prisma/build·23/214·lint, Front 18/162·type/lint 0 errors/18 warnings, Android 365; URL absent·clean·product diff 0·`APPROVED`
+- [x] offline `C:\dsm-offline-learning-site`/`codex/offline-learning-site`/`2cbb088`: base `43145b6`, source `fb54b5d`, ancestry `0 1`, memory 4 paths, Node 66/66, 28-source `PASS`, review clean
+- [x] Task 7~10: AI-control/foundation; invariant `56c0575` migration+contract; handoff/fail-fast `04f5980` `RECHECKED`
+- [x] Task 11 PostgreSQL 17 amendment `332e3ad`: `LOW`, fresh `canonical-prisma-r2*`; empty 5·canonical 4·seed 1/1/2·forward 5·invariant PASS, captured-only cleanup·URL absent·existing DB preserved; review `APPROVED`, report `f30dcd2`, `ER-20260827-001`/`4c25b67`, memory `2f96c77`
+- [x] Task 12: Node `v24.19.0`/npm `11.19.0`; Backend 24/215. Contract lines 17·25 wraps 2건 blocker `6ef5dab`/`0cf4031`; exact amendment, plans `046d67f`/`0ecbf2d`, 1-file `69d3154`; retry Backend 24/215, Front 18/162+type/lint, Android 365, lock/offline/Git/SDD PASS
+- [x] Task 13 exact approval, plan `80ab65b`, active 3+README exact 4-path closure·UTF-8/hash/backup PASS
+- [x] Task 14 plan `2815f6d`, `.codex/config.toml` 삭제 `4533c0c`, report `c9e9ba9`; security re-review clean
+- [x] Task 15 integration/offline summary, offline `0 1`·4 paths, six pinned refs·canonical ancestry·no-publish gate, HEAD `30441ca`
 - [ ] 별도 승인 전 push·PR·`main` 변경·shared/remote DB·배포 금지
-- [x] `.ai/memory` 2026-08-27 압축·정리
-  - [x] 사용자 직접 요청; `ER-20260720-014` 적용; unsafe CLI/외부 전송 금지
-  - [x] active 3 pre-image byte-exact date backup
-  - [x] `plan.md`·`context.md`·`checklist.md` current-state local compression
-  - [x] README bytes/hash/ratio·strict UTF-8·semantic/gate 검증
+- [x] `.ai/memory` 2026-08-27 압축: `ER-20260720-014`, byte-exact backups, active 3+README local 정리, UTF-8/hash/semantic/gate PASS
 
 ## 완료
 
@@ -120,11 +88,14 @@
 
 ## `.ai/memory` 압축·정리 — 2026-08-16
 
-- [x] 2026-08-27 active memory·Git·current blocker 대조
-- [x] unsafe `caveman-compress` audit: `ER-20260720-014` 일치, direct run/외부 upload 금지
-- [x] `plan.20260827.original.md` byte-exact backup
-- [x] `context.20260827.original.md` byte-exact backup
-- [x] `checklist.20260827.original.md` byte-exact backup
-- [x] active 3 local `apply_patch` compression; playbook read-only
-- [x] README snapshot update
-- [x] strict UTF-8, backup hash, heading/gate/secret/Git validation
+- [x] 2026-08-27 active/Git 대조; `ER-20260720-014`, direct CLI/upload 금지
+- [x] active 3 date backup·local `apply_patch`; playbook read-only
+- [x] README·UTF-8/hash/heading/gate/secret/Git 검증
+
+## `.ai/memory` post-Task15 재압축 — 2026-08-27
+
+- [x] HEAD `30441ca`, active 3/README 기준선, `ER-20260720-014`, exact 7 paths·1~2-file stages 승인
+- [x] 기존 backup 불변; 새 `30441ca` active 3 byte-exact backup·ignore/hash PASS
+- [x] `plan.md`·`context.md`·`checklist.md` local 재압축; `README.md` snapshot 갱신
+- [x] strict UTF-8·semantic anchors·secret·`git diff --check`·exact 4-path diff 검증
+- [x] 2026-08-30 사용자 승인: active memory exact 4-path local commit; backup·product·playbook·push 제외
