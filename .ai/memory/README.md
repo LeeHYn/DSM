@@ -58,11 +58,11 @@
 
 | File | Pre-image bytes | Active bytes | 감소 | Active SHA-256 |
 |---|---:|---:|---:|---|
-| `plan.md` | 15,183 | 12,458 | 17.9% | `B51D261135AA6943D8056326FC45DE3EA2A20E4235EAEACD6F9B193D4F1340C1` |
-| `context.md` | 9,003 | 8,400 | 6.7% | `D7DF03A272AE26C438FF26CECEE0CFC2263840E592F389A5A6E4853B13B53C58` |
-| `checklist.md` | 8,315 | 6,431 | 22.7% | `AFED9E8C004CB30FDC02BAE172C5AC44565281E93EEDCB1BA80A29FA511923F5` |
-| **active 3 total** | **32,501** | **27,289** | **16.0%** | — |
+| `plan.md` | 15,183 | 13,333 | 12.2% | `D30ECB89140A7CE733EBDD9D1487C9249AEB59F4FBDF53B9956FA0A6A3D35605` |
+| `context.md` | 9,003 | 8,439 | 6.3% | `2E1CD34DC7E61B35BAD6AAD259E2C7731D061BEC4A6E6DFDFDF79D6BA855BB47` |
+| `checklist.md` | 8,315 | 6,965 | 16.2% | `BF7914FEF6ADF1602053D1430E47DF4B658A57DD2540365B0383E455E176C60B` |
+| **active 3 total** | **32,501** | **28,737** | **11.6%** | — |
 
 - Previous Task 13 active snapshot: 29,471 bytes total; `plan.md` `BF2D136878F40973D7DA551019784DA56399C57563FC184021E492C323203665`, `context.md` `AA84F443972E324AD2FA05A28265E03EC7B28C34CE8495FDF6032672EA4A5E4C`, `checklist.md` `D6859674C4FD6321FDC7B24FE7468F4AD1D8474B807C99991C2C91B4042181F7`.
 - Active/recovery Markdown strict UTF-8 verification PASS.
-- Active integration status: Task 12 full matrix PASS; Task 13 memory reconciliation, Task 14 independent review, and Task 15 local handoff complete. Integration/offline branches remain local-only pending a new publish/PR/merge approval.
+- Active integration status: Task 12 matrix, Task 13 memory, Task 14 review, Task 15 handoff와 2026-08-30 integration origin publish complete. Offline branch는 local-only; PR/merge는 새 승인 필요.

@@ -25,7 +25,7 @@
 
 ## 현재 진행 상태
 
-- [x] Main integration local review/handoff complete; branches unpublished
+- [x] Main integration review/handoff·origin publish complete; offline branch unpublished
 - [/] M12 notification: 12A/12B done; 12C·actual ADC/FCM sandbox pending
 - [x] Front secure session product·Web QA·auth gate
 - [/] Android Google
@@ -99,3 +99,13 @@
 - [x] `plan.md`·`context.md`·`checklist.md` local 재압축; `README.md` snapshot 갱신
 - [x] strict UTF-8·semantic anchors·secret·`git diff --check`·exact 4-path diff 검증
 - [x] 2026-08-30 사용자 승인: active memory exact 4-path local commit; backup·product·playbook·push 제외
+
+## Integration branch publish — 2026-08-30
+
+- [x] 사용자 `codex/integration-main-review` push 승인
+- [x] upstream 확인·fetch: `origin/codex/integration-main-review`, divergence `0 176`
+- [x] fresh tests: Backend 24/215, Front 18/162 PASS; `ER-20260725-002` local-cache 재검증
+- [x] task-specific cache cleanup·product diff 0·document checks PASS
+- [x] active memory publish 상태 커밋
+- [x] non-force push·remote ref=local HEAD 확인
+- [x] offline/`main`/PR/merge/deploy/DB/Firebase 불변 확인

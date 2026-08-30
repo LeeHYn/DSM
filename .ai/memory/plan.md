@@ -1,6 +1,6 @@
 # 목표
 
-DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `codex/integration-main-review`의 승인된 main 통합 검토는 Task 12 matrix, Task 13 memory, Task 14 independent review와 Task 15 local handoff까지 완료했다. 두 결과 브랜치는 local-only이며 publish·PR·`main` merge는 새 승인 전 금지다. 별도 제품 release-audit는 `F-006`부터 독립 계획·승인으로 재개한다.
+DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `codex/integration-main-review`의 main 통합 검토·local handoff와 2026-08-30 origin publish를 완료했다. Offline 결과는 별도 local branch이며 PR·`main` merge는 새 승인 전 금지다. 제품 release-audit는 `F-006`부터 독립 계획·승인으로 재개한다.
 
 # Main branch integration review — 2026-08-26
 
@@ -9,7 +9,7 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `
 - offline: `C:\dsm-offline-learning-site`/`codex/offline-learning-site`/`2cbb088`; base `43145b6`, source `fb54b5d`, `396fc0a` 제외, ancestry `0 1`, memory 4 paths, Node 66/66, 28-source `PASS`; integration과 분리.
 - Task 7~11: AI-control `1bacf47`/`1d36d70`; active-schedule partial index만 `PORT`; migration+contract `56c0575`; handoff/fail-fast `04f5980`. Amendment `332e3ad`로 seed `EASY→LOW`, fresh `canonical-prisma-r2*`; PostgreSQL 17 empty 5/canonical 4/seed 1·1·2/forward 5/invariant PASS, captured-only cleanup·URL absent·`dsm-back-dev-db-1` 보존. Review `APPROVED`, report `f30dcd2`, `ER-20260827-001`/`4c25b67`, closure `2f96c77`.
 - Task 12: 최초 backend install 882·Prisma/build·24/215 PASS 뒤 contract spec lines 17·25 wrap 2건으로 lint BLOCKED(`6ef5dab`/`0cf4031`). Exact amendment, plans `046d67f`/`0ecbf2d`, test-only `69d3154` 후 Backend 24/215, Front 18/162+type/lint, Android 365, lock roots, offline 66/66+28-source, Git/SDD PASS; Node `v24.19.0`/npm `11.19.0`, product/dependency/remote 변경 없음.
-- Task 13~15: memory plan `80ab65b`; Task 14 plan `2815f6d`, `.codex/config.toml` 삭제 `4533c0c`, report `c9e9ba9`, original findings `ADDRESSED`, 신규 P0-P2 없음, Spec/Quality/Whole-branch `APPROVED`. Task 15는 offline `0 1`·4 paths, six pinned refs, canonical ancestry, clean/diff와 exact 4-path memory closure를 재확인; final HEAD `30441ca`. Branches local-only, publish·PR·`main`/shared DB/deploy는 새 승인 필요.
+- Task 13~15: memory plan `80ab65b`; Task 14 plan `2815f6d`, `.codex/config.toml` 삭제 `4533c0c`, report `c9e9ba9`, original findings `ADDRESSED`, 신규 P0-P2 없음, Spec/Quality/Whole-branch `APPROVED`. Task 15는 offline `0 1`·4 paths, six pinned refs, canonical ancestry, clean/diff와 exact 4-path memory closure를 재확인; local closure HEAD `30441ca`. Integration branch origin publish 완료; offline은 local-only, PR·`main`/shared DB/deploy는 새 승인 필요.
 
 # Memory SSOT
 
@@ -91,7 +91,7 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `
 
 # 잔여 위험·보류
 
-- Integration Task 12 PASS; Task 13 memory reconciled; Task 14 approved/committed; Task 15 local handoff complete. Branches remain local-only.
+- Integration Task 12 PASS; Task 13 memory reconciled; Task 14 approved/committed; Task 15 local handoff와 integration branch origin publish 완료. Offline branch는 local-only.
 - release signing·release `.env`/OAuth provisioning 미구성; production 미검증. external OAuth state 삭제·변경 시 current-PC smoke 재발 가능.
 - Task/Score/Ranking Android UI prototype·fixed data. `F-006`, `F-026`, actual multi-connection refresh/logout, Firebase delivery/F-007 race 미해결.
 - launcher/splash/app name template branding, dependency audit 32, Task parser hash/non-string, Apple, revoked-token reuse hook, UTC midnight Cron 보류.
@@ -109,8 +109,16 @@ DSM full-stack의 기능·test·문서·승인·검증 이력을 유지한다. `
 - 사용자 승인 후 main agent가 local `apply_patch`로 수행; `ER-20260720-014` 때문에 `caveman-compress` CLI·외부 전송 금지.
 - HEAD `30441ca` pre-image는 `plan.20260827-30441ca.original.md`, `context.20260827-30441ca.original.md`, `checklist.20260827-30441ca.original.md`에 byte-exact·ignored 보존; 기존 backup과 playbook 불변.
 - exact writable: 새 backup 3개+active 3+`README.md`; 제품/DB/Docker/Firebase/remote/offline 및 Git stage/commit/push/PR/merge 제외. Heading·inline code·경로·명령·SHA·날짜·버전·수치·gate 보존, Task 12~15 중복만 병합.
-- 완료: 새 backup SHA 일치·ignored, active 3 32,501→27,289 bytes(16.0%), README 갱신. Strict UTF-8, heading, Task 12~15/offline/F-006/security·no-publish anchors, secret pattern 0, exact 4-path diff, playbook 불변, `git diff --check` PASS.
+- 완료: 새 backup SHA 일치·ignored, active 3 32,501→28,737 bytes(11.6%), README 갱신. Strict UTF-8, heading, Task 12~15/offline/F-006/security·no-publish anchors, secret pattern 0, exact 4-path diff, playbook 불변, `git diff --check` PASS.
 - 2026-08-30 사용자가 active memory exact 4-path local commit을 승인했다. 대상은 `plan.md`, `context.md`, `checklist.md`, `README.md`; ignored backup·제품·playbook 제외, push/PR/merge 없음. Commit message: `docs(memory): refresh integration handoff state`.
+
+# Integration branch publish — 2026-08-30
+
+- 사용자가 `codex/integration-main-review` push를 승인했다. Upstream은 `origin/codex/integration-main-review`; fetch 후 divergence `0 176`, force 없이 fast-forward publish한다.
+- fresh product/document verification 후 active memory 4-path publish 상태를 커밋하고 해당 integration 브랜치만 push한다.
+- offline `codex/offline-learning-site`, `main`, 제품 sibling, PR/merge/deploy, shared/remote DB/Firebase는 범위 밖이다.
+- fresh verification: default Temp cache는 `ER-20260725-002` `EPERM`; project-local cache 재실행으로 Backend 24 suites/215 tests, Front 18/162 PASS. Cache exact cleanup, product diff 0, memory/document checks PASS.
+- 완료: active memory publish closure commit 후 non-force push, remote ref=local HEAD 확인. Worktree 유지; PR/merge/deploy 없음.
 
 # 완료 기준
 

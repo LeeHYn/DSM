@@ -2,11 +2,11 @@
 
 ## Main integration review — 2026-08-26
 
-- active `C:\dsm-integration-review`/`codex/integration-main-review`, final HEAD `30441ca`; `main`/`origin/main` `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`, canonical `2a4e9916765b505037e1c533735d84cd9f251ccf`. SSOT: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`, `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`, `docs/reviews/2026-08-25-main-integration-conflict-review.md`.
+- active `C:\dsm-integration-review`/`codex/integration-main-review`, local handoff HEAD `30441ca`, origin publish 2026-08-30; `main`/`origin/main` `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`, canonical `2a4e9916765b505037e1c533735d84cd9f251ccf`. SSOT: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`, `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`, `docs/reviews/2026-08-25-main-integration-conflict-review.md`.
 - Task 11 PostgreSQL: empty 5/canonical 4/seed 1·1·2/forward 5/invariant/captured cleanup PASS, review `APPROVED`. Task 12: plans `046d67f`/`0ecbf2d`, style `69d3154`, Node `v24.19.0`/npm `11.19.0`; Backend install 882·24/215, Front install 988·18/162+type/lint, Android 365, lock/offline 66/66+28-source, Git/SDD PASS.
 - Task 13 plan `80ab65b`, active 3+README exact 4-path closure. Task 14 plan `2815f6d`, `.codex/config.toml` 삭제 `4533c0c`, report `c9e9ba9`; original findings `ADDRESSED`, 신규 P0-P2 없음, Whole-branch `APPROVED`. Task 15 local handoff·memory closure complete.
-- offline `C:\dsm-offline-learning-site`/`codex/offline-learning-site`/`2cbb088`, base `43145b6`, source `fb54b5d`; ancestry `0 1`, four paths, 66 tests·28-source PASS. Six pinned refs·canonical ancestry verified; integration과 분리, branches local-only.
-- push·PR·`main`/shared·remote DB/deploy 및 `dsm-back-dev-db-1` 접근 금지. Product audit `20260817-release-audit-full-project`: 26건(confirmed 22, unknown 2, rechecked 2), release-ready 아님; `F-016`/`F-025` RECHECKED, 다음 gate `F-006` written-spec review.
+- offline `C:\dsm-offline-learning-site`/`codex/offline-learning-site`/`2cbb088`, base `43145b6`, source `fb54b5d`; ancestry `0 1`, four paths, 66 tests·28-source PASS. Six pinned refs·canonical ancestry verified; integration과 분리·local-only.
+- integration branch만 non-force origin publish 완료. PR·`main`/shared·remote DB/deploy 및 `dsm-back-dev-db-1` 접근 금지. Product audit `20260817-release-audit-full-project`: 26건(confirmed 22, unknown 2, rechecked 2), release-ready 아님; `F-016`/`F-025` RECHECKED, 다음 gate `F-006` written-spec review.
 
 ## Stack·환경
 
@@ -59,8 +59,8 @@
 
 ## Git·외부 경계
 
-- Integration branch only; `main`/origin refs immutable until explicit approval. Offline and Android product branches remain separate.
-- Git stage/commit/push/PR/merge/deploy and remote/prod DB/Firebase send need explicit current scope. No force push/reset/drop.
+- Integration branch origin publish 완료; `main`/offline/Android product refs는 불변·분리.
+- 추가 Git stage/commit/push, PR/merge/deploy와 remote/prod DB/Firebase send는 새 승인 필요. No force push/reset/drop.
 - implementation exact 1~2 files; main owns approvals/shared memory/audit. high risk=`change-gate`; release=`release-audit`.
 - credential/token/SHA/client ID full values never Git/memory/chat/log.
 
@@ -76,5 +76,5 @@
 
 - error work searches `error-resolution-playbook.md`; matching `VERIFIED` only, revalidate current checkout. `MITIGATION_ONLY` gates persist.
 - `*.original.md` local recovery, excluded from Git/search/handoff/recompression. Post-Task15 `30441ca` active 3 pre-images are byte-exact ignored backups; existing backups unchanged.
-- `caveman-compress` direct run prohibited by `ER-20260720-014`; no external upload. Local `apply_patch` pass reduced active 3 from 32,501 to 27,289 bytes(16.0%); playbook read-only.
+- `caveman-compress` direct run prohibited by `ER-20260720-014`; no external upload. Local `apply_patch` pass reduced active 3 from 32,501 to 28,737 bytes(11.6%); playbook read-only.
 - Obsidian 1.12.7: `C:\AiWiki\AiProject\DSM`; `Current`→`C:\DEV\.ai\docs`, `Planning`→`C:\DEV\Planing Document`; stale cache recovery `ER-20260722-001`.
