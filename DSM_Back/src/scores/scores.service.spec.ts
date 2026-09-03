@@ -33,11 +33,27 @@ describe('ScoresService', () => {
   describe('recompute', () => {
     it('computes the daily score and refreshes total/tier', async () => {
       prismaMock.task.findMany.mockResolvedValue([
-        { status: 'COMPLETED', difficulty: 'MEDIUM' },
-        { status: 'COMPLETED', difficulty: 'MEDIUM' },
-        { status: 'COMPLETED', difficulty: 'MEDIUM' },
-        { status: 'COMPLETED', difficulty: 'HIGH' },
-        { status: 'PENDING', difficulty: 'LOW' },
+        {
+          status: 'COMPLETED',
+          difficulty: 'MEDIUM',
+          completedAt: new Date('2026-06-03T01:00:00.000Z'),
+        },
+        {
+          status: 'COMPLETED',
+          difficulty: 'MEDIUM',
+          completedAt: new Date('2026-06-03T02:00:00.000Z'),
+        },
+        {
+          status: 'COMPLETED',
+          difficulty: 'MEDIUM',
+          completedAt: new Date('2026-06-03T03:00:00.000Z'),
+        },
+        {
+          status: 'COMPLETED',
+          difficulty: 'HIGH',
+          completedAt: new Date('2026-06-03T04:00:00.000Z'),
+        },
+        { status: 'PENDING', difficulty: 'LOW', completedAt: null },
       ]);
       prismaMock.dailyScore.upsert.mockResolvedValue({ id: 'ds-1' });
       prismaMock.dailyScore.aggregate.mockResolvedValue({
@@ -47,12 +63,21 @@ describe('ScoresService', () => {
 
       await service.recompute('user-1', '2026-06-03');
 
-      expect(prismaMock.task.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          where: expect.objectContaining({ userId: 'user-1', deletedAt: null }),
-        }),
-      );
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          deletedAt: null,
+          startAt: {
+            gte: new Date('2026-06-03T00:00:00.000Z'),
+            lt: new Date('2026-06-04T00:00:00.000Z'),
+          },
+        },
+        select: {
+          status: true,
+          difficulty: true,
+          completedAt: true,
+        },
+      });
       expect(prismaMock.dailyScore.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -78,6 +103,7 @@ describe('ScoresService', () => {
         Array.from({ length: 40 }, () => ({
           status: 'COMPLETED',
           difficulty: 'HIGH',
+          completedAt: new Date('2026-06-03T12:00:00.000Z'),
         })),
       );
       prismaMock.dailyScore.upsert.mockResolvedValue({ id: 'ds-1' });
@@ -112,10 +138,90 @@ describe('ScoresService', () => {
       });
     });
 
+    it.each([
+      {
+        label: 'completion at dayStart',
+        completedAt: new Date('2026-06-03T00:00:00.000Z'),
+        completedTaskCount: 1,
+        rawScore: 10,
+        adjustedScore: 15,
+        achievementRate: 100,
+      },
+      {
+        label: 'completion exactly at nextDay',
+        completedAt: new Date('2026-06-04T00:00:00.000Z'),
+        completedTaskCount: 0,
+        rawScore: 0,
+        adjustedScore: 0,
+        achievementRate: 0,
+      },
+      {
+        label: 'late completion after the scheduled day',
+        completedAt: new Date('2026-06-04T12:00:00.000Z'),
+        completedTaskCount: 0,
+        rawScore: 0,
+        adjustedScore: 0,
+        achievementRate: 0,
+      },
+      {
+        label: 'early completion before the scheduled day',
+        completedAt: new Date('2026-06-02T23:59:59.999Z'),
+        completedTaskCount: 0,
+        rawScore: 0,
+        adjustedScore: 0,
+        achievementRate: 0,
+      },
+      {
+        label: 'legacy completion without a timestamp',
+        completedAt: null,
+        completedTaskCount: 0,
+        rawScore: 0,
+        adjustedScore: 0,
+        achievementRate: 0,
+      },
+    ])(
+      'keeps the registered denominator for $label',
+      async ({
+        completedAt,
+        completedTaskCount,
+        rawScore,
+        adjustedScore,
+        achievementRate,
+      }) => {
+        prismaMock.task.findMany.mockResolvedValue([
+          { status: 'COMPLETED', difficulty: 'LOW', completedAt },
+        ]);
+        prismaMock.dailyScore.upsert.mockResolvedValue({ id: 'ds-boundary' });
+        prismaMock.dailyScore.aggregate.mockResolvedValue({
+          _sum: { cappedScore: adjustedScore },
+        });
+        prismaMock.user.update.mockResolvedValue({});
+
+        await service.recompute('user-1', '2026-06-03');
+
+        expect(prismaMock.dailyScore.upsert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            create: expect.objectContaining({
+              registeredTaskCount: 1,
+              completedTaskCount,
+              rawScore,
+              adjustedScore,
+              achievementRate,
+            }),
+          }),
+        );
+      },
+    );
+
     it('routes every recompute query through the supplied transaction client', async () => {
       const transactionMock = makePrismaMock();
       transactionMock.task.findMany.mockResolvedValue([
-        { status: 'COMPLETED', difficulty: 'LOW' },
+        {
+          status: 'COMPLETED',
+          difficulty: 'LOW',
+          completedAt: new Date('2026-06-03T12:00:00.000Z'),
+        },
       ]);
       transactionMock.dailyScore.upsert.mockResolvedValue({ id: 'ds-tx' });
       transactionMock.dailyScore.aggregate.mockResolvedValue({

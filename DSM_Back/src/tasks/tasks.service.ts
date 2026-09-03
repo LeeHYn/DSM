@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, type Task, TaskStatus } from '@prisma/client';
 import {
   NOTIFICATION_DELIVERY_STATUS,
@@ -12,6 +16,7 @@ import type { UpdateTaskDto } from './dto/update-task.dto';
 import type { TaskQueryDto } from './dto/task-query.dto';
 
 const MAX_SERIALIZABLE_TRANSACTION_RETRIES = 2;
+const MAX_TASKS_PER_UTC_DAY = 20;
 
 @Injectable()
 export class TasksService {
@@ -23,11 +28,12 @@ export class TasksService {
   async create(userId: string, dto: CreateTaskDto): Promise<Task> {
     return this.runSerializableTransaction(async (client) => {
       const now = new Date();
+      const startAt = new Date(dto.startAt);
+      await this.assertDailyTaskCapacity(userId, startAt, undefined, client);
       if (dto.categoryId !== undefined) {
         await this.assertCategoryAssignable(userId, dto.categoryId, client);
       }
 
-      const startAt = new Date(dto.startAt);
       const notificationEnabled = dto.notificationEnabled ?? true;
       const task = await client.task.create({
         data: {
@@ -81,6 +87,11 @@ export class TasksService {
     return this.runSerializableTransaction(async (client) => {
       const now = new Date();
       const existing = await this.findOneWithClient(userId, id, client);
+      const nextStartAt =
+        dto.startAt !== undefined ? new Date(dto.startAt) : existing.startAt;
+      if (!this.isSameUtcDay(existing.startAt, nextStartAt)) {
+        await this.assertDailyTaskCapacity(userId, nextStartAt, id, client);
+      }
       if (
         dto.categoryId !== undefined &&
         dto.categoryId !== existing.categoryId
@@ -88,8 +99,6 @@ export class TasksService {
         await this.assertCategoryAssignable(userId, dto.categoryId, client);
       }
 
-      const nextStartAt =
-        dto.startAt !== undefined ? new Date(dto.startAt) : existing.startAt;
       const nextNotificationEnabled =
         dto.notificationEnabled ?? existing.notificationEnabled;
       const nextStatus = dto.status ?? existing.status;
@@ -103,6 +112,15 @@ export class TasksService {
         nextNotificationEnabled &&
         nextStatus === TaskStatus.PENDING &&
         nextStartAt.getTime() > now.getTime();
+      const completionData =
+        dto.status === TaskStatus.COMPLETED &&
+        existing.status !== TaskStatus.COMPLETED
+          ? { completedAt: now }
+          : dto.status !== undefined &&
+              dto.status !== TaskStatus.COMPLETED &&
+              existing.status === TaskStatus.COMPLETED
+            ? { completedAt: null }
+            : {};
 
       if (scheduleRelevantChange) {
         await this.cancelNonterminalNotificationsForTask(id, client);
@@ -119,6 +137,7 @@ export class TasksService {
           ...(dto.endAt !== undefined && { endAt: new Date(dto.endAt) }),
           ...(dto.difficulty !== undefined && { difficulty: dto.difficulty }),
           ...(dto.status !== undefined && { status: dto.status }),
+          ...completionData,
           ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
           ...(dto.notificationEnabled !== undefined && {
             notificationEnabled: dto.notificationEnabled,
@@ -161,13 +180,18 @@ export class TasksService {
 
   async complete(userId: string, id: string): Promise<Task> {
     return this.runSerializableTransaction(async (client) => {
-      await this.findOneWithClient(userId, id, client);
+      const now = new Date();
+      const existing = await this.findOneWithClient(userId, id, client);
       await this.cancelNonterminalNotificationsForTask(id, client);
       const task = await client.task.update({
         where: { id },
         data: {
           status: TaskStatus.COMPLETED,
-          completedAt: new Date(),
+          completedAt:
+            existing.status === TaskStatus.COMPLETED &&
+            existing.completedAt !== null
+              ? existing.completedAt
+              : now,
         },
       });
       await this.scores.recompute(userId, task.startAt, client);
@@ -228,6 +252,48 @@ export class TasksService {
         nextAttemptAt: null,
       },
     });
+  }
+
+  private utcDayRange(reference: Date): { dayStart: Date; nextDay: Date } {
+    const dayStart = new Date(
+      Date.UTC(
+        reference.getUTCFullYear(),
+        reference.getUTCMonth(),
+        reference.getUTCDate(),
+      ),
+    );
+    const nextDay = new Date(dayStart);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    return { dayStart, nextDay };
+  }
+
+  private isSameUtcDay(left: Date, right: Date): boolean {
+    return (
+      left.getUTCFullYear() === right.getUTCFullYear() &&
+      left.getUTCMonth() === right.getUTCMonth() &&
+      left.getUTCDate() === right.getUTCDate()
+    );
+  }
+
+  private async assertDailyTaskCapacity(
+    userId: string,
+    startAt: Date,
+    excludedTaskId: string | undefined,
+    client: Prisma.TransactionClient,
+  ): Promise<void> {
+    const { dayStart, nextDay } = this.utcDayRange(startAt);
+    const count = await client.task.count({
+      where: {
+        userId,
+        deletedAt: null,
+        startAt: { gte: dayStart, lt: nextDay },
+        ...(excludedTaskId ? { id: { not: excludedTaskId } } : {}),
+      },
+    });
+
+    if (count >= MAX_TASKS_PER_UTC_DAY) {
+      throw new ConflictException('Daily task limit reached');
+    }
   }
 
   /** Recompute each distinct UTC day touched by a mutation. */

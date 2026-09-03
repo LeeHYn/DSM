@@ -54,15 +54,15 @@
 5. Implement·verify.
 6. End: active memory update. 새 해결이면 playbook index/body 동시 갱신.
 
-## Current compression snapshot — 2026-08-27
+## Current active snapshot — 2026-08-31
 
-| File | Pre-image bytes | Active bytes | 감소 | Active SHA-256 |
+| File | Pre-image bytes | Active bytes | 변화 | Active SHA-256 |
 |---|---:|---:|---:|---|
-| `plan.md` | 15,183 | 13,333 | 12.2% | `D30ECB89140A7CE733EBDD9D1487C9249AEB59F4FBDF53B9956FA0A6A3D35605` |
-| `context.md` | 9,003 | 8,439 | 6.3% | `2E1CD34DC7E61B35BAD6AAD259E2C7731D061BEC4A6E6DFDFDF79D6BA855BB47` |
-| `checklist.md` | 8,315 | 6,965 | 16.2% | `BF7914FEF6ADF1602053D1430E47DF4B658A57DD2540365B0383E455E176C60B` |
-| **active 3 total** | **32,501** | **28,737** | **11.6%** | — |
+| `plan.md` | 15,183 | 29,197 | -92.3% | `3FEBE22F75B8615C4D9DFB4AA43EC6AA2FBCFAF072DA6E73B250BD639E2CD628` |
+| `context.md` | 9,003 | 9,993 | -11.0% | `36660B877D84019FA3B0D4E8340086945010EA882F0FEE991BFFE24A06B4AD1F` |
+| `checklist.md` | 8,315 | 11,656 | -40.2% | `120E383078E40DAFCF513FB1609AE34ABA6F6004AB4A73325C4ABB6B843A723D` |
+| **active 3 total** | **32,501** | **50,846** | **-56.4%** | — |
 
 - Previous Task 13 active snapshot: 29,471 bytes total; `plan.md` `BF2D136878F40973D7DA551019784DA56399C57563FC184021E492C323203665`, `context.md` `AA84F443972E324AD2FA05A28265E03EC7B28C34CE8495FDF6032672EA4A5E4C`, `checklist.md` `D6859674C4FD6321FDC7B24FE7468F4AD1D8474B807C99991C2C91B4042181F7`.
 - Active/recovery Markdown strict UTF-8 verification PASS.
-- Active integration status: Task 12 matrix, Task 13 memory, Task 14 review, Task 15 handoff와 2026-08-30 integration origin publish complete. Offline branch는 local-only; PR/merge는 새 승인 필요.
+- Active integration status: Task 12 matrix, Task 13 memory, Task 14 review, Task 15 local handoff complete. Integration push는 exact 177-commit payload 승인 부족으로 `BLOCKED`·remote transfer 0; integration/offline 모두 local-only다. F-006은 approved 8-path implementation, PostgreSQL 17.11 r2 9/9, full unit 245/e2e 2/Prisma/build/lint, independent reviewer를 거쳐 audit `RECHECKED`다. Target migration SHA-256은 `AA496C2C2D029D26C58083E888E360F79AA7EA8D10C876CF664F841BD16E291A`; shared/remote/prod DB, Firebase, deploy, offline branch와 Git stage/commit/push/PR/merge는 미실행이다. Audit은 confirmed 21/unknown 2 때문에 열린 상태다.

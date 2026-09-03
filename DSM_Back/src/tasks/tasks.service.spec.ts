@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma, TaskDifficulty, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -24,6 +24,7 @@ const MOCK_TASK = {
 
 const makeClientMock = () => ({
   task: {
+    count: jest.fn(),
     create: jest.fn(),
     findMany: jest.fn(),
     findFirst: jest.fn(),
@@ -57,6 +58,7 @@ describe('TasksService', () => {
 
   beforeEach(async () => {
     transactionMock = makeClientMock();
+    transactionMock.task.count.mockResolvedValue(0);
     prismaMock = makePrismaMock(transactionMock);
     scoresMock = { recompute: jest.fn().mockResolvedValue(undefined) };
 
@@ -105,6 +107,101 @@ describe('TasksService', () => {
       );
       expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.task.create).not.toHaveBeenCalled();
+    });
+
+    it('allows the twentieth active task and uses the UTC half-open day predicate', async () => {
+      transactionMock.task.count.mockResolvedValue(19);
+      transactionMock.task.create.mockResolvedValue(MOCK_TASK);
+
+      await service.create('user-uuid-1', {
+        title: 'Morning run',
+        startAt: '2026-06-03T06:00:00Z',
+        endAt: '2026-06-03T07:00:00Z',
+        difficulty: TaskDifficulty.MEDIUM,
+      });
+
+      expect(transactionMock.task.count).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+          startAt: {
+            gte: new Date('2026-06-03T00:00:00.000Z'),
+            lt: new Date('2026-06-04T00:00:00.000Z'),
+          },
+        },
+      });
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects the twenty-first active task before every side effect', async () => {
+      transactionMock.task.count.mockResolvedValue(20);
+
+      const action = service.create('user-uuid-1', {
+        title: 'Morning run',
+        startAt: '2026-06-03T06:00:00Z',
+        endAt: '2026-06-03T07:00:00Z',
+        difficulty: TaskDifficulty.MEDIUM,
+      });
+
+      await expect(action).rejects.toBeInstanceOf(ConflictException);
+      await expect(action).rejects.toMatchObject({
+        message: 'Daily task limit reached',
+        status: 409,
+      });
+      expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
+      expect(transactionMock.task.create).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+    });
+
+    it('returns the capacity conflict before checking an invalid category', async () => {
+      transactionMock.task.count.mockResolvedValue(20);
+      transactionMock.category.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.create('user-uuid-1', {
+          title: 'Morning run',
+          startAt: '2026-06-03T06:00:00Z',
+          endAt: '2026-06-03T07:00:00Z',
+          difficulty: TaskDifficulty.MEDIUM,
+          categoryId: 'missing-category',
+        }),
+      ).rejects.toMatchObject({
+        message: 'Daily task limit reached',
+        status: 409,
+      });
+
+      expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
+      expect(transactionMock.task.create).not.toHaveBeenCalled();
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+    });
+
+    it('checks an invalid category only after capacity is available', async () => {
+      transactionMock.task.count.mockResolvedValue(19);
+      transactionMock.category.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.create('user-uuid-1', {
+          title: 'Morning run',
+          startAt: '2026-06-03T06:00:00Z',
+          endAt: '2026-06-03T07:00:00Z',
+          difficulty: TaskDifficulty.MEDIUM,
+          categoryId: 'missing-category',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(
+        transactionMock.task.count.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        transactionMock.category.findFirst.mock.invocationCallOrder[0],
+      );
+      expect(transactionMock.task.create).not.toHaveBeenCalled();
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
     });
 
     it('creates one pending schedule for an enabled future task', async () => {
@@ -411,6 +508,177 @@ describe('TasksService', () => {
       expect(
         transactionMock.notificationDelivery.updateMany,
       ).not.toHaveBeenCalled();
+      expect(transactionMock.task.count).not.toHaveBeenCalled();
+    });
+
+    it('loads the owned task before rejecting a move into a full UTC day', async () => {
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.count.mockResolvedValue(20);
+      transactionMock.category.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('user-uuid-1', 'task-uuid-1', {
+          startAt: '2026-06-04T00:00:00.000Z',
+          categoryId: 'missing-category',
+        }),
+      ).rejects.toMatchObject({
+        message: 'Daily task limit reached',
+        status: 409,
+      });
+
+      expect(transactionMock.task.count).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+          startAt: {
+            gte: new Date('2026-06-04T00:00:00.000Z'),
+            lt: new Date('2026-06-05T00:00:00.000Z'),
+          },
+          id: { not: 'task-uuid-1' },
+        },
+      });
+      expect(
+        transactionMock.task.findFirst.mock.invocationCallOrder[0],
+      ).toBeLessThan(transactionMock.task.count.mock.invocationCallOrder[0]);
+      expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+    });
+
+    it('does not check capacity before reporting a missing owned task', async () => {
+      transactionMock.task.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('user-uuid-1', 'missing-task', {
+          startAt: '2026-06-04T00:00:00.000Z',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(transactionMock.task.count).not.toHaveBeenCalled();
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+    });
+
+    it('skips capacity for a same-day move and preserves category 404 precedence', async () => {
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.category.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('user-uuid-1', 'task-uuid-1', {
+          startAt: '2026-06-03T23:59:59.999Z',
+          categoryId: 'missing-category',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(transactionMock.task.count).not.toHaveBeenCalled();
+      expect(transactionMock.category.findFirst).toHaveBeenCalledTimes(1);
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+    });
+
+    it('treats the next UTC midnight as a different capacity day', async () => {
+      const endOfDayTask = {
+        ...MOCK_TASK,
+        startAt: new Date('2026-06-03T23:59:59.999Z'),
+      };
+      transactionMock.task.findFirst.mockResolvedValue(endOfDayTask);
+      transactionMock.task.count.mockResolvedValue(19);
+      transactionMock.task.update.mockResolvedValue({
+        ...endOfDayTask,
+        startAt: new Date('2026-06-04T00:00:00.000Z'),
+      });
+
+      await service.update('user-uuid-1', 'task-uuid-1', {
+        startAt: '2026-06-04T00:00:00.000Z',
+      });
+
+      expect(transactionMock.task.count).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+          startAt: {
+            gte: new Date('2026-06-04T00:00:00.000Z'),
+            lt: new Date('2026-06-05T00:00:00.000Z'),
+          },
+          id: { not: 'task-uuid-1' },
+        },
+      });
+    });
+
+    it('stamps completedAt when generic update enters COMPLETED', async () => {
+      const now = new Date('2026-06-03T08:30:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+      transactionMock.task.update.mockResolvedValue({
+        ...MOCK_TASK,
+        status: TaskStatus.COMPLETED,
+        completedAt: now,
+      });
+
+      await service.update('user-uuid-1', 'task-uuid-1', {
+        status: TaskStatus.COMPLETED,
+      });
+
+      expect(transactionMock.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          data: expect.objectContaining({
+            status: TaskStatus.COMPLETED,
+            completedAt: now,
+          }),
+        }),
+      );
+    });
+
+    it.each([TaskStatus.PENDING, TaskStatus.CANCELLED])(
+      'clears completedAt when generic update leaves COMPLETED for %s',
+      async (status) => {
+        const completedTask = {
+          ...MOCK_TASK,
+          status: TaskStatus.COMPLETED,
+          completedAt: new Date('2026-06-03T07:30:00.000Z'),
+        };
+        transactionMock.task.findFirst.mockResolvedValue(completedTask);
+        transactionMock.task.update.mockResolvedValue({
+          ...completedTask,
+          status,
+          completedAt: null,
+        });
+
+        await service.update('user-uuid-1', 'task-uuid-1', { status });
+
+        expect(transactionMock.task.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            data: expect.objectContaining({ status, completedAt: null }),
+          }),
+        );
+      },
+    );
+
+    it.each([
+      ['an unrelated field', MOCK_TASK, { title: 'Evening run' }],
+      [
+        'the same completed status with a legacy null timestamp',
+        { ...MOCK_TASK, status: TaskStatus.COMPLETED },
+        { status: TaskStatus.COMPLETED },
+      ],
+    ])('preserves completedAt for %s', async (_label, existingTask, dto) => {
+      transactionMock.task.findFirst.mockResolvedValue(existingTask);
+      transactionMock.task.update.mockResolvedValue({
+        ...existingTask,
+        ...dto,
+      });
+
+      await service.update('user-uuid-1', 'task-uuid-1', dto);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const updateData = transactionMock.task.update.mock.calls[0][0].data;
+      expect(updateData).not.toHaveProperty('completedAt');
     });
 
     it.each([
@@ -862,6 +1130,52 @@ describe('TasksService', () => {
         completedTask.startAt,
         transactionMock,
       );
+    });
+
+    it('preserves the timestamp when an already completed task is completed again', async () => {
+      const completedAt = new Date('2026-06-03T07:30:00.000Z');
+      const completedTask = {
+        ...MOCK_TASK,
+        status: TaskStatus.COMPLETED,
+        completedAt,
+      };
+      transactionMock.task.findFirst.mockResolvedValue(completedTask);
+      transactionMock.task.update.mockResolvedValue(completedTask);
+
+      await service.complete('user-uuid-1', 'task-uuid-1');
+
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        data: {
+          status: TaskStatus.COMPLETED,
+          completedAt,
+        },
+      });
+    });
+
+    it('stamps a legacy completed task whose timestamp is null', async () => {
+      const now = new Date('2026-06-03T08:30:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      const legacyTask = {
+        ...MOCK_TASK,
+        status: TaskStatus.COMPLETED,
+        completedAt: null,
+      };
+      transactionMock.task.findFirst.mockResolvedValue(legacyTask);
+      transactionMock.task.update.mockResolvedValue({
+        ...legacyTask,
+        completedAt: now,
+      });
+
+      await service.complete('user-uuid-1', 'task-uuid-1');
+
+      expect(transactionMock.task.update).toHaveBeenCalledWith({
+        where: { id: 'task-uuid-1' },
+        data: {
+          status: TaskStatus.COMPLETED,
+          completedAt: now,
+        },
+      });
     });
 
     it('does not recompute scores when the task nested write fails', async () => {

@@ -31,6 +31,7 @@
 ## Runtime and external evidence
 
 - 현재 APK는 순수 React Native Community CLI로 실행된다.
+- F-006은 Node 24.19.0/npm 11.19.0과 작업 전용 PostgreSQL 17.11에서 검증했다. 공식 포터블 아카이브 SHA-256은 `6EABDF00D2893713B75DB4336A23C3FDF505F056E217EC6E2E95D901750CFEA3`, 대상 migration SHA-256은 `AA496C2C2D029D26C58083E888E360F79AA7EA8D10C876CF664F841BD16E291A`다. r2 실DB 9/9, 전체 unit 245개, 일반 e2e 2개, Prisma validate/generate, build와 ESLint가 통과했고 종료 후 전용 포트 listener는 0개였다. 공유·원격·운영 DB와 기존 Docker 컨테이너는 사용하거나 변경하지 않았다.
 - F-016 수정은 `846cf1968ae0b729e0525ccb2af82f6fc5bd8e20`에 Android-only 기준선과 native 52개를 추적하고 feature branch에 push했다. 독립 reviewer가 remote/clean tree, wrapper/config, APK metadata/hash와 secret/local exclusion을 재검증해 `RECHECKED`로 판정했다.
 - 기존 emulator 설치본은 signing identity가 달라 update install이 실패했다. emulator의 정확한 package `com.dsm.dailyup`만 제거한 뒤 현재 debug APK를 재설치했다.
 - 첫 실제 Google 계정 인증은 Credential Manager `[16] Account reauth failed`로 provider token 전에 중단됐다. 값 제거 digest 비교에서 앱 Web client와 Cloud project는 일치했지만, 기존 same-package Android clients 두 개는 현재 Android Studio debug signer와 모두 불일치했다.
@@ -42,16 +43,17 @@
 ## Merged result
 
 - canonical findings: 26
-- confirmed: 22 (`P1` 4, `P2` 14, `P3` 4)
+- confirmed: 21 (`P1` 3, `P2` 14, `P3` 4)
+- fixing: 0
 - unknown: 2 (`P2` 2)
 - accepted risk: 0
-- fixed/rechecked: 2 (`F-016`, Android Git handoff; `F-025`, external Android OAuth debug signer registration)
-- 주요 release blockers: 핵심 Task/Score/Ranking frontend가 prototype 상태, 임의 날짜 점수 누적 조작 경로, release signing 미구성, release 환경값 계약 부재. Android native Git handoff와 현재 PC debug OAuth blocker는 `RECHECKED`지만 다른 PC와 release/Play signer 등록은 별도 gate다.
+- fixed/rechecked: 3 (`F-006`, Task score integrity; `F-016`, Android Git handoff; `F-025`, external Android OAuth debug signer registration)
+- 주요 release blockers: 핵심 Task/Score/Ranking frontend가 prototype 상태, release signing 미구성, release 환경값 계약 부재. F-006의 애플리케이션 점수 무결성 경로, Android native Git handoff와 현재 PC debug OAuth blocker는 `RECHECKED`지만 운영 규모 migration과 직접 DB write, 다른 PC와 release/Play signer 등록은 별도 gate다.
 
 `findings.jsonl`이 candidate alias, 독립 검증, severity와 상태의 canonical ledger다. 이번 요청은 검수 요청이므로 confirmed finding을 제품 코드에서 수정하지 않았다.
 
 ## Termination status
 
-Release-audit는 **열린 상태**다. confirmed 22건과 `UNKNOWN` 2건이 남아 있고, 서로 다른 두 자유 탐색 라운드에서 신규 confirmed P0–P2가 0건이라는 종료 조건도 충족하지 않았다. 따라서 이 문서는 배포 승인이나 release-ready 선언이 아니다.
+Release-audit는 **열린 상태**다. confirmed 21건과 `UNKNOWN` 2건이 남아 있고, 서로 다른 두 자유 탐색 라운드에서 신규 confirmed P0–P2가 0건이라는 종료 조건도 충족하지 않았다. 따라서 이 문서는 배포 승인이나 release-ready 선언이 아니다.
 
 다음 단계는 별도 계획·승인 아래 P1부터 1–2파일 단위로 수정하고, 각 finding을 독립 recheck한 뒤 신규 자유 탐색 라운드를 반복하는 것이다.

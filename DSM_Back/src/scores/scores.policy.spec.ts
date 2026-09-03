@@ -19,6 +19,117 @@ describe('achievementMultiplier', () => {
 describe('computeDailyScore', () => {
   const { MEDIUM, HIGH, LOW } = TaskDifficulty;
 
+  it.each([
+    {
+      registered: 3,
+      completed: 1,
+      difficulty: LOW,
+      raw: 10,
+      adjusted: 7,
+      capped: 7,
+      rate: 33.33,
+    },
+    {
+      registered: 20,
+      completed: 11,
+      difficulty: LOW,
+      raw: 110,
+      adjusted: 77,
+      capped: 77,
+      rate: 55,
+    },
+    {
+      registered: 20,
+      completed: 12,
+      difficulty: LOW,
+      raw: 120,
+      adjusted: 120,
+      capped: 120,
+      rate: 60,
+    },
+    {
+      registered: 20,
+      completed: 15,
+      difficulty: LOW,
+      raw: 150,
+      adjusted: 150,
+      capped: 150,
+      rate: 75,
+    },
+    {
+      registered: 20,
+      completed: 16,
+      difficulty: LOW,
+      raw: 160,
+      adjusted: 208,
+      capped: 208,
+      rate: 80,
+    },
+    {
+      registered: 20,
+      completed: 19,
+      difficulty: LOW,
+      raw: 190,
+      adjusted: 247,
+      capped: 247,
+      rate: 95,
+    },
+    {
+      registered: 20,
+      completed: 20,
+      difficulty: LOW,
+      raw: 200,
+      adjusted: 300,
+      capped: 300,
+      rate: 100,
+    },
+    {
+      registered: 20,
+      completed: 20,
+      difficulty: HIGH,
+      raw: 600,
+      adjusted: 900,
+      capped: 900,
+      rate: 100,
+    },
+    {
+      registered: 21,
+      completed: 21,
+      difficulty: HIGH,
+      raw: 630,
+      adjusted: 945,
+      capped: 900,
+      rate: 100,
+    },
+    {
+      registered: 800,
+      completed: 57,
+      difficulty: LOW,
+      raw: 570,
+      adjusted: 399,
+      capped: 399,
+      rate: 7.13,
+    },
+  ])(
+    'matches the literal oracle for $completed/$registered $difficulty tasks',
+    ({ registered, completed, difficulty, raw, adjusted, capped, rate }) => {
+      const result = computeDailyScore({
+        registeredTaskCount: registered,
+        completedDifficulties:
+          Array<TaskDifficulty>(completed).fill(difficulty),
+      });
+
+      expect(result).toEqual({
+        registeredTaskCount: registered,
+        completedTaskCount: completed,
+        rawScore: raw,
+        adjustedScore: adjusted,
+        cappedScore: capped,
+        achievementRate: rate,
+      });
+    },
+  );
+
   it('scores a perfect day (5/5, 중×3 상×2 → 180)', () => {
     const result = computeDailyScore({
       registeredTaskCount: 5,
