@@ -4,9 +4,38 @@ apply plugin: "com.facebook.react"
 
 project.ext.envConfigFiles = [
     debug: ".env.local",
-    release: ".env",
+    release: ".env.release.local",
 ]
+def releaseRequested = gradle.startParameter.taskNames.any {
+    it.toLowerCase().contains('release') || it.tokenize(':').last() in ['build', 'assemble', 'bundle']
+}
+def envOverride = System.getenv('ENVFILE') != null || System.getProperty('ENVFILE') != null
+if (releaseRequested && envOverride) {
+    throw new GradleException('ENVFILE overrides are forbidden for release')
+}
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
+def signingProperties = ['DAILYUP_UPLOAD_STORE_FILE', 'DAILYUP_UPLOAD_STORE_PASSWORD',
+                         'DAILYUP_UPLOAD_KEY_ALIAS', 'DAILYUP_UPLOAD_KEY_PASSWORD'].collectEntries {
+    [(it): providers.gradleProperty(it).orNull]
+}
+def validateReleaseInputs = new GroovyShell().evaluate(rootProject.file('release-config.gradle'))
+def validateRelease = {
+    def errors = validateReleaseInputs([properties: signingProperties,
+        envFile: rootProject.file('../.env.release.local'), env: project.env,
+        tasks: gradle.startParameter.taskNames, override: envOverride])
+    if (!errors.empty) throw new GradleException('Release configuration rejected:\n- ' + errors.join('\n- '))
+}
+tasks.register('validateReleaseConfiguration') { doLast { validateRelease() } }
+// Validate the resolved graph, including direct package/install/bundle and aggregate entrypoints.
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') }) {
+        validateRelease()
+    }
+}
+tasks.configureEach {
+    if (name == 'preReleaseBuild') dependsOn('validateReleaseConfiguration')
+}
 
 react {
     entryFile = file("../../index.js")
@@ -31,9 +60,22 @@ android {
         versionName '1.0.0'
     }
 
+    signingConfigs {
+        release {
+            def storePath = signingProperties.DAILYUP_UPLOAD_STORE_FILE
+            if (storePath && new File(storePath).isAbsolute() && new File(storePath).isFile()) {
+                storeFile new File(storePath)
+            }
+            storePassword signingProperties.DAILYUP_UPLOAD_STORE_PASSWORD
+            keyAlias signingProperties.DAILYUP_UPLOAD_KEY_ALIAS
+            keyPassword signingProperties.DAILYUP_UPLOAD_KEY_PASSWORD
+        }
+    }
+
     buildTypes {
         debug {}
         release {
+            signingConfig signingConfigs.release
             minifyEnabled enableMinifyInReleaseBuilds
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

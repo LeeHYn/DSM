@@ -48,7 +48,40 @@ Android 기본 debug keystore는 PC마다 다르므로 새 PC에서 Google 로�
 3. package name은 `com.dsm.dailyup`으로 등록합니다. 외부 OAuth client 생성은 프로젝트 관리자의 승인을 받은 뒤 수행합니다.
 4. backend `GOOGLE_CLIENT_ID`와 `.env.local`의 `GOOGLE_WEB_CLIENT_ID`는 같은 Web OAuth audience를 사용합니다.
 
-공용 개발 keystore를 Git에 넣거나 release 서명에 debug key를 재사용하지 않습니다. 현재 release signing은 의도적으로 별도 구성 전까지 비활성입니다.
+공용 개발 keystore를 Git에 넣거나 release 서명에 debug key를 재사용하지 않습니다.
+
+## 릴리스 구성
+
+기존 Play 등록 이력을 먼저 확인합니다. 기존 앱이면 기존 upload key를 사용하고,
+신규 앱이면 승인된 별도 upload key와 Play App Signing을 사용합니다.
+키 생성, Console 변경, 업로드는 이 설정 구현에 포함되지 않습니다.
+
+1. `.env.release.example`을 Git 제외된 `.env.release.local`로 복사합니다.
+   실제 운영 HTTPS `API_BASE_URL`과 backend `GOOGLE_CLIENT_ID`와 동일한
+   Web audience의 `GOOGLE_WEB_CLIENT_ID`를 설정합니다. 예시 주소는 운영 주소가 아닙니다.
+2. 저장소 밖의 `GRADLE_USER_HOME/gradle.properties`(기본 사용자 `.gradle/gradle.properties`)
+   또는 CI secret 주입으로 아래 네 값을 제공합니다.
+   키 파일 경로는 절대 경로여야 합니다. 프로젝트 `gradle.properties`에는 넣지 않습니다.
+   - `DAILYUP_UPLOAD_STORE_FILE`
+   - `DAILYUP_UPLOAD_STORE_PASSWORD`
+   - `DAILYUP_UPLOAD_KEY_ALIAS`
+   - `DAILYUP_UPLOAD_KEY_PASSWORD`
+   CI에서는 각각 `ORG_GRADLE_PROJECT_DAILYUP_UPLOAD_*` 환경변수로 주입합니다.
+   암호를 `-P...` 명령줄 인자로 전달하거나 출력하지 않습니다.
+3. `android`에서 `./gradlew.bat :app:validateReleaseConfiguration`으로 사전 검증하고,
+   `./gradlew.bat :app:bundleRelease` 또는 `./gradlew.bat :app:assembleRelease`를 실행합니다.
+   `clean :app:bundleRelease`는 허용합니다. `build`, `assemble`, debug/release 혼합과
+   `ENVFILE` 환경변수·JVM property override는 release에서 거부합니다.
+4. 업로드 전 APK/AAB의 package, version, 실제 signer와 포함 환경을 로컬에서 확인합니다.
+   이 입력 검증은 키의 암호·인증서 유효성이나 운영 API 도달성을 증명하지 않습니다.
+5. upload signer로 설치한 APK와 Play internal testing에서 설치한 app-signing APK에서
+   Google 로그인→세션 복구→갱신→로그아웃을 각각 검증합니다. 두 signer별 Android
+   OAuth client가 필요합니다. Internal App Sharing signer는 이 검증을 대신하지 않습니다.
+
+앱에 들어간 환경값은 추출 가능하므로 서버 비밀키를 넣지 않습니다. 키·암호·client ID·
+전체 인증서 fingerprint를 로그/채팅/Git에 남기지 않습니다. CI는 일반 build 로그만 보존하고
+secret echo, `--debug`, signingReport 로그 업로드를 금지합니다. 키는 별도 암호화 백업과
+최소 권한으로 관리합니다. 재배포는 versionCode를 증가시키고 동일 앱 identity를 유지합니다.
 
 ## 검증
 
