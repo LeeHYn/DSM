@@ -102,6 +102,63 @@ describe('validateEnv', () => {
     expect(config.FCM_PROJECT_ID).toBeUndefined();
   });
 
+  it.each([
+    'redis://127.0.0.1:6379',
+    'redis://:password@cache.internal:6379/2',
+    'rediss://ranking-user:password@cache.example.com:6380/0',
+  ])('accepts REDIS_URL %p', (REDIS_URL) => {
+    expect(validateEnv({ ...validConfig, REDIS_URL }).REDIS_URL).toBe(
+      REDIS_URL,
+    );
+  });
+
+  it('normalizes an empty non-production REDIS_URL to undefined', () => {
+    expect(
+      validateEnv({ ...validConfig, REDIS_URL: '' }).REDIS_URL,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    'http://cache.example.com:6379',
+    'redis://',
+    'redis://cache.example.com/0/extra',
+    'redis://cache.example.com/0?timeout=1',
+    ' redis://cache.example.com:6379',
+  ])('rejects invalid REDIS_URL %p', (REDIS_URL) => {
+    expect(() => validateEnv({ ...validConfig, REDIS_URL })).toThrow(
+      /REDIS_URL/,
+    );
+  });
+
+  it.each([undefined, ''])(
+    'requires REDIS_URL in production when its value is %p',
+    (REDIS_URL) => {
+      expect(() =>
+        validateEnv({
+          ...validConfig,
+          NODE_ENV: 'production',
+          REDIS_URL,
+        }),
+      ).toThrow(/REDIS_URL/);
+    },
+  );
+
+  it('does not echo Redis credentials when URL validation fails', () => {
+    const password = 'do-not-log-this-password';
+    let message = '';
+    try {
+      validateEnv({
+        ...validConfig,
+        REDIS_URL: `http://user:${password}@cache.example.com`,
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(message).toContain('REDIS_URL');
+    expect(message).not.toContain(password);
+  });
+
   it('removes inline service-account fields from validated config', () => {
     const config = validateEnv({
       ...validConfig,

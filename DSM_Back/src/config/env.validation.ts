@@ -58,6 +58,7 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   REDIS_URL?: string;
 }
 
@@ -120,6 +121,50 @@ export function parseCorsOrigins(value: unknown): string[] {
   return [...new Set(origins)];
 }
 
+export function parseRedisUrl(
+  value: unknown,
+  nodeEnvironment: unknown,
+): string | undefined {
+  const required = nodeEnvironment === NodeEnvironment.Production;
+  if (value === undefined || value === '') {
+    if (required) {
+      throw new Error(
+        'Environment validation failed: REDIS_URL: is required in production',
+      );
+    }
+    return undefined;
+  }
+
+  const invalid = (): never => {
+    throw new Error(
+      'Environment validation failed: REDIS_URL: must be a valid redis:// or rediss:// connection URL',
+    );
+  };
+
+  if (typeof value !== 'string' || value.trim() !== value) {
+    return invalid();
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return invalid();
+  }
+
+  if (
+    (url.protocol !== 'redis:' && url.protocol !== 'rediss:') ||
+    url.hostname === '' ||
+    url.search !== '' ||
+    url.hash !== '' ||
+    !/^\/(?:\d+)?$|^$/.test(url.pathname)
+  ) {
+    return invalid();
+  }
+
+  return value;
+}
+
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
@@ -131,6 +176,7 @@ export function validateEnv(
         config.FCM_DISPATCH_ENABLED,
       ),
       CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS),
+      REDIS_URL: parseRedisUrl(config.REDIS_URL, config.NODE_ENV),
     },
     {
       enableImplicitConversion: true,

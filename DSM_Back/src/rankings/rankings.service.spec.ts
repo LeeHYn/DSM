@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RankingPeriod } from '@prisma/client';
 import { RankingsService } from './rankings.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RankingCacheService } from './ranking-cache.service';
+import { RankingProjectionService } from './ranking-projection.service';
 
 const makePrismaMock = () => ({
   user: {
@@ -19,17 +21,33 @@ const makePrismaMock = () => ({
   rankingSnapshot: { create: jest.fn() },
 });
 
+const makeCacheMock = () => ({
+  isConfigured: jest.fn().mockReturnValue(false),
+  readMyRanking: jest.fn(),
+  readLeaderboard: jest.fn(),
+});
+
+const makeProjectionMock = () => ({
+  refreshPeriod: jest.fn().mockResolvedValue(false),
+});
+
 describe('RankingsService', () => {
   let service: RankingsService;
   let prismaMock: ReturnType<typeof makePrismaMock>;
+  let cacheMock: ReturnType<typeof makeCacheMock>;
+  let projectionMock: ReturnType<typeof makeProjectionMock>;
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
+    cacheMock = makeCacheMock();
+    projectionMock = makeProjectionMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RankingsService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: RankingCacheService, useValue: cacheMock },
+        { provide: RankingProjectionService, useValue: projectionMock },
       ],
     }).compile();
 
@@ -37,6 +55,66 @@ describe('RankingsService', () => {
   });
 
   describe('getMyRanking', () => {
+    it('returns a Redis projection without querying PostgreSQL', async () => {
+      const cached = {
+        period: RankingPeriod.TOTAL,
+        score: 500,
+        rank: 10,
+        percentile: 20,
+        totalUsers: 50,
+      };
+      cacheMock.isConfigured.mockReturnValue(true);
+      cacheMock.readMyRanking.mockResolvedValue(cached);
+
+      await expect(
+        service.getMyRanking('user-1', RankingPeriod.TOTAL),
+      ).resolves.toEqual(cached);
+      expect(projectionMock.refreshPeriod).not.toHaveBeenCalled();
+      expect(prismaMock.user.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(prismaMock.user.count).not.toHaveBeenCalled();
+    });
+
+    it('publishes one cache-miss projection before using DB fallback', async () => {
+      const refreshed = {
+        period: RankingPeriod.DAILY,
+        score: 117,
+        rank: 5,
+        percentile: 2.5,
+        totalUsers: 200,
+      };
+      cacheMock.isConfigured.mockReturnValue(true);
+      cacheMock.readMyRanking
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(refreshed);
+      projectionMock.refreshPeriod.mockResolvedValue(true);
+
+      await expect(
+        service.getMyRanking('user-1', RankingPeriod.DAILY),
+      ).resolves.toEqual(refreshed);
+      expect(projectionMock.refreshPeriod).toHaveBeenCalledTimes(1);
+      expect(prismaMock.dailyScore.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.user.count).not.toHaveBeenCalled();
+    });
+
+    it('uses the bounded DB path when Redis stays unavailable', async () => {
+      cacheMock.isConfigured.mockReturnValue(true);
+      cacheMock.readMyRanking.mockResolvedValue(null);
+      prismaMock.user.findUniqueOrThrow.mockResolvedValue({ totalScore: 500 });
+      prismaMock.user.count.mockResolvedValueOnce(9).mockResolvedValueOnce(50);
+
+      await expect(
+        service.getMyRanking('user-1', RankingPeriod.TOTAL),
+      ).resolves.toEqual({
+        period: RankingPeriod.TOTAL,
+        score: 500,
+        rank: 10,
+        percentile: 20,
+        totalUsers: 50,
+      });
+      expect(projectionMock.refreshPeriod).toHaveBeenCalledTimes(1);
+      expect(cacheMock.readMyRanking).toHaveBeenCalledTimes(2);
+    });
+
     it('ranks by cumulative total score', async () => {
       prismaMock.user.findUniqueOrThrow.mockResolvedValue({ totalScore: 500 });
       prismaMock.user.count
@@ -87,6 +165,27 @@ describe('RankingsService', () => {
   });
 
   describe('getLeaderboard', () => {
+    it('returns a Redis leaderboard without querying PostgreSQL', async () => {
+      const cached = [
+        {
+          rank: 1,
+          userId: 'u1',
+          nickname: 'A',
+          tier: 'GOLD',
+          profileImageUrl: null,
+          score: 900,
+        },
+      ];
+      cacheMock.isConfigured.mockReturnValue(true);
+      cacheMock.readLeaderboard.mockResolvedValue(cached);
+
+      await expect(
+        service.getLeaderboard(RankingPeriod.TOTAL, 100),
+      ).resolves.toEqual(cached);
+      expect(projectionMock.refreshPeriod).not.toHaveBeenCalled();
+      expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+    });
+
     it('returns a ranked total leaderboard', async () => {
       prismaMock.user.findMany.mockResolvedValue([
         {

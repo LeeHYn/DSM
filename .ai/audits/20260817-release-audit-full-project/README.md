@@ -3,9 +3,9 @@
 - Audit ID: `20260817-release-audit-full-project`
 - Mode: `release-audit`
 - Authoritative checkout: `C:\dsm-integration-review`
-- Branch baseline: `codex/integration-main-review@d7400bf`
+- Branch baseline: `codex/integration-main-review@74406a0`
 - Canonical ledger: `findings.jsonl`
-- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. The approved F-067/F-068 work now adds the Backend account-deletion endpoint and PostgreSQL test, Android session/UI/legal-link paths, ProductStore deletion fence, release URL validator and public examples. Dependencies, lockfiles, Jest/TypeScript configs, Prisma schema/migrations, external services and Git publish state were not changed; public legal URLs remain undetermined.
+- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. The approved F-069 work changes fifteen Backend dependency, environment, local-service, ranking source, test and benchmark paths and adds one audit evidence artifact; it does not change Prisma schema/migrations, Front, Android, WebSocket, external production services or Git publish state.
 
 ## Interrupted-session recovery
 
@@ -22,8 +22,9 @@ The recovered ledger contains 83 schema-valid findings.
 
 | Status | Count | IDs requiring attention |
 |---|---:|---|
-| `CONFIRMED` | 69 | Product fixes require separate plans and approval |
+| `CONFIRMED` | 68 | Product fixes require separate plans and approval |
 | `FIXING` | 2 | F-067, F-068 — public URL and external release evidence pending |
+| `FIXED` | 1 | F-069 — implementation verified; independent fix-recheck pending |
 | `REFUTED` | 1 | F-066 |
 | `RECHECKED` | 8 | F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083 |
 | `UNKNOWN` | 3 | F-003, F-013, F-017 |
@@ -35,8 +36,8 @@ The recovered ledger contains 83 schema-valid findings.
 | `P2` | 53 |
 | `P3` | 20 |
 
-- Ledger bytes: 320,321.
-- Ledger SHA-256: `742EFEA9A9BDC01A674380458F6808B1709E716594F47F38FF906A0BDF7988F8`.
+- Ledger bytes: 325,286.
+- Ledger SHA-256: `F47A9F4927425D5B3D9F6BDF2651936485A6C36724B89E73E5A265ABB52A6C63`.
 - IDs are contiguous from F-001 through F-083.
 - Finding IDs and fingerprint values are unique.
 - Every fingerprint value equals SHA-256 of its recorded basis.
@@ -93,7 +94,7 @@ F-083 first changed from `VALIDATING` to `CONFIRMED P2` after two independent da
 - F-066: `REFUTED P1`. The user explicitly confirmed the v1.3 release as Android-only. Two independent reviewers found that the current Front contract, approved Android-only design and tracked native inventory match that scope, so the missing iOS project is not a release blocker. The three current v1.3 planning documents now explicitly exclude their retained historical iOS wording from release acceptance; a read-only follow-up review passed. A future return to iOS scope requires a separate deliverable audit.
 - F-067: `FIXING P1`. The authenticated 204 endpoint, transactional deletion order, Android session fence, two-stage UI and real PostgreSQL cascade test are implemented. Public web deletion, operator handling, signed-device cold start and Play Console evidence remain open.
 - F-068: `FIXING P1`. Login/MyPage legal links and release URL validation are implemented, with placeholder release hosts rejected. Actual public privacy/deletion content, signed-device link opening and Play Console/Data safety evidence remain open. Terms of Service stays outside this finding.
-- F-069: `CONFIRMED P2`. An independent reviewer resolved the prior P2/P3 disagreement: NFR-03's batch, Redis, WebSocket and window-function architecture is absent, and weekly personal rank materializes every higher-scoring user group. Production latency remains unmeasured.
+- F-069: `FIXED P2`. DAILY, WEEKLY and TOTAL rankings now use a one-minute PostgreSQL window-function projection published as fenced Redis generations and read cache-first. Disposable service verification and a reproducible 50,000-user single-host benchmark passed; production evidence and an independent fix-recheck remain open. WebSocket stays under F-074.
 
 Round 12 policy conclusions use current official [Google Play account-deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en), [Google Play User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311?hl=en), [Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), and [Android task-affinity risk guidance](https://developer.android.com/privacy-and-security/risks/strandhogg). Play Console, public legal/deletion resources and device exploit behavior were not inspected.
 
@@ -133,6 +134,16 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 - Runtime gates: Backend unit passed 24 suites/266 tests, normal e2e passed 1 suite/2 tests and PostgreSQL 17.10 passed the full 1 suite/10-test disposable database run.
 - Recheck and cleanup: `/root/f040_fix_recheck` independently returned `RECHECKED` with no new P0 or P1. Both exact task containers and the temporary migration prefix were removed, and Docker returned to its prior stopped state.
 
+## F-069 repository implementation
+
+- Projection: a non-overlapping one-minute Cron computes DAILY, rolling seven-day WEEKLY and TOTAL score rows with PostgreSQL `RANK()` and `COUNT(*) OVER()`. Ties receive the same competition rank and UTC boundaries reuse the existing ranking policy.
+- Cache: Redis stores immutable per-generation user hashes and ordered leaderboard lists. Each chunk writes data and TTL atomically; a completion marker then precedes a Lua-fenced active-pointer swap. After activation, the previous generation receives a 30-second reader grace, preventing normal minute-by-minute accumulation while preserving in-flight reads.
+- Concurrency and failure: process-local single-flight, a Redis owner lock and a 45-second freshness check prevent overlapping or near-duplicate multi-instance DB batches. Production requires a credential-safe valid `REDIS_URL`; an unavailable cache falls back to the existing request-time DB path while warning without connection details.
+- Verification: Backend passed 25 suites/293 unit tests, normal e2e 2, build, full no-emit typecheck, non-fixing ESLint, Prisma validation and lockfile dry-run. Fresh task-owned PostgreSQL 17 and Redis 8 databases passed 2/2 integration tests, including current and retired generation TTLs, cache-only reads after PostgreSQL disconnect, tie ranks, lock ownership and stale-writer rejection. Disposable containers were removed and Docker returned to stopped.
+- Synthetic evidence: `f069-synthetic-performance.json` is 36,011 bytes with SHA-256 `B5931E479E8842766AD79FED2AEB373792B012975AB5026408227FBE6767D7DE`. It records full PostgreSQL 17.10 plans for 50,000 users and 350,000 daily rows, ten cold end-to-end samples per period, and 1,000 reads per operation at concurrency 25. Projection p99 was 927.706 ms DAILY, 1,674.051 ms WEEKLY and 994.351 ms TOTAL; cache p99 was 22.023 ms TOP100 and 4.628 ms personal. A three-period generation used about 51.6 MB. Rollover briefly reached 18 generation keys and about 101.0 MB, then returned to 9 generation keys and about 51.6 MB after the 30-second grace.
+- Reproduction: `npm run test:ranking:bench` requires the explicit `F069_RANKING_BENCHMARK=1` marker, a task-owned loopback PostgreSQL database whose name starts with `f069_ranking_benchmark_`, loopback Redis database 15 and a non-existing output path. Dataset size and sample counts are bounded by the script.
+- Open gates: these are single-host synthetic observations without a numeric product SLO. The default PostgreSQL plan spilled 1,121-1,160 temporary blocks; actual production cardinality, capacity, plans, managed Redis failover and concurrent p50/p95/p99 remain unmeasured. An unresolved cache miss can use the legacy DB fallback, WebSocket delta delivery remains F-074, and an implementer-independent fix-recheck is required before `RECHECKED`.
+
 ## F-005 and F-039 implementation closure
 
 - Product paths: Home, Ranking, MyPage and TaskSheets use authenticated ProductProvider/ProductStore REST state scoped by user ID and session epoch. Prototype context remains only for theme and toast UI state.
@@ -158,4 +169,4 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 
 ## Termination status
 
-The release audit remains open. It has 69 confirmed findings, two fixes in progress, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.
+The release audit remains open. It has 68 confirmed findings, two fixes in progress, one fixed finding awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.
