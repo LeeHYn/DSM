@@ -1,15 +1,16 @@
-# DSM 실행 계획 — 2026-09-08
+# DSM 실행 계획 — 2026-09-09
 
 ## 목표·경계
 
 - 제품 범위는 Android 전용 DSM v1.3이다.
-- 제품·감사 checkout은 `codex/integration-main-review`이며 F-069 제품·감사 checkpoint `c3205dfa2e5e04524513ef8e11beba737af074e0`은 원격과 같다.
+- 제품·감사 checkout은 `codex/integration-main-review`이며 F-011/F-029/F-030 제품·감사 checkpoint `0c6031b862e9c777d2403e2e3b46c7e1d37c3a8e`까지 원격과 같다. 이 memory snapshot이 해당 기준을 후속 기록한다.
 - F-069 제품·감사 변경은 전체 검증 뒤 commit·push됐다. 공개 URL, Front, Android, WebSocket, Prisma schema·migration은 이 변경에 포함하지 않는다.
 - 실제 환경 파일, private Gradle property, key·keystore와 recovery snapshot은 읽기·수정·stage하지 않는다.
 
 ## Canonical audit
 
-- F-001~F-083, 83건: 67 CONFIRMED / 2 FIXING / 2 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN.
+- F-001~F-083, 83건: 64 CONFIRMED / 2 FIXING / 5 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN.
+- F-011/F-029/F-030은 cache와 DB fallback의 tie·전체 사용자·UTC anchor 계약을 통일하고 전체·실제 서비스 검증을 마쳐 FIXED다. 독립 fix-recheck가 남았다.
 - F-065는 MainActivity의 package affinity 상속을 제거하고 task reparenting을 명시적으로 막은 뒤 merged/packaged manifest, Android build/lint와 emulator task smoke를 통과해 FIXED다. 구형 OS 독립 recheck가 남았다.
 - F-069는 PostgreSQL batch projection·Redis cache, 동시성·세대 수명 보강과 실제 서비스·50,000-user 합성 검증을 마쳐 FIXED다. 구현자와 독립된 fix-recheck가 남았다.
 - F-067/F-068은 코드 검증을 마쳤으나 실제 privacy/deletion URL·외부 처리·signed device·Play Console 증거가 없어 FIXING이다.
@@ -33,18 +34,10 @@
 
 ## 다음 실행
 
-1. F-065 제품·감사·memory 변경을 exact-path checkpoint로 commit·push한다.
-2. F-069 독립 fix-recheck와 실제 운영 cardinality·capacity·query plan·managed Redis failover·latency를 확보한다.
+1. 현재 CONFIRMED P1은 0건이다. 다음 로컬 P2는 canonical 순서와 결합 영향도를 대조해 F-001/F-002 인증 폐기 범위부터 계획한다.
+2. F-011/F-029/F-030/F-065/F-069의 구현자 독립 fix-recheck와 F-069 운영 성능·failover 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제 절차·signed-device·Play Console 증거를 확보한다.
-4. 현재 CONFIRMED P1은 0건이다. F-069 변경과 직접 겹치는 ranking P2 F-011/F-029/F-030을 cache와 DB fallback까지 재검증한다.
-5. 남은 finding은 P2→P3 순으로 수정하고, 서로 다른 자유 탐색에서 zero-new-confirmed-P0~P2 연속 두 round를 확보한다.
-
-## F-065 완료 계약
-
-- API 24~29 지원을 유지한다. `MainActivity`에 빈 `android:taskAffinity`를 선언해 package namespace 상속을 끊고 `android:allowTaskReparenting="false"`를 명시한다.
-- Launcher에 필요한 `exported=true`와 현재 React Native `singleTask` 동작은 유지한다. Application·다른 component에는 불필요한 task 속성을 확장하지 않는다.
-- Merged·packaged debug manifest에서 빈 affinity와 reparenting 비활성화를 확인했다. Android debug build·lint와 API 36 emulator의 cold launch·launcher 재진입·recents smoke가 통과했다.
-- 공식 Android 문서에 따라 app configuration은 구형 OS의 모든 StrandHogg 변형을 완전 차단하는 증거가 아니다. API 24~29 malicious-app PoC·OEM patch matrix 미실행을 residual risk로 남기고 F-065는 독립 recheck 전 `FIXED`까지만 전이한다.
+4. 남은 finding은 P2→P3 순으로 수정하고, 서로 다른 자유 탐색에서 zero-new-confirmed-P0~P2 연속 두 round를 확보한다.
 
 ## 불변 조건
 
