@@ -28,6 +28,12 @@ type AuthRequest = Request & { user: JwtPayload };
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
+  @Post('client-mutation-ids')
+  @HttpCode(HttpStatus.OK)
+  issueClientMutationId(): { clientMutationId: string } {
+    return this.tasksService.issueClientMutationId();
+  }
+
   @Post()
   create(@Req() req: AuthRequest, @Body() dto: CreateTaskDto): Promise<Task> {
     return this.tasksService.create(req.user.sub, dto);

@@ -54,6 +54,7 @@ function createController(state: SessionState) {
   return {
     bootstrap: jest.fn().mockResolvedValue(undefined),
     completeOnboarding: jest.fn().mockResolvedValue(undefined),
+    deleteAccount: jest.fn().mockResolvedValue(false),
     endUnauthorizedSession: jest.fn().mockResolvedValue(undefined),
     getAccessToken: jest.fn().mockReturnValue(null),
     getEpoch: jest.fn().mockReturnValue(0),

@@ -26,9 +26,15 @@ const MOCK_USER = {
 
 const makeTransactionClientMock = () => ({
   $queryRaw: jest.fn(),
+  notificationDelivery: {
+    deleteMany: jest.fn(),
+  },
   refreshToken: {
     create: jest.fn(),
     updateMany: jest.fn(),
+  },
+  user: {
+    deleteMany: jest.fn(),
   },
 });
 
@@ -443,6 +449,70 @@ describe('AuthService', () => {
       ).resolves.toBeUndefined();
 
       expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteAccount', () => {
+    it('locks the user and removes blocking deliveries before the user row', async () => {
+      prismaMock.transactionClient.notificationDelivery.deleteMany.mockResolvedValue(
+        { count: 2 },
+      );
+      prismaMock.transactionClient.user.deleteMany.mockResolvedValue({
+        count: 1,
+      });
+
+      await expect(
+        service.deleteAccount(MOCK_USER.id),
+      ).resolves.toBeUndefined();
+
+      expectUserRowLock(prismaMock.transactionClient.$queryRaw, MOCK_USER.id);
+      expect(
+        prismaMock.transactionClient.notificationDelivery.deleteMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            { schedule: { userId: MOCK_USER.id } },
+            { fcmToken: { userId: MOCK_USER.id } },
+          ],
+        },
+      });
+      expect(prismaMock.transactionClient.user.deleteMany).toHaveBeenCalledWith(
+        {
+          where: { id: MOCK_USER.id },
+        },
+      );
+      expect(
+        prismaMock.transactionClient.$queryRaw.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        prismaMock.transactionClient.notificationDelivery.deleteMany.mock
+          .invocationCallOrder[0],
+      );
+      expect(
+        prismaMock.transactionClient.notificationDelivery.deleteMany.mock
+          .invocationCallOrder[0],
+      ).toBeLessThan(
+        prismaMock.transactionClient.user.deleteMany.mock
+          .invocationCallOrder[0],
+      );
+    });
+
+    it('keeps repeated deletion idempotent when the user is already absent', async () => {
+      prismaMock.transactionClient.notificationDelivery.deleteMany.mockResolvedValue(
+        { count: 0 },
+      );
+      prismaMock.transactionClient.user.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+
+      await expect(
+        service.deleteAccount('deleted-user'),
+      ).resolves.toBeUndefined();
+
+      expect(prismaMock.transactionClient.user.deleteMany).toHaveBeenCalledWith(
+        {
+          where: { id: 'deleted-user' },
+        },
+      );
     });
   });
 

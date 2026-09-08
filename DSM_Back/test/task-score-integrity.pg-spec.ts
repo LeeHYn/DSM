@@ -509,24 +509,29 @@ describe('F-006 task score integrity migration', () => {
   let TasksService: typeof import('../src/tasks/tasks.service').TasksService;
   let seed: SeedState;
 
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Runtime imports intentionally follow the fail-closed environment guard. */
+  /* eslint-disable @typescript-eslint/no-require-imports -- Runtime imports intentionally follow the fail-closed environment guard. */
   beforeAll(async () => {
     const prisma = await import('@prisma/client');
-    const policy = await import('../src/scores/scores.policy');
+    const policy =
+      require('../src/scores/scores.policy') as typeof import('../src/scores/scores.policy');
     PrismaClient = prisma.PrismaClient;
     TaskDifficulty = prisma.TaskDifficulty;
     computeDailyScore = policy.computeDailyScore;
     tierForScore = policy.tierForScore;
-    PrismaService = (await import('../src/prisma/prisma.service'))
-      .PrismaService;
-    ScoresService = (await import('../src/scores/scores.service'))
-      .ScoresService;
-    TasksService = (await import('../src/tasks/tasks.service')).TasksService;
+    PrismaService = (
+      require('../src/prisma/prisma.service') as typeof import('../src/prisma/prisma.service')
+    ).PrismaService;
+    ScoresService = (
+      require('../src/scores/scores.service') as typeof import('../src/scores/scores.service')
+    ).ScoresService;
+    TasksService = (
+      require('../src/tasks/tasks.service') as typeof import('../src/tasks/tasks.service')
+    ).TasksService;
     emptyClient = new PrismaClient({ datasourceUrl: config.emptyUrl });
     upgradeClient = new PrismaClient({ datasourceUrl: config.upgradeUrl });
     atomicClient = new PrismaClient({ datasourceUrl: atomicUrl });
   });
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+  /* eslint-enable @typescript-eslint/no-require-imports */
 
   afterAll(async () => {
     await Promise.all([
@@ -860,8 +865,13 @@ describe('F-006 task score integrity migration', () => {
     const scores = new ScoresService(appPrisma);
     const tasks = new TasksService(appPrisma, scores);
     try {
-      const create = (suffix: string) =>
+      const mutationIds = {
+        a: '00000000-0000-4000-8000-0000000000a1',
+        b: '00000000-0000-4000-8000-0000000000b2',
+      } as const;
+      const create = (suffix: keyof typeof mutationIds) =>
         tasks.create(userId, {
+          clientMutationId: mutationIds[suffix],
           title: `f006-concurrent-${suffix}`,
           startAt: new Date(scoreDay.getTime() + 64_800_000).toISOString(),
           endAt: new Date(scoreDay.getTime() + 68_400_000).toISOString(),
@@ -887,6 +897,97 @@ describe('F-006 task score integrity migration', () => {
           },
         }),
       ).toBe(20);
+    } finally {
+      await appPrisma.$disconnect();
+    }
+  });
+
+  it('deduplicates concurrent PostgreSQL create retries by client mutation ID', async () => {
+    const userId = 'f083-idempotency-user';
+    const clientMutationId = '08300000-0000-4000-8000-000000000001';
+    const distinctMutationId = '08300000-0000-4000-8000-000000000002';
+    const startAt = new Date(Date.now() + 7 * 86_400_000);
+    startAt.setUTCMilliseconds(0);
+    const endAt = new Date(startAt.getTime() + 3_600_000);
+    const scoreDate = new Date(
+      Date.UTC(
+        startAt.getUTCFullYear(),
+        startAt.getUTCMonth(),
+        startAt.getUTCDate(),
+      ),
+    );
+    const createInput = {
+      clientMutationId,
+      title: 'f083-idempotent-create',
+      description: 'same canonical payload',
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString(),
+      difficulty: TaskDifficulty.MEDIUM,
+      notificationEnabled: true,
+    };
+    await upgradeClient.user.create({
+      data: { id: userId, nickname: 'f083-idempotency' },
+    });
+    const appPrisma = new PrismaService();
+    const scores = new ScoresService(appPrisma);
+    const tasks = new TasksService(appPrisma, scores);
+    try {
+      const [first, replay] = await Promise.all([
+        tasks.create(userId, createInput),
+        tasks.create(userId, createInput),
+      ]);
+
+      expect(first.id).toBe(clientMutationId);
+      expect(replay.id).toBe(clientMutationId);
+      expect(
+        await upgradeClient.task.count({
+          where: {
+            userId,
+            title: createInput.title,
+            deletedAt: null,
+          },
+        }),
+      ).toBe(1);
+      expect(
+        await upgradeClient.dailyScore.findUniqueOrThrow({
+          where: { userId_scoreDate: { userId, scoreDate } },
+        }),
+      ).toMatchObject({ registeredTaskCount: 1 });
+      expect(
+        await upgradeClient.notificationSchedule.count({
+          where: { taskId: clientMutationId, userId },
+        }),
+      ).toBe(1);
+
+      const distinct = await tasks.create(userId, {
+        ...createInput,
+        clientMutationId: distinctMutationId,
+      });
+
+      expect(distinct.id).toBe(distinctMutationId);
+      expect(distinct.id).not.toBe(first.id);
+      expect(
+        await upgradeClient.task.count({
+          where: {
+            userId,
+            title: createInput.title,
+            deletedAt: null,
+          },
+        }),
+      ).toBe(2);
+      expect(
+        await upgradeClient.dailyScore.findUniqueOrThrow({
+          where: { userId_scoreDate: { userId, scoreDate } },
+        }),
+      ).toMatchObject({ registeredTaskCount: 2 });
+      expect(
+        await upgradeClient.notificationSchedule.count({
+          where: {
+            taskId: { in: [clientMutationId, distinctMutationId] },
+            userId,
+          },
+        }),
+      ).toBe(2);
     } finally {
       await appPrisma.$disconnect();
     }

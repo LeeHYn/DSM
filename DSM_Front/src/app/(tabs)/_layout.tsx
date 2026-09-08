@@ -12,6 +12,7 @@ import {
   useDailyupPalette,
 } from '@/components/dailyup/primitives';
 import { TaskSheets } from '@/components/dailyup/task-sheets';
+import { ProductProvider } from '@/features/product/product-context';
 import {
   dailyupFonts,
   dailyupSpacing,
@@ -105,6 +106,7 @@ function DailyupTabBar({ navigation, state }: BottomTabBarProps) {
 
 export default function TabLayout() {
   return (
+    <ProductProvider>
     <PrototypeFrame>
       <Tab.Navigator
         screenOptions={{ headerShown: false }}
@@ -115,6 +117,7 @@ export default function TabLayout() {
       </Tab.Navigator>
       <TaskSheets />
     </PrototypeFrame>
+    </ProductProvider>
   );
 }
 

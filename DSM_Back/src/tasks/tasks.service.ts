@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, type Task, TaskStatus } from '@prisma/client';
+import crypto from 'node:crypto';
 import {
   NOTIFICATION_DELIVERY_STATUS,
   NOTIFICATION_NONTERMINAL_STATUSES,
@@ -25,42 +26,76 @@ export class TasksService {
     private readonly scores: ScoresService,
   ) {}
 
+  issueClientMutationId(): { clientMutationId: string } {
+    return { clientMutationId: crypto.randomUUID() };
+  }
+
   async create(userId: string, dto: CreateTaskDto): Promise<Task> {
-    return this.runSerializableTransaction(async (client) => {
-      const now = new Date();
-      const startAt = new Date(dto.startAt);
-      await this.assertDailyTaskCapacity(userId, startAt, undefined, client);
-      if (dto.categoryId !== undefined) {
-        await this.assertCategoryAssignable(userId, dto.categoryId, client);
+    const startAt = new Date(dto.startAt);
+    const endAt = new Date(dto.endAt);
+
+    try {
+      return await this.runSerializableTransaction(async (client) => {
+        const existing = await client.task.findUnique({
+          where: { id: dto.clientMutationId },
+        });
+        if (existing) {
+          return this.resolveCreateReplay(
+            userId,
+            dto,
+            existing,
+            startAt,
+            endAt,
+          );
+        }
+
+        const now = new Date();
+        await this.assertDailyTaskCapacity(userId, startAt, undefined, client);
+        if (dto.categoryId !== undefined) {
+          await this.assertCategoryAssignable(userId, dto.categoryId, client);
+        }
+
+        const notificationEnabled = dto.notificationEnabled ?? true;
+        const task = await client.task.create({
+          data: {
+            id: dto.clientMutationId,
+            userId,
+            title: dto.title,
+            description: dto.description,
+            startAt,
+            endAt,
+            difficulty: dto.difficulty,
+            categoryId: dto.categoryId,
+            notificationEnabled,
+            ...(notificationEnabled && startAt.getTime() > now.getTime()
+              ? {
+                  notificationSchedules: {
+                    create: {
+                      userId,
+                      scheduledAt: startAt,
+                      status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+                    },
+                  },
+                }
+              : {}),
+          },
+        });
+        await this.scores.recompute(userId, task.startAt, client);
+        return task;
+      });
+    } catch (error) {
+      if (!this.isCreateRaceConflict(error)) {
+        throw error;
       }
 
-      const notificationEnabled = dto.notificationEnabled ?? true;
-      const task = await client.task.create({
-        data: {
-          userId,
-          title: dto.title,
-          description: dto.description,
-          startAt,
-          endAt: new Date(dto.endAt),
-          difficulty: dto.difficulty,
-          categoryId: dto.categoryId,
-          notificationEnabled,
-          ...(notificationEnabled && startAt.getTime() > now.getTime()
-            ? {
-                notificationSchedules: {
-                  create: {
-                    userId,
-                    scheduledAt: startAt,
-                    status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
-                  },
-                },
-              }
-            : {}),
-        },
+      const existing = await this.prisma.task.findUnique({
+        where: { id: dto.clientMutationId },
       });
-      await this.scores.recompute(userId, task.startAt, client);
-      return task;
-    });
+      if (!existing) {
+        throw error;
+      }
+      return this.resolveCreateReplay(userId, dto, existing, startAt, endAt);
+    }
   }
 
   findAll(userId: string, query: TaskQueryDto): Promise<Task[]> {
@@ -227,6 +262,37 @@ export class TasksService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2034'
     );
+  }
+
+  private isCreateRaceConflict(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === 'P2002' || error.code === 'P2034')
+    );
+  }
+
+  private resolveCreateReplay(
+    userId: string,
+    dto: CreateTaskDto,
+    task: Task,
+    startAt: Date,
+    endAt: Date,
+  ): Task {
+    const matches =
+      task.userId === userId &&
+      task.deletedAt === null &&
+      task.title === dto.title &&
+      task.description === (dto.description ?? null) &&
+      task.startAt.getTime() === startAt.getTime() &&
+      task.endAt.getTime() === endAt.getTime() &&
+      task.difficulty === dto.difficulty &&
+      task.categoryId === (dto.categoryId ?? null) &&
+      task.notificationEnabled === (dto.notificationEnabled ?? true);
+
+    if (!matches) {
+      throw new ConflictException();
+    }
+    return task;
   }
 
   private async cancelNonterminalNotificationsForTask(

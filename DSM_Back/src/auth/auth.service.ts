@@ -119,6 +119,18 @@ export class AuthService {
     });
   }
 
+  async deleteAccount(userId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUserForSessionMutation(tx, userId);
+      await tx.notificationDelivery.deleteMany({
+        where: {
+          OR: [{ schedule: { userId } }, { fcmToken: { userId } }],
+        },
+      });
+      await tx.user.deleteMany({ where: { id: userId } });
+    });
+  }
+
   async getCurrentUser(userId: string): Promise<CurrentUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

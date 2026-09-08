@@ -9,6 +9,7 @@ import LoginScreen from '../../app/index';
 
 const mockShowToast = jest.fn();
 const mockAcquireIdToken = jest.fn();
+const mockOpenLegalLink = jest.fn();
 const mockSignIn = jest.fn().mockResolvedValue(undefined);
 
 type MockSessionAction = 'idle' | 'signing-in';
@@ -49,6 +50,10 @@ jest.mock('@/features/auth/session-context', () => ({
   useSession: () => mockSession,
 }));
 
+jest.mock('@/config/legal-links', () => ({
+  openLegalLink: (kind: string) => mockOpenLegalLink(kind),
+}));
+
 beforeEach(() => {
   mockSession = {
     action: 'idle',
@@ -57,6 +62,7 @@ beforeEach(() => {
     state: { status: 'unauthenticated' },
   };
   mockAcquireIdToken.mockReset();
+  mockOpenLegalLink.mockReset().mockResolvedValue(true);
   mockSignIn.mockReset().mockResolvedValue(undefined);
   mockShowToast.mockReset();
 });
@@ -177,4 +183,49 @@ it('keeps Kakao as a placeholder without starting authentication', async () => {
   );
   expect(mockAcquireIdToken).not.toHaveBeenCalled();
   expect(mockSignIn).not.toHaveBeenCalled();
+});
+
+it('opens the configured privacy policy from the login screen', async () => {
+  await render(<LoginScreen />);
+
+  await fireEvent.press(
+    screen.getByRole('link', { name: '개인정보처리방침' }),
+  );
+
+  expect(mockOpenLegalLink).toHaveBeenCalledWith('privacy');
+  expect(mockShowToast).not.toHaveBeenCalled();
+});
+
+it('ignores duplicate privacy link presses while opening', async () => {
+  let resolveOpen!: (opened: boolean) => void;
+  mockOpenLegalLink.mockReturnValue(
+    new Promise<boolean>((resolve) => {
+      resolveOpen = resolve;
+    }),
+  );
+  await render(<LoginScreen />);
+  const privacyLink = screen.getByRole('link', {
+    name: '개인정보처리방침',
+  });
+
+  await fireEvent.press(privacyLink);
+  await fireEvent.press(privacyLink);
+
+  expect(mockOpenLegalLink).toHaveBeenCalledTimes(1);
+  expect(privacyLink).toBeDisabled();
+  resolveOpen(true);
+  await waitFor(() => expect(privacyLink).not.toBeDisabled());
+});
+
+it('shows safe feedback when the privacy policy cannot be opened', async () => {
+  mockOpenLegalLink.mockResolvedValue(false);
+  await render(<LoginScreen />);
+
+  await fireEvent.press(
+    screen.getByRole('link', { name: '개인정보처리방침' }),
+  );
+
+  expect(mockShowToast).toHaveBeenCalledWith(
+    '개인정보처리방침을 열 수 없습니다. 다시 시도해 주세요.',
+  );
 });

@@ -7,12 +7,19 @@ try {
     def store = new File(sandbox, 'fixture.jks')
     store.text = 'not a key: existence validation fixture only'
     def env = new File(sandbox, '.env.release.local')
-    env.text = 'API_BASE_URL=https://api.example.invalid\nGOOGLE_WEB_CLIENT_ID=fixture\n'
+    env.text = '''API_BASE_URL=https://api.example.invalid
+GOOGLE_WEB_CLIENT_ID=fixture
+PRIVACY_POLICY_URL=https://privacy.example.com/dailyup
+ACCOUNT_DELETION_URL=https://privacy.example.com/dailyup#account-deletion
+'''
     def props = [DAILYUP_UPLOAD_STORE_FILE: store.absolutePath,
                  DAILYUP_UPLOAD_STORE_PASSWORD: 'test-only-password',
                  DAILYUP_UPLOAD_KEY_ALIAS: 'test-only-alias',
                  DAILYUP_UPLOAD_KEY_PASSWORD: 'test-only-password']
-    def values = [API_BASE_URL: 'https://api.example.invalid', GOOGLE_WEB_CLIENT_ID: 'fixture']
+    def values = [API_BASE_URL: 'https://api.example.invalid',
+                  GOOGLE_WEB_CLIENT_ID: 'fixture',
+                  PRIVACY_POLICY_URL: 'https://privacy.example.com/dailyup',
+                  ACCOUNT_DELETION_URL: 'https://privacy.example.com/dailyup#account-deletion']
     def input = { -> [properties: props, envFile: env, env: values, tasks: [':app:bundleRelease'], override: false] }
     assert validate(input()).empty
     props.keySet().each { key ->
@@ -38,9 +45,24 @@ try {
     }
     assert !validate(input() + [env: values + [GOOGLE_WEB_CLIENT_ID: ' ']]).empty
     assert validate(input() + [env: values + [API_BASE_URL: 'https://example.invalid:8443/api/']]).empty
+    ['PRIVACY_POLICY_URL', 'ACCOUNT_DELETION_URL'].each { key ->
+        def missing = new LinkedHashMap(values)
+        missing.remove(key)
+        assert validate(input() + [env: missing]).any { it.contains(key) }
+        ['', '  ', 'http://privacy.example.com/dailyup',
+         'https://user:private-value@privacy.example.com/dailyup',
+         'https://privacy.example.invalid/dailyup', 'not-a-url'].each { url ->
+            assert validate(input() + [env: values + [(key): url]]).any { it.contains(key) }
+        }
+    }
+    assert validate(input() + [env: values + [ACCOUNT_DELETION_URL:
+        'https://privacy.example.com/dailyup?source=play#account-deletion']]).empty
     def errors = validate(input() + [properties: props + [DAILYUP_UPLOAD_STORE_FILE: 'private/path']])
     assert !errors.join().contains('private/path')
     assert !errors.join().contains('test-only-password')
+    errors = validate(input() + [env: values + [ACCOUNT_DELETION_URL:
+        'https://user:private-value@privacy.example.com/dailyup']])
+    assert !errors.join().contains('private-value')
     println 'Release input behavior checks PASS'
 } finally {
     sandbox.listFiles().each { assert it.delete() }

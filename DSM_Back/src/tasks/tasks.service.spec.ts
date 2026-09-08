@@ -1,11 +1,37 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma, TaskDifficulty, TaskStatus } from '@prisma/client';
+import { Prisma, type Task, TaskDifficulty, TaskStatus } from '@prisma/client';
+import crypto from 'node:crypto';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoresService } from '../scores/scores.service';
 
-const MOCK_TASK = {
+const CLIENT_MUTATION_ID = '0cfe1042-769f-4d19-88bc-7a0d710553ca';
+const SECOND_CLIENT_MUTATION_ID = 'b6bcc7b5-a5d1-4ddd-ae80-b9d6be5193cf';
+
+type CreateTaskFixture = {
+  clientMutationId: string;
+  title: string;
+  description?: string;
+  startAt: string;
+  endAt: string;
+  difficulty: TaskDifficulty;
+  categoryId?: string;
+  notificationEnabled?: boolean;
+};
+
+const makeCreateTaskDto = (
+  overrides: Partial<CreateTaskFixture> = {},
+): CreateTaskFixture => ({
+  clientMutationId: CLIENT_MUTATION_ID,
+  title: 'Morning run',
+  startAt: '2026-06-03T06:00:00Z',
+  endAt: '2026-06-03T07:00:00Z',
+  difficulty: TaskDifficulty.MEDIUM,
+  ...overrides,
+});
+
+const MOCK_TASK: Task = {
   id: 'task-uuid-1',
   title: 'Morning run',
   description: null,
@@ -22,12 +48,43 @@ const MOCK_TASK = {
   deletedAt: null,
 };
 
+const makePersistedCreateTask = (
+  dto: CreateTaskFixture,
+  overrides: Partial<Task> = {},
+): Task => ({
+  ...MOCK_TASK,
+  id: dto.clientMutationId,
+  title: dto.title,
+  description: dto.description ?? null,
+  startAt: new Date(dto.startAt),
+  endAt: new Date(dto.endAt),
+  difficulty: dto.difficulty,
+  notificationEnabled: dto.notificationEnabled ?? true,
+  categoryId: dto.categoryId ?? null,
+  ...overrides,
+});
+
+const CREATE_CONFLICT_CASES: Array<
+  [string, Partial<CreateTaskFixture>, Partial<Task>]
+> = [
+  ['a changed title', { title: 'Evening run' }, {}],
+  ['a changed description', { description: 'Intervals' }, {}],
+  ['a changed start time', { startAt: '2026-06-03T06:30:00Z' }, {}],
+  ['a changed end time', { endAt: '2026-06-03T07:30:00Z' }, {}],
+  ['a changed difficulty', { difficulty: TaskDifficulty.HIGH }, {}],
+  ['a changed category', { categoryId: 'category-2' }, {}],
+  ['a changed notification setting', { notificationEnabled: false }, {}],
+  ['a foreign owner', {}, { userId: 'user-uuid-2' }],
+  ['a soft-deleted task', {}, { deletedAt: new Date('2026-06-04T00:00:00Z') }],
+];
+
 const makeClientMock = () => ({
   task: {
     count: jest.fn(),
     create: jest.fn(),
     findMany: jest.fn(),
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     update: jest.fn(),
   },
   category: { findFirst: jest.fn() },
@@ -41,6 +98,13 @@ const makeTransactionConflict = () =>
   new Prisma.PrismaClientKnownRequestError('Transaction conflict', {
     code: 'P2034',
     clientVersion: 'test',
+  });
+
+const makeUniqueConstraintConflict = () =>
+  new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+    code: 'P2002',
+    clientVersion: 'test',
+    meta: { target: ['id'] },
   });
 
 const makePrismaMock = (transactionMock: ClientMock) => ({
@@ -59,7 +123,9 @@ describe('TasksService', () => {
   beforeEach(async () => {
     transactionMock = makeClientMock();
     transactionMock.task.count.mockResolvedValue(0);
+    transactionMock.task.findUnique.mockResolvedValue(null);
     prismaMock = makePrismaMock(transactionMock);
+    prismaMock.task.findUnique.mockResolvedValue(null);
     scoresMock = { recompute: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -75,18 +141,38 @@ describe('TasksService', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  describe('issueClientMutationId', () => {
+    it('returns a distinct UUIDv4 value for every issuance', () => {
+      const randomUuidSpy = jest
+        .spyOn(crypto, 'randomUUID')
+        .mockReturnValueOnce(CLIENT_MUTATION_ID)
+        .mockReturnValueOnce(SECOND_CLIENT_MUTATION_ID);
+      const issuableService = service as unknown as {
+        issueClientMutationId(): { clientMutationId: string };
+      };
+      const uuidV4Pattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      const first = issuableService.issueClientMutationId();
+      const second = issuableService.issueClientMutationId();
+
+      expect(first.clientMutationId).toBe(CLIENT_MUTATION_ID);
+      expect(second.clientMutationId).toBe(SECOND_CLIENT_MUTATION_ID);
+      expect(first.clientMutationId).toMatch(uuidV4Pattern);
+      expect(second.clientMutationId).toMatch(uuidV4Pattern);
+      expect(second.clientMutationId).not.toBe(first.clientMutationId);
+      expect(randomUuidSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('create', () => {
     it('creates a task for the given user', async () => {
       transactionMock.task.create.mockResolvedValue(MOCK_TASK);
 
-      const result = await service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt: '2026-06-03T06:00:00Z',
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-      });
+      const result = await service.create('user-uuid-1', makeCreateTaskDto());
 
       expect(result).toEqual(MOCK_TASK);
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
@@ -97,7 +183,10 @@ describe('TasksService', () => {
       expect(transactionMock.task.create).toHaveBeenCalledWith(
         expect.objectContaining({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({ userId: 'user-uuid-1' }),
+          data: expect.objectContaining({
+            id: CLIENT_MUTATION_ID,
+            userId: 'user-uuid-1',
+          }),
         }),
       );
       expect(scoresMock.recompute).toHaveBeenCalledWith(
@@ -109,16 +198,121 @@ describe('TasksService', () => {
       expect(prismaMock.task.create).not.toHaveBeenCalled();
     });
 
+    it('returns a matching replay before capacity and category checks without repeating side effects', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
+      const dto = makeCreateTaskDto({ categoryId: 'category-1' });
+      const persistedTask = makePersistedCreateTask(dto);
+      transactionMock.task.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(persistedTask);
+      transactionMock.task.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(20);
+      transactionMock.category.findFirst
+        .mockResolvedValueOnce({
+          id: 'category-1',
+          userId: 'user-uuid-1',
+          isDefault: false,
+        })
+        .mockResolvedValueOnce(null);
+      transactionMock.task.create.mockResolvedValue(persistedTask);
+
+      const created = await service.create('user-uuid-1', dto);
+      const replayed = await service.create('user-uuid-1', dto);
+
+      expect(created).toEqual(persistedTask);
+      expect(replayed).toEqual(persistedTask);
+      expect(transactionMock.task.findUnique).toHaveBeenCalledTimes(2);
+      expect(transactionMock.task.findUnique).toHaveBeenNthCalledWith(1, {
+        where: { id: CLIENT_MUTATION_ID },
+      });
+      expect(transactionMock.task.findUnique).toHaveBeenNthCalledWith(2, {
+        where: { id: CLIENT_MUTATION_ID },
+      });
+      expect(transactionMock.task.count).toHaveBeenCalledTimes(1);
+      expect(transactionMock.category.findFirst).toHaveBeenCalledTimes(1);
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(1);
+      expect(transactionMock.task.create).toHaveBeenCalledWith({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.objectContaining({
+          id: CLIENT_MUTATION_ID,
+          notificationSchedules: {
+            create: {
+              userId: 'user-uuid-1',
+              scheduledAt: new Date('2026-06-03T06:00:00Z'),
+              status: 'PENDING',
+            },
+          },
+        }),
+      });
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(CREATE_CONFLICT_CASES)(
+      'returns the same generic conflict for %s using the same mutation ID',
+      async (_label, dtoOverrides, persistedOverrides) => {
+        const dto = makeCreateTaskDto(dtoOverrides);
+        transactionMock.task.findUnique.mockResolvedValue(
+          makePersistedCreateTask(makeCreateTaskDto(), persistedOverrides),
+        );
+        transactionMock.task.count.mockResolvedValue(20);
+
+        const action = service.create('user-uuid-1', dto);
+
+        await expect(action).rejects.toBeInstanceOf(ConflictException);
+        await expect(action).rejects.toMatchObject({
+          message: 'Conflict',
+          status: 409,
+        });
+
+        expect(transactionMock.task.count).not.toHaveBeenCalled();
+        expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
+        expect(transactionMock.task.create).not.toHaveBeenCalled();
+        expect(scoresMock.recompute).not.toHaveBeenCalled();
+      },
+    );
+
+    it('allows identical canonical payloads when mutation IDs differ', async () => {
+      const firstDto = makeCreateTaskDto();
+      const secondDto = makeCreateTaskDto({
+        clientMutationId: SECOND_CLIENT_MUTATION_ID,
+      });
+      const firstTask = makePersistedCreateTask(firstDto);
+      const secondTask = makePersistedCreateTask(secondDto);
+      transactionMock.task.create
+        .mockResolvedValueOnce(firstTask)
+        .mockResolvedValueOnce(secondTask);
+
+      await expect(service.create('user-uuid-1', firstDto)).resolves.toEqual(
+        firstTask,
+      );
+      await expect(service.create('user-uuid-1', secondDto)).resolves.toEqual(
+        secondTask,
+      );
+
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(2);
+      expect(transactionMock.task.create).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          data: expect.objectContaining({ id: CLIENT_MUTATION_ID }),
+        }),
+      );
+      expect(transactionMock.task.create).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          data: expect.objectContaining({ id: SECOND_CLIENT_MUTATION_ID }),
+        }),
+      );
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(2);
+    });
+
     it('allows the twentieth active task and uses the UTC half-open day predicate', async () => {
       transactionMock.task.count.mockResolvedValue(19);
       transactionMock.task.create.mockResolvedValue(MOCK_TASK);
 
-      await service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt: '2026-06-03T06:00:00Z',
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-      });
+      await service.create('user-uuid-1', makeCreateTaskDto());
 
       expect(transactionMock.task.count).toHaveBeenCalledWith({
         where: {
@@ -136,12 +330,7 @@ describe('TasksService', () => {
     it('rejects the twenty-first active task before every side effect', async () => {
       transactionMock.task.count.mockResolvedValue(20);
 
-      const action = service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt: '2026-06-03T06:00:00Z',
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-      });
+      const action = service.create('user-uuid-1', makeCreateTaskDto());
 
       await expect(action).rejects.toBeInstanceOf(ConflictException);
       await expect(action).rejects.toMatchObject({
@@ -164,13 +353,10 @@ describe('TasksService', () => {
       transactionMock.category.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.create('user-uuid-1', {
-          title: 'Morning run',
-          startAt: '2026-06-03T06:00:00Z',
-          endAt: '2026-06-03T07:00:00Z',
-          difficulty: TaskDifficulty.MEDIUM,
-          categoryId: 'missing-category',
-        }),
+        service.create(
+          'user-uuid-1',
+          makeCreateTaskDto({ categoryId: 'missing-category' }),
+        ),
       ).rejects.toMatchObject({
         message: 'Daily task limit reached',
         status: 409,
@@ -186,13 +372,10 @@ describe('TasksService', () => {
       transactionMock.category.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.create('user-uuid-1', {
-          title: 'Morning run',
-          startAt: '2026-06-03T06:00:00Z',
-          endAt: '2026-06-03T07:00:00Z',
-          difficulty: TaskDifficulty.MEDIUM,
-          categoryId: 'missing-category',
-        }),
+        service.create(
+          'user-uuid-1',
+          makeCreateTaskDto({ categoryId: 'missing-category' }),
+        ),
       ).rejects.toThrow(NotFoundException);
 
       expect(
@@ -208,12 +391,7 @@ describe('TasksService', () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
       transactionMock.task.create.mockResolvedValue(MOCK_TASK);
 
-      await service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt: '2026-06-03T06:00:00Z',
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-      });
+      await service.create('user-uuid-1', makeCreateTaskDto());
 
       expect(transactionMock.task.create).toHaveBeenCalledWith({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -245,13 +423,10 @@ describe('TasksService', () => {
         notificationEnabled: notificationEnabled ?? true,
       });
 
-      await service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt,
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-        notificationEnabled,
-      });
+      await service.create(
+        'user-uuid-1',
+        makeCreateTaskDto({ startAt, notificationEnabled }),
+      );
 
       expect(transactionMock.task.create).toHaveBeenCalledWith({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -275,13 +450,10 @@ describe('TasksService', () => {
         categoryId: 'category-1',
       });
 
-      await service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt: '2026-06-03T06:00:00Z',
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-        categoryId: 'category-1',
-      });
+      await service.create(
+        'user-uuid-1',
+        makeCreateTaskDto({ categoryId: 'category-1' }),
+      );
 
       expect(transactionMock.category.findFirst).toHaveBeenCalledWith({
         where: {
@@ -299,13 +471,10 @@ describe('TasksService', () => {
         transactionMock.category.findFirst.mockResolvedValue(null);
 
         await expect(
-          service.create('user-uuid-1', {
-            title: 'Morning run',
-            startAt: '2026-06-03T06:00:00Z',
-            endAt: '2026-06-03T07:00:00Z',
-            difficulty: TaskDifficulty.MEDIUM,
-            categoryId: 'unassignable-category',
-          }),
+          service.create(
+            'user-uuid-1',
+            makeCreateTaskDto({ categoryId: 'unassignable-category' }),
+          ),
         ).rejects.toThrow(NotFoundException);
 
         expect(transactionMock.task.create).not.toHaveBeenCalled();
@@ -319,12 +488,7 @@ describe('TasksService', () => {
       scoresMock.recompute.mockRejectedValue(recomputeError);
 
       await expect(
-        service.create('user-uuid-1', {
-          title: 'Morning run',
-          startAt: '2026-06-03T06:00:00Z',
-          endAt: '2026-06-03T07:00:00Z',
-          difficulty: TaskDifficulty.MEDIUM,
-        }),
+        service.create('user-uuid-1', makeCreateTaskDto()),
       ).rejects.toBe(recomputeError);
     });
 
@@ -333,15 +497,39 @@ describe('TasksService', () => {
       transactionMock.task.create.mockRejectedValue(writeError);
 
       await expect(
-        service.create('user-uuid-1', {
-          title: 'Morning run',
-          startAt: '2099-06-03T06:00:00Z',
-          endAt: '2099-06-03T07:00:00Z',
-          difficulty: TaskDifficulty.MEDIUM,
-        }),
+        service.create(
+          'user-uuid-1',
+          makeCreateTaskDto({
+            startAt: '2099-06-03T06:00:00Z',
+            endAt: '2099-06-03T07:00:00Z',
+          }),
+        ),
       ).rejects.toBe(writeError);
 
       expect(scoresMock.recompute).not.toHaveBeenCalled();
+    });
+
+    it('converges a P2002 create race through a matching post-transaction ID lookup', async () => {
+      const dto = makeCreateTaskDto();
+      const persistedTask = makePersistedCreateTask(dto);
+      transactionMock.task.create.mockRejectedValue(
+        makeUniqueConstraintConflict(),
+      );
+      prismaMock.task.findUnique.mockResolvedValue(persistedTask);
+
+      await expect(service.create('user-uuid-1', dto)).resolves.toEqual(
+        persistedTask,
+      );
+
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(1);
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+      expect(prismaMock.task.findUnique).toHaveBeenCalledWith({
+        where: { id: CLIENT_MUTATION_ID },
+      });
+      expect(prismaMock.$transaction.mock.invocationCallOrder[0]).toBeLessThan(
+        prismaMock.task.findUnique.mock.invocationCallOrder[0],
+      );
     });
   });
 
@@ -356,12 +544,7 @@ describe('TasksService', () => {
         })
         .mockImplementationOnce((callback) => callback(transactionMock));
 
-      const result = await service.create('user-uuid-1', {
-        title: 'Morning run',
-        startAt: '2026-06-03T06:00:00Z',
-        endAt: '2026-06-03T07:00:00Z',
-        difficulty: TaskDifficulty.MEDIUM,
-      });
+      const result = await service.create('user-uuid-1', makeCreateTaskDto());
 
       expect(result).toEqual(MOCK_TASK);
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(2);
@@ -388,17 +571,38 @@ describe('TasksService', () => {
       });
 
       await expect(
-        service.create('user-uuid-1', {
-          title: 'Morning run',
-          startAt: '2026-06-03T06:00:00Z',
-          endAt: '2026-06-03T07:00:00Z',
-          difficulty: TaskDifficulty.MEDIUM,
-        }),
+        service.create('user-uuid-1', makeCreateTaskDto()),
       ).rejects.toBe(conflict);
 
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(3);
       expect(transactionMock.task.create).toHaveBeenCalledTimes(3);
       expect(scoresMock.recompute).toHaveBeenCalledTimes(3);
+    });
+
+    it('converges exhausted P2034 retries through a matching post-transaction ID lookup', async () => {
+      const conflict = makeTransactionConflict();
+      const dto = makeCreateTaskDto();
+      const persistedTask = makePersistedCreateTask(dto);
+      transactionMock.task.create.mockResolvedValue(persistedTask);
+      prismaMock.$transaction.mockImplementation(async (callback) => {
+        await callback(transactionMock);
+        throw conflict;
+      });
+      prismaMock.task.findUnique.mockResolvedValue(persistedTask);
+
+      await expect(service.create('user-uuid-1', dto)).resolves.toEqual(
+        persistedTask,
+      );
+
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(3);
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(3);
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(3);
+      expect(prismaMock.task.findUnique).toHaveBeenCalledWith({
+        where: { id: CLIENT_MUTATION_ID },
+      });
+      expect(prismaMock.$transaction.mock.invocationCallOrder[2]).toBeLessThan(
+        prismaMock.task.findUnique.mock.invocationCallOrder[0],
+      );
     });
 
     it('does not retry non-P2034 errors', async () => {
@@ -410,12 +614,7 @@ describe('TasksService', () => {
       });
 
       await expect(
-        service.create('user-uuid-1', {
-          title: 'Morning run',
-          startAt: '2026-06-03T06:00:00Z',
-          endAt: '2026-06-03T07:00:00Z',
-          difficulty: TaskDifficulty.MEDIUM,
-        }),
+        service.create('user-uuid-1', makeCreateTaskDto()),
       ).rejects.toBe(error);
 
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);

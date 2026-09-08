@@ -1,10 +1,21 @@
+import {
+  GUARDS_METADATA,
+  HTTP_CODE_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
+import { HttpStatus, RequestMethod } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { TaskDifficulty, TaskStatus } from '@prisma/client';
+import { validate } from 'class-validator';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateTaskDto } from './dto/create-task.dto';
+
+const CLIENT_MUTATION_ID = '0cfe1042-769f-4d19-88bc-7a0d710553ca';
 
 const MOCK_TASK = {
   id: 'task-uuid-1',
@@ -24,6 +35,9 @@ const MOCK_TASK = {
 };
 
 const makeTasksServiceMock = () => ({
+  issueClientMutationId: jest.fn().mockReturnValue({
+    clientMutationId: CLIENT_MUTATION_ID,
+  }),
   create: jest.fn().mockResolvedValue(MOCK_TASK),
   findAll: jest.fn().mockResolvedValue([MOCK_TASK]),
   findOne: jest.fn().mockResolvedValue(MOCK_TASK),
@@ -38,6 +52,28 @@ const makeTasksServiceMock = () => ({
 
 const makeAuthRequest = (userId = 'user-uuid-1') =>
   ({ user: { sub: userId, type: 'access' } }) as never;
+
+const getControllerHandler = (methodName: 'issueClientMutationId'): object => {
+  const handler: unknown = Object.getOwnPropertyDescriptor(
+    TasksController.prototype,
+    methodName,
+  )?.value;
+
+  if (typeof handler !== 'function') {
+    throw new TypeError(`Missing controller handler: ${methodName}`);
+  }
+
+  return handler;
+};
+
+const expectValidationError = async (
+  dto: object,
+  property: string,
+): Promise<void> => {
+  const errors = await validate(dto);
+
+  expect(errors.map((error) => error.property)).toContain(property);
+};
 
 describe('TasksController', () => {
   let controller: TasksController;
@@ -62,8 +98,37 @@ describe('TasksController', () => {
     controller = module.get<TasksController>(TasksController);
   });
 
+  it('uses the tasks path and JWT guard at class level', () => {
+    expect(Reflect.getMetadata(PATH_METADATA, TasksController)).toBe('tasks');
+    expect(Reflect.getMetadata(GUARDS_METADATA, TasksController)).toEqual([
+      JwtAuthGuard,
+    ]);
+  });
+
+  it('exposes POST client-mutation-ids with a 200 status', () => {
+    const handler = getControllerHandler('issueClientMutationId');
+
+    expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
+      'client-mutation-ids',
+    );
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.POST,
+    );
+    expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(
+      HttpStatus.OK,
+    );
+  });
+
+  it('delegates client mutation ID issuance to tasksService', () => {
+    const result = controller.issueClientMutationId();
+
+    expect(tasksServiceMock.issueClientMutationId).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ clientMutationId: CLIENT_MUTATION_ID });
+  });
+
   it('create delegates to tasksService.create', async () => {
     const dto = {
+      clientMutationId: CLIENT_MUTATION_ID,
       title: 'Morning run',
       startAt: '2026-06-03T06:00:00Z',
       endAt: '2026-06-03T07:00:00Z',
@@ -121,5 +186,35 @@ describe('TasksController', () => {
       'task-uuid-1',
     );
     expect(result.status).toBe(TaskStatus.COMPLETED);
+  });
+});
+
+describe('CreateTaskDto validation', () => {
+  it.each([
+    ['missing', undefined],
+    ['malformed', 'not-a-uuid'],
+    ['non-v4', '6ba7b810-9dad-11d1-80b4-00c04fd430c8'],
+  ])('rejects a %s clientMutationId', async (_label, clientMutationId) => {
+    const dto = Object.assign(new CreateTaskDto(), {
+      ...(clientMutationId === undefined ? {} : { clientMutationId }),
+      title: 'Morning run',
+      startAt: '2026-06-03T06:00:00Z',
+      endAt: '2026-06-03T07:00:00Z',
+      difficulty: TaskDifficulty.MEDIUM,
+    });
+
+    await expectValidationError(dto, 'clientMutationId');
+  });
+
+  it('accepts a valid create task DTO', async () => {
+    const dto = Object.assign(new CreateTaskDto(), {
+      clientMutationId: CLIENT_MUTATION_ID,
+      title: 'Morning run',
+      startAt: '2026-06-03T06:00:00Z',
+      endAt: '2026-06-03T07:00:00Z',
+      difficulty: TaskDifficulty.MEDIUM,
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
   });
 });

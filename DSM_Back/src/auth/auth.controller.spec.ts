@@ -20,6 +20,7 @@ const makeAuthServiceMock = () => ({
   socialLogin: jest.fn().mockResolvedValue(TOKEN_RESPONSE),
   refreshTokens: jest.fn().mockResolvedValue(TOKEN_RESPONSE),
   logout: jest.fn().mockResolvedValue(undefined),
+  deleteAccount: jest.fn().mockResolvedValue(undefined),
   getCurrentUser: jest.fn().mockResolvedValue(CURRENT_USER),
   completeOnboarding: jest.fn().mockResolvedValue(CURRENT_USER),
 });
@@ -83,5 +84,12 @@ describe('AuthController', () => {
     expect(authServiceMock.completeOnboarding).toHaveBeenCalledWith(
       'user-uuid-1',
     );
+  });
+
+  it('deleteAccount delegates with the authenticated user', async () => {
+    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
+
+    await expect(controller.deleteAccount(req)).resolves.toBeUndefined();
+    expect(authServiceMock.deleteAccount).toHaveBeenCalledWith('user-uuid-1');
   });
 });

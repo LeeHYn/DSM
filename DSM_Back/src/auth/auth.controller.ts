@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -55,5 +56,14 @@ export class AuthController {
     @Req() req: Request & { user: JwtPayload },
   ): Promise<CurrentUser> {
     return this.authService.completeOnboarding(req.user.sub);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  async deleteAccount(
+    @Req() req: Request & { user: JwtPayload },
+  ): Promise<void> {
+    await this.authService.deleteAccount(req.user.sub);
   }
 }

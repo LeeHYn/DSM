@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Pressable,
   ScrollView,
@@ -8,6 +8,7 @@ import {
 
 import {
   AppText,
+  AppButton,
   SurfaceCard,
   useDailyupPalette,
 } from '@/components/dailyup/primitives';
@@ -16,14 +17,11 @@ import {
   dailyupRadius,
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
-import {
-  myRankingByPeriod,
-  rankingData,
-  type RankingEntry,
-  type RankingPeriod,
-} from '@/features/prototype/prototype-data';
+import { useProduct } from '@/features/product/product-context';
+import type { Leader as RankingEntry, Period as RankingPeriod } from '@/features/product/product-contracts';
 
-const PERIODS: RankingPeriod[] = ['일간', '주간', '누적'];
+const PERIODS: RankingPeriod[] = ['DAILY', 'WEEKLY', 'TOTAL'];
+const PERIOD_LABELS = { DAILY: '일간', WEEKLY: '주간', TOTAL: '누적' };
 
 function PeriodSegment({
   onChange,
@@ -52,7 +50,7 @@ function PeriodSegment({
               color={selected ? palette.textOnLime : palette.muted}
               style={styles.segmentText}
               variant="label">
-              {period}
+              {PERIOD_LABELS[period]}
             </AppText>
           </Pressable>
         );
@@ -61,9 +59,10 @@ function PeriodSegment({
   );
 }
 
-function MyRankCard({ period }: { period: RankingPeriod }) {
+function MyRankCard() {
   const palette = useDailyupPalette();
-  const rank = myRankingByPeriod[period];
+  const { snapshot } = useProduct();
+  const rank = snapshot.ranking.data;
   return (
     <SurfaceCard
       style={[
@@ -75,7 +74,7 @@ function MyRankCard({ period }: { period: RankingPeriod }) {
           내 순위
         </AppText>
         <AppText style={styles.myRankValue} variant="metric">
-          {rank.rank}위
+          {rank && rank.totalUsers > 0 ? `${rank.rank}위` : '—'}
         </AppText>
       </View>
       <View style={styles.myRankRight}>
@@ -83,7 +82,7 @@ function MyRankCard({ period }: { period: RankingPeriod }) {
           상위
         </AppText>
         <AppText style={styles.percentile} variant="sectionTitle">
-          {rank.percentile}%
+          {rank && rank.totalUsers > 0 ? `${rank.percentile}%` : '—'}
         </AppText>
       </View>
     </SurfaceCard>
@@ -101,7 +100,7 @@ function RankingRow({ entry }: { entry: RankingEntry }) {
       <AppText color={rankColor} style={styles.rankNumber} variant="sectionTitle">
         {entry.rank}
       </AppText>
-      <View style={[styles.avatar, { backgroundColor: `${entry.avatarColor}40` }]}>
+      <View style={[styles.avatar, { backgroundColor: palette.surfaceRaised }]}>
         <AppText style={styles.avatarText} variant="label">
           {entry.nickname.slice(0, 1)}
         </AppText>
@@ -123,8 +122,9 @@ function RankingRow({ entry }: { entry: RankingEntry }) {
 
 export default function RankingScreen() {
   const palette = useDailyupPalette();
-  const [period, setPeriod] = useState<RankingPeriod>('일간');
-  const entries = rankingData[period];
+  const { snapshot, store } = useProduct();
+  const { period } = snapshot;
+  const entries = snapshot.leaderboard.data ?? [];
 
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
@@ -134,14 +134,19 @@ export default function RankingScreen() {
         <AppText style={styles.title} variant="screenTitle">
           랭킹
         </AppText>
-        <PeriodSegment onChange={setPeriod} value={period} />
-        <MyRankCard period={period} />
+        <PeriodSegment onChange={next => { void store.setPeriod(next); }} value={period} />
+        <MyRankCard />
+        {snapshot.ranking.error ? <AppText color={palette.danger}>{snapshot.ranking.error}</AppText> : null}
+        {snapshot.leaderboard.error ? <AppText color={palette.danger}>{snapshot.leaderboard.error}</AppText> : null}
+        {snapshot.ranking.status === 'loading' || snapshot.leaderboard.status === 'loading' ? <AppText>랭킹 조회 중…</AppText> : null}
+        <AppButton disabled={snapshot.mutating} onPress={() => { void store.loadRanking(); }} variant="ghost">랭킹 새로고침</AppButton>
         <AppText color={palette.muted} style={styles.realtimeCopy} variant="caption">
           실시간 갱신은 준비 중입니다 · 새로고침으로 최신 순위를 확인하세요
         </AppText>
         <View style={styles.list}>
+          {snapshot.leaderboard.status === 'ready' && entries.length === 0 ? <AppText>표시할 순위가 없습니다.</AppText> : null}
           {entries.map((entry) => (
-            <RankingRow entry={entry} key={`${period}-${entry.rank}`} />
+            <RankingRow entry={entry} key={`${period}-${entry.userId}`} />
           ))}
         </View>
       </ScrollView>

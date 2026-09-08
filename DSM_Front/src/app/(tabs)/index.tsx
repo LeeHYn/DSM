@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React from 'react';
 import {
   Pressable,
   ScrollView,
@@ -8,6 +8,7 @@ import {
 
 import {
   AppText,
+  AppButton,
   Badge,
   Icon,
   ScreenHeader,
@@ -15,41 +16,30 @@ import {
   useDailyupPalette,
 } from '@/components/dailyup/primitives';
 import {
-  HomeState,
-  StateDeveloperBar,
-} from '@/components/dailyup/screen-state';
-import {
   dailyupFonts,
   dailyupRadius,
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
-import { usePrototype } from '@/features/prototype/prototype-context';
-import {
-  HOME_DATE,
-  type PrototypeTask,
-} from '@/features/prototype/prototype-data';
+import { useProduct, type TaskView } from '@/features/product/product-context';
+import { utcDay } from '@/features/product/product-contracts';
 
-const DIFFICULTY_SCORE: Record<PrototypeTask['difficulty'], number> = {
-  낮음: 10,
-  보통: 20,
-  높음: 30,
-};
-
-function ScoreCard({ score }: { score: number }) {
+function ScoreCard() {
+  const { snapshot } = useProduct();
+  const score = snapshot.score.status === 'ready' ? snapshot.score.data?.cappedScore ?? 0 : null;
   const palette = useDailyupPalette();
-  const progress = `${Math.min(100, (score / 900) * 100)}%` as `${number}%`;
-  const cumulative = 12450 + score - 100;
+  const progress = `${Math.min(100, ((score ?? 0) / 900) * 100)}%` as `${number}%`;
+  const cumulative = snapshot.summary.data?.totalScore;
 
   return (
     <SurfaceCard style={styles.scoreCard}>
       <View style={styles.scoreTop}>
         <View>
           <AppText color={palette.muted} variant="caption">
-            오늘 점수
+            선택일 점수
           </AppText>
           <View style={styles.scoreValueRow}>
             <AppText color={palette.lime} variant="metric">
-              {score}
+              {score ?? '—'}
             </AppText>
             <AppText color={palette.muted} style={styles.scoreMax} variant="label">
               /
@@ -57,9 +47,9 @@ function ScoreCard({ score }: { score: number }) {
           </View>
         </View>
         <View style={styles.rankSummary}>
-          <Badge tone="gold">GOLD 티어</Badge>
+          <Badge tone="gold">{snapshot.summary.data?.tier ?? '—'} 티어</Badge>
           <AppText color={palette.muted} variant="caption">
-            오늘 12위 · 상위 8%
+            {snapshot.score.status === 'loading' ? '점수 조회 중' : snapshot.score.error ?? '서버 집계 기준'}
           </AppText>
         </View>
       </View>
@@ -71,17 +61,17 @@ function ScoreCard({ score }: { score: number }) {
           900
         </AppText>
         <AppText color={palette.muted} variant="caption">
-          누적 점수 {cumulative.toLocaleString('ko-KR')}점
+          누적 점수 {cumulative?.toLocaleString('ko-KR') ?? '—'}점
         </AppText>
       </View>
     </SurfaceCard>
   );
 }
 
-function TaskRow({ task }: { task: PrototypeTask }) {
-  const { openTaskDetail, screenState, toggleTask } = usePrototype();
+function TaskRow({ task }: { task: TaskView }) {
+  const { openTaskDetail, snapshot, store } = useProduct();
   const palette = useDailyupPalette();
-  const disabled = screenState === 'offline';
+  const disabled = snapshot.mutating;
 
   return (
     <Pressable
@@ -102,7 +92,7 @@ function TaskRow({ task }: { task: PrototypeTask }) {
         accessibilityState={{ checked: task.completed, disabled }}
         disabled={disabled}
         hitSlop={8}
-        onPress={() => toggleTask(task.id)}
+        onPress={() => { void store.toggle(task.id); }}
         style={[
           styles.checkbox,
           {
@@ -120,7 +110,7 @@ function TaskRow({ task }: { task: PrototypeTask }) {
           {task.title}
         </AppText>
         <AppText color={palette.muted} variant="caption">
-          {task.startTime} - {task.endTime} · {task.category} · {task.difficulty}
+          {task.startTime} - {task.endTime} UTC · {task.category} · {task.difficultyLabel}
         </AppText>
       </View>
       <View
@@ -135,45 +125,13 @@ function TaskRow({ task }: { task: PrototypeTask }) {
 }
 
 export default function HomeScreen() {
-  const {
-    openNewTask,
-    screenState,
-    setScreenState,
-    showToast,
-    tasks,
-  } = usePrototype();
+  const { openNewTask, snapshot, store, tasks } = useProduct();
   const palette = useDailyupPalette();
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  const score = useMemo(
-    () =>
-      90 +
-      tasks.reduce(
-        (total, task) => total + (task.completed ? DIFFICULTY_SCORE[task.difficulty] : 0),
-        0,
-      ),
-    [tasks],
-  );
-
-  const refresh = () => {
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-    }
-    setScreenState('loading');
-    refreshTimerRef.current = setTimeout(() => {
-      setScreenState('normal');
-      showToast('오늘의 일과를 새로고침했어요.');
-      refreshTimerRef.current = null;
-    }, 620);
+  const refresh = () => { void store.refresh(); };
+  const moveDate = (days: number) => {
+    const date = new Date(`${snapshot.date}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    void store.setDate(utcDay(date));
   };
 
   return (
@@ -186,7 +144,7 @@ export default function HomeScreen() {
             <Pressable
               accessibilityLabel="새로고침"
               accessibilityRole="button"
-              disabled={screenState === 'loading'}
+              disabled={snapshot.mutating || snapshot.tasks.status === 'loading'}
               onPress={refresh}
               style={({ pressed }) => [
                 styles.refresh,
@@ -201,33 +159,40 @@ export default function HomeScreen() {
               </AppText>
             </Pressable>
           }
-          eyebrow={HOME_DATE}
-          title="안녕하세요, 지민님"
+          eyebrow={`${snapshot.date} · UTC 기준`}
+          title="안녕하세요"
         />
-
-        <HomeState onAdd={openNewTask}>
-          <ScoreCard score={score} />
+        <View style={styles.dateNavigation}>
+          <AppButton disabled={snapshot.mutating} onPress={() => moveDate(-1)} variant="ghost">이전 날짜</AppButton>
+          <AppButton disabled={snapshot.mutating} onPress={() => { void store.setDate(utcDay()); }} variant="ghost">오늘</AppButton>
+          <AppButton disabled={snapshot.mutating} onPress={() => moveDate(1)} variant="ghost">다음 날짜</AppButton>
+        </View>
+          <ScoreCard />
+          {snapshot.summary.error ? <AppText color={palette.danger}>{snapshot.summary.error}</AppText> : null}
+          {snapshot.mutationError ? <AppText color={palette.danger}>{snapshot.mutationError}</AppText> : null}
           <View style={styles.taskSection}>
-            <AppText variant="sectionTitle">오늘의 일과</AppText>
+            <AppText variant="sectionTitle">선택일 일과</AppText>
+            {snapshot.tasks.status === 'loading' ? <AppText>일과 조회 중…</AppText> : null}
+            {snapshot.tasks.error ? <AppText color={palette.danger}>{snapshot.tasks.error}</AppText> : null}
+            {snapshot.tasks.status === 'ready' && tasks.length === 0 ? <AppText>등록된 일과가 없습니다.</AppText> : null}
             <View style={styles.taskList}>
               {tasks.map((task) => (
                 <TaskRow key={task.id} task={task} />
               ))}
             </View>
           </View>
-        </HomeState>
-        <StateDeveloperBar />
       </ScrollView>
 
       <Pressable
         accessibilityLabel="새 일과 추가"
         accessibilityRole="button"
+        disabled={snapshot.mutating}
         onPress={openNewTask}
         style={({ pressed }) => [
           styles.fab,
           {
             backgroundColor: palette.lime,
-            opacity: pressed ? 0.74 : screenState === 'offline' ? 0.42 : 1,
+            opacity: pressed ? 0.74 : snapshot.mutating ? 0.42 : 1,
           },
         ]}>
         <Icon color={palette.textOnLime} name="plus" size={27} />
@@ -237,6 +202,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  dateNavigation: { flexDirection: 'row', justifyContent: 'space-between' },
   checkbox: {
     alignItems: 'center',
     borderRadius: dailyupRadius.round,

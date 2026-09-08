@@ -30,6 +30,7 @@ export type SessionAction =
   | 'signing-in'
   | 'refreshing'
   | 'completing-onboarding'
+  | 'deleting-account'
   | 'logging-out'
   | 'recovering';
 
@@ -53,6 +54,7 @@ export type SessionControllerDependencies = {
 export interface SessionControllerPort {
   bootstrap(): Promise<void>;
   completeOnboarding(): Promise<void>;
+  deleteAccount(): Promise<boolean>;
   endUnauthorizedSession(): Promise<void>;
   getAccessToken(): string | null;
   getEpoch(): number;
@@ -75,6 +77,9 @@ const SAFE_ERROR_MESSAGES: Record<ApiErrorKind, string> = {
 
 export class SessionController implements SessionControllerPort {
   private accessToken: string | null = null;
+  private accountDeletion:
+    | { epoch: number; operation: Promise<boolean> }
+    | null = null;
   private bootstrapPromise: Promise<void> | null = null;
   private epoch = 0;
   private onboardingCompletion:
@@ -172,7 +177,9 @@ export class SessionController implements SessionControllerPort {
     }
 
     const epoch = this.epoch;
-    this.setAction('refreshing');
+    if (this.accountDeletion?.epoch !== epoch) {
+      this.setAction('refreshing');
+    }
     const operation = this.rotateAndCommit(epoch);
     this.refreshPromise = operation;
     const clear = () => {
@@ -236,6 +243,75 @@ export class SessionController implements SessionControllerPort {
 
       await this.handleProfileError(error, epoch);
     }
+  }
+
+  deleteAccount(): Promise<boolean> {
+    if (this.accountDeletion?.epoch === this.epoch) {
+      return this.accountDeletion.operation;
+    }
+
+    const { state } = this.snapshot;
+    if (!this.accessToken || state.status !== 'authenticated') {
+      return Promise.resolve(false);
+    }
+
+    const epoch = this.epoch;
+    const operation = this.deleteAccountInternal(epoch, state);
+    const deletion = { epoch, operation };
+    this.accountDeletion = deletion;
+    const clear = () => {
+      if (this.accountDeletion === deletion) {
+        this.accountDeletion = null;
+      }
+    };
+    operation.then(clear, clear).catch(() => undefined);
+    return operation;
+  }
+
+  private async deleteAccountInternal(
+    epoch: number,
+    authenticatedState: Extract<SessionState, { status: 'authenticated' }>,
+  ): Promise<boolean> {
+    this.setAction('deleting-account');
+    try {
+      await this.dependencies.authenticatedClient.request<void>({
+        path: '/auth/me',
+        method: 'DELETE',
+        responseMode: 'empty',
+      });
+    } catch (error) {
+      if (epoch === this.epoch) {
+        this.publish({
+          state: authenticatedState,
+          action: 'idle',
+          error: this.sanitizeError(error),
+        });
+      }
+      return false;
+    }
+
+    if (epoch !== this.epoch) {
+      return false;
+    }
+
+    const cleanupEpoch = ++this.epoch;
+    if (this.accountDeletion?.epoch === epoch) {
+      this.accountDeletion.epoch = cleanupEpoch;
+    }
+    this.accessToken = null;
+    try {
+      await this.dependencies.tokenStore.readAndClear();
+      if (cleanupEpoch !== this.epoch) {
+        return false;
+      }
+      this.publishUnauthenticated();
+    } catch (error) {
+      if (cleanupEpoch !== this.epoch) {
+        return false;
+      }
+      this.publishStorageError('clear', error);
+    }
+    return true;
   }
 
   async logout(): Promise<void> {
@@ -391,7 +467,9 @@ export class SessionController implements SessionControllerPort {
     }
 
     this.accessToken = pair.accessToken;
-    this.setAction('idle');
+    this.setAction(
+      this.accountDeletion?.epoch === epoch ? 'deleting-account' : 'idle',
+    );
     return pair.accessToken;
   }
 

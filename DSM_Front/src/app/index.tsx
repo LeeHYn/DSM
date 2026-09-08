@@ -12,6 +12,7 @@ import {
   dailyupRadius,
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
+import { openLegalLink } from '@/config/legal-links';
 import {
   googleSignInAdapter,
   isGoogleProviderError,
@@ -73,7 +74,9 @@ export default function LoginScreen() {
   const { showToast } = usePrototype();
   const { action, error, signIn } = useSession();
   const [isGooglePending, setIsGooglePending] = useState(false);
+  const [isPrivacyPending, setIsPrivacyPending] = useState(false);
   const googleRequestInFlightRef = useRef(false);
+  const privacyRequestInFlightRef = useRef(false);
   const lastSessionErrorRef = useRef<unknown>(null);
   const providerButtonsDisabled =
     isGooglePending || action === 'signing-in';
@@ -118,6 +121,24 @@ export default function LoginScreen() {
 
   const explainProviderStep = () => {
     showToast('소셜 로그인 연결은 다음 단계에서 제공됩니다.');
+  };
+
+  const handlePrivacyPress = async () => {
+    if (privacyRequestInFlightRef.current) {
+      return;
+    }
+
+    privacyRequestInFlightRef.current = true;
+    setIsPrivacyPending(true);
+    try {
+      const opened = await openLegalLink('privacy');
+      if (!opened) {
+        showToast('개인정보처리방침을 열 수 없습니다. 다시 시도해 주세요.');
+      }
+    } finally {
+      privacyRequestInFlightRef.current = false;
+      setIsPrivacyPending(false);
+    }
   };
 
   return (
@@ -167,7 +188,14 @@ export default function LoginScreen() {
             </AppText>
           </Pressable>
           <View style={[styles.legalDot, { backgroundColor: palette.border }]} />
-          <Pressable onPress={() => showToast('개인정보처리방침은 준비 중입니다.')}>
+          <Pressable
+            accessibilityLabel="개인정보처리방침"
+            accessibilityRole="link"
+            accessibilityState={{ disabled: isPrivacyPending }}
+            disabled={isPrivacyPending}
+            onPress={() => {
+              handlePrivacyPress().catch(() => undefined);
+            }}>
             <AppText color={palette.muted} style={styles.legalText} variant="caption">
               개인정보처리방침
             </AppText>

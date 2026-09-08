@@ -5,10 +5,14 @@ import {
   IsEnum,
   IsBoolean,
   IsDateString,
+  IsUUID,
 } from 'class-validator';
 import { TaskDifficulty } from '@prisma/client';
 
 export class CreateTaskDto {
+  @IsUUID('4')
+  clientMutationId!: string;
+
   @IsString()
   @IsNotEmpty()
   title!: string;

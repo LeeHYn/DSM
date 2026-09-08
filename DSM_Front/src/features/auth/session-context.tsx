@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import { getApiBaseUrl } from '../../config/api-config';
-import { createAuthenticatedClient } from '../../lib/api/authenticated-client';
+import { createAuthenticatedClient, type AuthenticatedClient } from '../../lib/api/authenticated-client';
 import { createAuthApi } from '../../lib/api/auth-api';
 import { createHttpClient } from '../../lib/api/http-client';
 import { TokenStoreCoordinator } from './token-store-coordinator';
@@ -20,13 +20,18 @@ import {
 } from './session-controller';
 import { createRefreshTokenStore } from './token-store';
 
-export type SessionContextValue = SessionSnapshot & Pick<
+export type SessionContextValue = SessionSnapshot & { epoch: number } & Pick<
   SessionControllerPort,
-  'completeOnboarding' | 'logout' | 'retryRecovery' | 'signIn'
+  | 'completeOnboarding'
+  | 'deleteAccount'
+  | 'logout'
+  | 'retryRecovery'
+  | 'signIn'
 >;
 
 type SessionProviderProps = PropsWithChildren<{
   controller?: SessionControllerPort;
+  client?: AuthenticatedClient;
 }>;
 
 type SessionSnapshotStore = {
@@ -35,8 +40,9 @@ type SessionSnapshotStore = {
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
+const ClientContext = createContext<AuthenticatedClient | null>(null);
 
-function createSessionController(): SessionController {
+function createSessionRuntime() {
   const http = createHttpClient({ baseUrl: getApiBaseUrl() });
   const authApi = createAuthApi(http);
   const store = createRefreshTokenStore();
@@ -55,7 +61,7 @@ function createSessionController(): SessionController {
     authenticatedClient,
     tokenStore: coordinator,
   });
-  return controller;
+  return { controller, client: authenticatedClient };
 }
 
 function createSessionSnapshotStore(
@@ -79,11 +85,13 @@ function createSessionSnapshotStore(
 export function SessionProvider({
   children,
   controller: injectedController,
+  client: injectedClient,
 }: SessionProviderProps) {
-  const controller = useMemo(
-    () => injectedController ?? createSessionController(),
-    [injectedController],
+  const runtime = useMemo(
+    () => injectedController ? { controller: injectedController, client: injectedClient ?? null } : createSessionRuntime(),
+    [injectedController, injectedClient],
   );
+  const { controller, client } = runtime;
   const snapshotStore = useMemo(
     () => createSessionSnapshotStore(controller),
     [controller],
@@ -95,6 +103,10 @@ export function SessionProvider({
   );
   const completeOnboarding: SessionControllerPort['completeOnboarding'] =
     useCallback(() => controller.completeOnboarding(), [controller]);
+  const deleteAccount: SessionControllerPort['deleteAccount'] = useCallback(
+    () => controller.deleteAccount(),
+    [controller],
+  );
   const logout: SessionControllerPort['logout'] = useCallback(
     () => controller.logout(),
     [controller],
@@ -110,12 +122,22 @@ export function SessionProvider({
   const value = useMemo<SessionContextValue>(
     () => ({
       ...snapshot,
+      epoch: controller.getEpoch(),
       completeOnboarding,
+      deleteAccount,
       logout,
       retryRecovery,
       signIn,
     }),
-    [completeOnboarding, logout, retryRecovery, signIn, snapshot],
+    [
+      completeOnboarding,
+      controller,
+      deleteAccount,
+      logout,
+      retryRecovery,
+      signIn,
+      snapshot,
+    ],
   );
 
   useEffect(() => {
@@ -123,8 +145,16 @@ export function SessionProvider({
   }, [controller]);
 
   return (
-    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+    <ClientContext.Provider value={client}>
+      <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+    </ClientContext.Provider>
   );
+}
+
+export function useAuthenticatedClient(): AuthenticatedClient {
+  const client = useContext(ClientContext);
+  if (!client) throw new Error('Authenticated client is unavailable');
+  return client;
 }
 
 export function useSession(): SessionContextValue {

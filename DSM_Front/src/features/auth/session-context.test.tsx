@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import type { SessionSnapshot } from './session-controller';
-import { SessionProvider, useSession } from './session-context';
+import { SessionProvider, useSession, useAuthenticatedClient } from './session-context';
 
 function Probe() {
   const session = useSession();
@@ -20,6 +20,7 @@ function createFakeController() {
   return {
     bootstrap: jest.fn().mockResolvedValue(undefined),
     completeOnboarding: jest.fn().mockResolvedValue(undefined),
+    deleteAccount: jest.fn().mockResolvedValue(true),
     endUnauthorizedSession: jest.fn().mockResolvedValue(undefined),
     getAccessToken: jest.fn().mockReturnValue(null),
     getEpoch: jest.fn().mockReturnValue(0),
@@ -69,4 +70,40 @@ it('rejects useSession outside SessionProvider', async () => {
   await expect(render(<OutsideProbe />)).rejects.toThrow(
     'useSession must be used inside SessionProvider',
   );
+});
+
+it('shares the injected authenticated client and publishes the session epoch', async () => {
+  const controller = createFakeController();
+  const client = { request: jest.fn() };
+  let seen: unknown;
+  function ClientProbe() {
+    seen = useAuthenticatedClient();
+    return <Text>{`epoch:${useSession().epoch}`}</Text>;
+  }
+  await render(<SessionProvider controller={controller} client={client}><ClientProbe /></SessionProvider>);
+  expect(seen).toBe(client);
+  controller.getEpoch.mockReturnValue(2);
+  await act(() => controller.emit({ state: { status: 'unauthenticated' }, action: 'idle', error: null }));
+  expect(screen.getByText('epoch:2')).toBeOnTheScreen();
+  expect(seen).toBe(client);
+});
+
+it('exposes the controller account deletion operation unchanged', async () => {
+  const controller = createFakeController();
+  const deletion = Promise.resolve(true);
+  controller.deleteAccount.mockReturnValue(deletion);
+  let deleteAccount: (() => Promise<boolean>) | undefined;
+  function DeleteProbe() {
+    deleteAccount = useSession().deleteAccount;
+    return null;
+  }
+
+  await render(
+    <SessionProvider controller={controller}>
+      <DeleteProbe />
+    </SessionProvider>,
+  );
+
+  expect(deleteAccount?.()).toBe(deletion);
+  expect(controller.deleteAccount).toHaveBeenCalledTimes(1);
 });

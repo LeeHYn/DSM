@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,6 +9,7 @@ import {
 
 import {
   AppText,
+  AppButton,
   AppToggle,
   Badge,
   Divider,
@@ -20,8 +22,13 @@ import {
   dailyupRadius,
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
+import {
+  openLegalLink,
+  type LegalLinkKind,
+} from '@/config/legal-links';
 import { useSession } from '@/features/auth/session-context';
 import { usePrototype } from '@/features/prototype/prototype-context';
+import { useProduct } from '@/features/product/product-context';
 
 type MenuItem = {
   icon: DailyupIconName;
@@ -30,11 +37,6 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  {
-    icon: 'account-cog-outline',
-    label: '프로필 · 계정 관리',
-    message: '프로필 · 계정 관리는 준비 중입니다.',
-  },
   {
     icon: 'bell-outline',
     label: '알림 설정',
@@ -47,24 +49,35 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     icon: 'help-circle-outline',
-    label: '도움말 · 규칙 · 법적 정보',
-    message: '도움말 · 규칙 · 법적 정보는 준비 중입니다.',
+    label: '도움말 · 규칙',
+    message: '도움말 · 규칙은 준비 중입니다.',
   },
 ];
 
 function SettingsRow({
+  accessibilityRole = 'button',
+  disabled = false,
   label,
   onPress,
 }: {
+  accessibilityRole?: 'button' | 'link';
+  disabled?: boolean;
   label: string;
   onPress: () => void;
 }) {
   const palette = useDailyupPalette();
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: palette.surface }]}>
+      style={({ pressed }) => [
+        styles.row,
+        disabled && styles.disabled,
+        pressed && { backgroundColor: palette.surface },
+      ]}>
       <AppText style={styles.rowLabel} variant="label">
         {label}
       </AppText>
@@ -75,7 +88,13 @@ function SettingsRow({
 
 export default function MyPageScreen() {
   const palette = useDailyupPalette();
-  const { action, logout } = useSession();
+  const { action, deleteAccount, logout } = useSession();
+  const { snapshot, store } = useProduct();
+  const [deletionPending, setDeletionPending] = useState(false);
+  const [openingLegalLink, setOpeningLegalLink] =
+    useState<LegalLinkKind | null>(null);
+  const deletionRequestInFlightRef = useRef(false);
+  const legalRequestInFlightRef = useRef(false);
   const {
     resetPrototype,
     setTheme,
@@ -88,6 +107,83 @@ export default function MyPageScreen() {
     void logout();
   };
 
+  const openConfiguredLegalLink = async (
+    kind: LegalLinkKind,
+    label: string,
+  ) => {
+    if (legalRequestInFlightRef.current) {
+      return;
+    }
+    legalRequestInFlightRef.current = true;
+    setOpeningLegalLink(kind);
+    try {
+      if (!(await openLegalLink(kind))) {
+        showToast(
+          kind === 'privacy'
+            ? '개인정보처리방침을 열 수 없습니다. 다시 시도해 주세요.'
+            : `${label}를 열 수 없습니다. 다시 시도해 주세요.`,
+        );
+      }
+    } finally {
+      legalRequestInFlightRef.current = false;
+      setOpeningLegalLink(null);
+    }
+  };
+
+  const deleteCurrentAccount = async () => {
+    if (deletionRequestInFlightRef.current) {
+      return;
+    }
+    deletionRequestInFlightRef.current = true;
+    setDeletionPending(true);
+    try {
+      const deleted = await deleteAccount();
+      if (deleted) {
+        resetPrototype();
+      } else {
+        showToast(
+          '계정 삭제에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+        );
+      }
+    } catch {
+      showToast(
+        '계정 삭제에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+      );
+    } finally {
+      deletionRequestInFlightRef.current = false;
+      setDeletionPending(false);
+    }
+  };
+
+  const confirmAccountDeletion = () => {
+    Alert.alert(
+      '계정을 영구 삭제할까요?',
+      '삭제 후에는 계정과 데이터를 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '계정 삭제',
+          style: 'destructive',
+          onPress: deleteCurrentAccount,
+        },
+      ],
+    );
+  };
+
+  const explainAccountDeletion = () => {
+    Alert.alert(
+      '계정 삭제',
+      '계정과 로그인 정보, 등록한 일과와 카테고리, 점수와 랭킹, 알림 정보가 영구 삭제됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '계속', onPress: confirmAccountDeletion },
+      ],
+    );
+  };
+
+  const accountDeletionPending =
+    deletionPending || action === 'deleting-account';
+
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <ScrollView
@@ -95,17 +191,20 @@ export default function MyPageScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.profile}>
           <View style={[styles.profileAvatar, { backgroundColor: palette.surfaceRaised }]}>
-            <AppText style={styles.profileInitial}>지</AppText>
+            <Icon name="account" size={32} />
           </View>
           <AppText style={styles.nickname} variant="sectionTitle">
-            지민
+            내 계정
           </AppText>
           <View>
-            <Badge tone="gold">GOLD 티어</Badge>
+            <Badge tone="gold">{snapshot.summary.data?.tier ?? '—'} 티어</Badge>
           </View>
           <AppText color={palette.muted} variant="caption">
-            누적 점수 12,450점
+            누적 점수 {snapshot.summary.data?.totalScore.toLocaleString('ko-KR') ?? '—'}점
           </AppText>
+          {snapshot.summary.error ? <AppText color={palette.danger}>{snapshot.summary.error}</AppText> : null}
+          {snapshot.summary.status === 'loading' ? <AppText>계정 점수 조회 중…</AppText> : null}
+          <AppButton onPress={() => { void store.loadHome(); }} variant="ghost">계정 점수 새로고침</AppButton>
         </View>
 
         <Divider />
@@ -140,10 +239,54 @@ export default function MyPageScreen() {
           ))}
 
           <Divider />
+          <SettingsRow
+            accessibilityRole="link"
+            disabled={openingLegalLink !== null}
+            label="개인정보처리방침"
+            onPress={() =>
+              openConfiguredLegalLink('privacy', '개인정보처리방침')
+            }
+          />
+
+          <Divider />
+          <SettingsRow
+            accessibilityRole="link"
+            disabled={openingLegalLink !== null}
+            label="계정 삭제 안내"
+            onPress={() =>
+              openConfiguredLegalLink('account-deletion', '계정 삭제 안내')
+            }
+          />
+
+          <Divider />
+          <Pressable
+            accessibilityLabel="계정 삭제"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: accountDeletionPending }}
+            disabled={accountDeletionPending}
+            onPress={explainAccountDeletion}
+            style={({ pressed }) => [
+              styles.row,
+              accountDeletionPending && styles.disabled,
+              pressed && { backgroundColor: palette.surface },
+            ]}>
+            <AppText
+              color={palette.danger}
+              style={styles.rowLabel}
+              variant="label">
+              계정 삭제
+            </AppText>
+          </Pressable>
+
+          <Divider />
           <Pressable
             accessibilityLabel="로그아웃"
             accessibilityRole="button"
-            disabled={action === 'logging-out'}
+            accessibilityState={{
+              disabled:
+                action === 'logging-out' || accountDeletionPending,
+            }}
+            disabled={action === 'logging-out' || accountDeletionPending}
             onPress={logoutSession}
             style={({ pressed }) => [styles.row, pressed && { backgroundColor: palette.surface }]}>
             <AppText color={palette.danger} style={styles.rowLabel} variant="label">
@@ -159,6 +302,9 @@ export default function MyPageScreen() {
 const styles = StyleSheet.create({
   content: {
     paddingBottom: dailyupSpacing.six,
+  },
+  disabled: {
+    opacity: 0.45,
   },
   nickname: {
     fontFamily: dailyupFonts.bold,

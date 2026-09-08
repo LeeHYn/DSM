@@ -47,6 +47,17 @@ beforeEach(() => {
   });
 });
 
+async function authenticateCurrentUser(): Promise<void> {
+  tokenStore.read.mockResolvedValue('old.secret');
+  authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+  authenticatedClient.request.mockResolvedValueOnce({
+    userId: 'user-1',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+  await controller.bootstrap();
+  authenticatedClient.request.mockReset();
+}
+
 it('starts in bootstrapping before the provider effect runs', () => {
   expect(controller.getSnapshot()).toEqual({
     state: { status: 'bootstrapping' },
@@ -732,4 +743,159 @@ it('keeps local malformed-profile cleanup successful when server revoke is offli
     TOKEN_PAIR.refreshToken,
   );
   expect(controller.getSnapshot().state.status).toBe('unauthenticated');
+});
+
+it('deletes the authenticated account before clearing the local session', async () => {
+  await authenticateCurrentUser();
+  tokenStore.readAndClear.mockResolvedValue('record.secret');
+  authenticatedClient.request.mockResolvedValue(undefined);
+
+  await expect(controller.deleteAccount()).resolves.toBe(true);
+
+  expect(authenticatedClient.request).toHaveBeenCalledWith({
+    path: '/auth/me',
+    method: 'DELETE',
+    responseMode: 'empty',
+  });
+  expect(tokenStore.readAndClear).toHaveBeenCalledTimes(1);
+  expect(controller.getAccessToken()).toBeNull();
+  expect(controller.getSnapshot()).toEqual({
+    state: { status: 'unauthenticated' },
+    action: 'idle',
+    error: null,
+  });
+});
+
+it('shares one pending account deletion between duplicate callers', async () => {
+  await authenticateCurrentUser();
+  let resolveDeletion!: () => void;
+  const deletionResponse = new Promise<void>((resolve) => {
+    resolveDeletion = resolve;
+  });
+  authenticatedClient.request.mockReturnValue(deletionResponse);
+
+  const first = controller.deleteAccount();
+  const second = controller.deleteAccount();
+
+  expect(first).toBe(second);
+  expect(controller.getSnapshot().action).toBe('deleting-account');
+  expect(authenticatedClient.request).toHaveBeenCalledTimes(1);
+
+  resolveDeletion();
+  await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+});
+
+it('keeps sharing the deletion while confirmed server success is clearing storage', async () => {
+  await authenticateCurrentUser();
+  let signalClearStarted!: () => void;
+  const clearStarted = new Promise<void>((resolve) => {
+    signalClearStarted = resolve;
+  });
+  let resolveClear!: () => void;
+  const clearGate = new Promise<void>((resolve) => {
+    resolveClear = resolve;
+  });
+  authenticatedClient.request.mockResolvedValue(undefined);
+  tokenStore.readAndClear.mockImplementation(async () => {
+    signalClearStarted();
+    await clearGate;
+    return 'record.secret';
+  });
+
+  const first = controller.deleteAccount();
+  await clearStarted;
+  const second = controller.deleteAccount();
+
+  expect(second).toBe(first);
+  expect(authenticatedClient.request).toHaveBeenCalledTimes(1);
+
+  resolveClear();
+  await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+});
+
+it.each([
+  ['network', new ApiError('network', 'diagnostic-network-message')],
+  ['timeout', new ApiError('timeout', 'diagnostic-timeout-message')],
+  ['http', new ApiError('http', 'diagnostic-http-message', { status: 503 })],
+] as const)(
+  'keeps the current session after a %s account deletion failure',
+  async (_kind, error) => {
+    await authenticateCurrentUser();
+    authenticatedClient.request.mockRejectedValue(error);
+
+    await expect(controller.deleteAccount()).resolves.toBe(false);
+
+    expect(controller.getSnapshot().state.status).toBe('authenticated');
+    expect(controller.getSnapshot().action).toBe('idle');
+    expect(controller.getSnapshot().error).toMatchObject({
+      kind: error.kind,
+      status: error.status,
+    });
+    expect(controller.getSnapshot().error?.message).not.toBe(error.message);
+    expect(controller.getAccessToken()).toBe(TOKEN_PAIR.accessToken);
+    expect(tokenStore.readAndClear).not.toHaveBeenCalled();
+  },
+);
+
+it('reports a clear recovery state after confirmed server deletion', async () => {
+  await authenticateCurrentUser();
+  authenticatedClient.request.mockResolvedValue(undefined);
+  tokenStore.readAndClear.mockRejectedValue(
+    new ApiError('storage', 'diagnostic-storage-message'),
+  );
+
+  await expect(controller.deleteAccount()).resolves.toBe(true);
+
+  expect(controller.getAccessToken()).toBeNull();
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'storage-error',
+    operation: 'clear',
+  });
+});
+
+it('fences a late refresh after confirmed account deletion', async () => {
+  await authenticateCurrentUser();
+  tokenStore.read.mockResolvedValue('record.secret');
+  authApi.rotateRefreshToken.mockReturnValue(refreshDeferred);
+  authenticatedClient.request.mockResolvedValue(undefined);
+
+  const refresh = controller.refreshAccessToken();
+  await expect(controller.deleteAccount()).resolves.toBe(true);
+  resolveRefresh(TOKEN_PAIR);
+  await Promise.allSettled([refresh]);
+
+  expect(controller.getAccessToken()).toBeNull();
+  expect(controller.getSnapshot().state.status).toBe('unauthenticated');
+});
+
+it('does not clear a newer session when an old account deletion finishes late', async () => {
+  await authenticateCurrentUser();
+  let resolveDeletion!: () => void;
+  const deletionResponse = new Promise<void>((resolve) => {
+    resolveDeletion = resolve;
+  });
+  const newerPair = {
+    accessToken: 'new.header.payload.signature',
+    refreshToken: 'new.record.secret',
+  };
+  authenticatedClient.request
+    .mockReturnValueOnce(deletionResponse)
+    .mockResolvedValueOnce({
+      userId: 'user-2',
+      onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+    });
+  authApi.exchangeProviderToken.mockResolvedValue(newerPair);
+
+  const deletion = controller.deleteAccount();
+  await controller.signIn('GOOGLE', 'new-provider-token');
+  resolveDeletion();
+
+  await expect(deletion).resolves.toBe(false);
+  expect(tokenStore.readAndClear).not.toHaveBeenCalled();
+  expect(controller.getAccessToken()).toBe(newerPair.accessToken);
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'authenticated',
+    userId: 'user-2',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
 });

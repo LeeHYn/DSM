@@ -31,5 +31,22 @@ return { Map input ->
         errors << 'API_BASE_URL must be HTTPS with a host, without credentials, query or fragment'
     }
     if (!input.env?.GOOGLE_WEB_CLIENT_ID?.toString()?.trim()) errors << 'Missing GOOGLE_WEB_CLIENT_ID'
+    ['PRIVACY_POLICY_URL', 'ACCOUNT_DELETION_URL'].each { key ->
+        def legalUrl = input.env?.get(key)?.toString()?.trim()
+        if (!legalUrl) {
+            errors << "Missing ${key}"
+        } else {
+            try {
+                def uri = new URI(legalUrl)
+                def host = uri.host?.toLowerCase()
+                if (uri.scheme != 'https' || !host || uri.userInfo != null ||
+                    host == 'invalid' || host.endsWith('.invalid')) {
+                    throw new IllegalArgumentException()
+                }
+            } catch (Exception ignored) {
+                errors << "${key} must be public HTTPS with a host and without credentials"
+            }
+        }
+    }
     errors
 }
