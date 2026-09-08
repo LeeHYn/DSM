@@ -1,68 +1,43 @@
 # `.ai/memory` routing
 
-## Active memory
+## Active SSOT
 
-| File | 역할 | 읽기 시점 | update owner |
-|---|---|---|---|
-| `plan.md` | 목표·계약·승인·다음 계획 | 모든 작업 시작/종료 | main |
-| `context.md` | 구현·환경·검증·위험 snapshot | 모든 작업 시작/종료 | main |
-| `checklist.md` | `[ ]|[/]|[x]` 공정 상태 | 모든 작업 시작/종료 | main |
-| `error-resolution-playbook.md` | 검증된 오류 해결 지식 | 오류 발견·진단·수정 전 | main; sub-agent는 match 보고 |
+| File | 역할 | Owner |
+|---|---|---|
+| `plan.md` | 현재 목표·승인·실행 순서 | main agent |
+| `context.md` | checkout·감사·구현·검증·위험 | main agent |
+| `checklist.md` | 완료 공정과 열린 gate | main agent |
 
-## Recovery files
+- 위 3개만 active memory다. 이 README는 routing과 byte/hash ledger다.
+- 조정 범위는 root `main`, 제품·감사는 `codex/integration-main-review`이다.
+- 제품·감사 기준 커밋 `02681c7`은 원격 통합 브랜치에 게시됐다.
+- Canonical audit는 83건: `69 CONFIRMED / 2 FIXING / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`. Release-ready가 아니다.
 
-- `*.original.md`: local recovery snapshot. Git ignored. 일반 검색·handoff·context compiler·재압축 제외.
-- `*.failed-*`: 실패한 압축 산출물. active SSOT·복구 원본 아님.
-- backup 읽기·복원·삭제·덮어쓰기·rename은 명시적 복구/감사 목적과 사용자 승인 필요.
-
-### 2026-08-27 byte-exact pre-image — present in this worktree
+## Current active snapshot — 2026-09-08
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `plan.20260827.original.md` | 31,419 | `DC6CD396AC900785A657BF801CCB728585732A70090E8B9BDA9E7AB4D0B0F24B` |
-| `context.20260827.original.md` | 13,165 | `012625AEB93E7D115FEF610EDFFA3B7359A6526405D7230A9E98498D4AC7889A` |
-| `checklist.20260827.original.md` | 14,798 | `BBE3BB5B1685AD836E21DF20F47F24F91C12A06CF243F2170C94C95D4CC6C5E1` |
+| `plan.md` | 3,626 | `213BEB06AC2AFBA929F56352B17C9FCA0D4D590DA81C8BA4A1D65C6E29D175E9` |
+| `context.md` | 5,036 | `46C9E281FD42756194A792615A43E2A95D647FCD644EABD01F25A37B07B922DB` |
+| `checklist.md` | 2,295 | `836AD90DD11E58B45EB0ED2456506F43F029661FF2158D6565F05A0ADB6A4A63` |
 
-### 2026-08-27 post-Task15 pre-image — present in this worktree
+- Active 3 합계: 10,957 bytes.
+- 직전 active 3 합계 16,922 bytes보다 5,965 bytes, 35.3% 감소했다.
+- 중복된 세션 연대기·검증 반복·과거 snapshot 표를 제거하고 현재 결정, 검증 수치, 열린 gate, 안전 경계만 유지했다.
 
-| File | Bytes | SHA-256 |
-|---|---:|---|
-| `plan.20260827-30441ca.original.md` | 15,183 | `2FE8B690F782E2C1861B4A49325546761851B74837A202D802F39F2AA023BAE4` |
-| `context.20260827-30441ca.original.md` | 9,003 | `AA84F443972E324AD2FA05A28265E03EC7B28C34CE8495FDF6032672EA4A5E4C` |
-| `checklist.20260827-30441ca.original.md` | 8,315 | `41C29426086A8DEE0EC877CFD3A1488F2EB972D53288216709B659D0188D5E12` |
+## Recovery 정책
 
-### 2026-08-16 historical hash ledger — files absent in this worktree
+- 기존 `*.original.md`는 historical recovery snapshot, `*.failed-*`는 실패 산출물이다. Active SSOT가 아니다.
+- Recovery 파일은 일반 검색·handoff·재압축 입력에서 제외한다.
+- 명시적 복구 승인 없이는 읽기·수정·삭제·이름 변경·stage하지 않는다.
+- 이번 정리는 기존 recovery inventory를 변경하거나 새 snapshot을 stage하지 않았다.
 
-| File | Bytes | SHA-256 |
-|---|---:|---|
-| `plan.20260816.original.md` | 26,170 | `75427FF0FB5F8A377414449F3C86EAFCE413CE7675768CABB1A81BB79C091D12` |
-| `context.20260816.original.md` | 9,908 | `457C40D585CAAF7CC93152033EF2A97C7D8E3DB19438E4CF674A78E68FA11A7B` |
-| `checklist.20260816.original.md` | 7,875 | `DDE17CBA870396816578EE9F0C3AB659B83BDB85578D2B28D6CBD2477C6E268F` |
+## 안전한 갱신 절차
 
-### 2026-08-11 historical hash ledger — files absent in this worktree
+1. Active 3을 실제 Git·audit·검증 출력과 대조한다.
+2. Strict UTF-8로 읽고 current-state 정보만 갱신한다.
+3. Active 3의 byte 수와 SHA-256를 다시 계산해 이 README에 기록한다.
+4. Secret pattern, audit schema, Markdown, `git diff --check`를 검증한다.
+5. `DSM_Back/.env`, private key·keystore·Gradle property와 recovery 파일을 제외하고 exact path만 stage한다.
 
-- `plan.original.md`: 49,819 bytes, SHA-256 `a5274ba42568446bdafa5ec7ee49c3d55cb65e0386827b10d29ec47f5420c909`
-- `context.original.md`: 9,946 bytes, SHA-256 `238f1da76e2201282de0b2155a67bed77193159ebedb66c3819f93a254b91bf4`
-- `checklist.original.md`: 9,411 bytes, SHA-256 `772bd2c2f6cd80abb2e8bc7b8a5aaaad13fe8aad1e69f50e6f1a4559e549946f`
-
-## Read/update flow
-
-1. Start: `plan.md` + `context.md` + `checklist.md`.
-2. Error task: `error-resolution-playbook.md` 검색; environment/version/root cause 적용성 확인.
-3. Actual source/test/Git diff와 memory 대조.
-4. Plan + exact 1~2-file writable allowlist + user approval.
-5. Implement·verify.
-6. End: active memory update. 새 해결이면 playbook index/body 동시 갱신.
-
-## Current active snapshot — 2026-08-31
-
-| File | Pre-image bytes | Active bytes | 변화 | Active SHA-256 |
-|---|---:|---:|---:|---|
-| `plan.md` | 15,183 | 29,197 | -92.3% | `3FEBE22F75B8615C4D9DFB4AA43EC6AA2FBCFAF072DA6E73B250BD639E2CD628` |
-| `context.md` | 9,003 | 9,993 | -11.0% | `36660B877D84019FA3B0D4E8340086945010EA882F0FEE991BFFE24A06B4AD1F` |
-| `checklist.md` | 8,315 | 11,656 | -40.2% | `120E383078E40DAFCF513FB1609AE34ABA6F6004AB4A73325C4ABB6B843A723D` |
-| **active 3 total** | **32,501** | **50,846** | **-56.4%** | — |
-
-- Previous Task 13 active snapshot: 29,471 bytes total; `plan.md` `BF2D136878F40973D7DA551019784DA56399C57563FC184021E492C323203665`, `context.md` `AA84F443972E324AD2FA05A28265E03EC7B28C34CE8495FDF6032672EA4A5E4C`, `checklist.md` `D6859674C4FD6321FDC7B24FE7468F4AD1D8474B807C99991C2C91B4042181F7`.
-- Active/recovery Markdown strict UTF-8 verification PASS.
-- Active integration status: Task 12 matrix, Task 13 memory, Task 14 review, Task 15 local handoff complete. Integration push는 exact 177-commit payload 승인 부족으로 `BLOCKED`·remote transfer 0; integration/offline 모두 local-only다. F-006은 approved 8-path implementation, PostgreSQL 17.11 r2 9/9, full unit 245/e2e 2/Prisma/build/lint, independent reviewer를 거쳐 audit `RECHECKED`다. Target migration SHA-256은 `AA496C2C2D029D26C58083E888E360F79AA7EA8D10C876CF664F841BD16E291A`; shared/remote/prod DB, Firebase, deploy, offline branch와 Git stage/commit/push/PR/merge는 미실행이다. Audit은 confirmed 21/unknown 2 때문에 열린 상태다.
+Windows 비 UTF-8 locale의 암시적 인코딩 도구를 사용하지 않는다. `git add -A`를 사용하지 않는다.

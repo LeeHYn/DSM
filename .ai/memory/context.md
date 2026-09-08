@@ -1,83 +1,55 @@
-# 현재 프로젝트 맥락 — 2026-08-17
+# DSM 현재 맥락 — 2026-09-08
 
-## Main integration review — 2026-08-26
+## Checkout·책임 경계
 
-- active `C:\dsm-integration-review`/`codex/integration-main-review`, local HEAD `d8d6937`; origin push는 exact remote·branch·177-commit payload 승인 부족으로 process 시작 전 `BLOCKED`, remote ref `6fa66eb`, divergence `0 177`. `main`/`origin/main` `2e25d9811db39a69a5ee6fa2f16d386d6bd18d81`, canonical `2a4e9916765b505037e1c533735d84cd9f251ccf`. SSOT: `docs/superpowers/plans/2026-08-25-main-branch-integration-review.md`, `docs/superpowers/specs/2026-08-25-main-branch-integration-review-design.md`, `docs/reviews/2026-08-25-main-integration-conflict-review.md`.
-- Task 11 PostgreSQL: empty 5/canonical 4/seed 1·1·2/forward 5/invariant/captured cleanup PASS, review `APPROVED`. Task 12: plans `046d67f`/`0ecbf2d`, style `69d3154`, Node `v24.19.0`/npm `11.19.0`; Backend install 882·24/215, Front install 988·18/162+type/lint, Android 365, lock/offline 66/66+28-source, Git/SDD PASS.
-- Task 13 plan `80ab65b`, active 3+README exact 4-path closure. Task 14 plan `2815f6d`, `.codex/config.toml` 삭제 `4533c0c`, report `c9e9ba9`; original findings `ADDRESSED`, 신규 P0-P2 없음, Whole-branch `APPROVED`. Task 15 local handoff·memory closure complete.
-- offline `C:\dsm-offline-learning-site`/`codex/offline-learning-site`/`2cbb088`, base `43145b6`, source `fb54b5d`; ancestry `0 1`, four paths, 66 tests·28-source PASS. Six pinned refs·canonical ancestry verified; integration과 분리·local-only.
-- integration branch origin publish 미완료·local-only. PR·`main`/shared·remote DB/deploy 및 `dsm-back-dev-db-1` 접근 금지. Product audit `20260817-release-audit-full-project`: 26건(confirmed 21, unknown 2, rechecked 3), release-ready 아님; `F-006`/`F-016`/`F-025` RECHECKED.
+- 조정: `C:\DEV`, `main`. 제품·감사: `C:\dsm-integration-review`, `codex/integration-main-review`.
+- 제품·감사 기준 커밋은 `02681c7`이며 원격 통합 브랜치에 게시됐다. Root 완료와 제품 release-ready 판정은 구분한다.
+- Canonical audit는 integration의 `.ai/audits/20260817-release-audit-full-project/findings.jsonl`이다.
+- Root `.ai/memory`의 active SSOT는 `plan.md`, `context.md`, `checklist.md`; `README.md`는 routing·hash ledger다.
+- Backend는 NestJS·Prisma v6·PostgreSQL, Front는 React Native Community CLI 기반 Android 앱이다.
 
-## Stack·환경
+## Canonical audit
 
-- Backend: NestJS, Prisma v6, PostgreSQL UTC `timestamptz`.
-- Front: Android-only React Native `0.83.10`, Community CLI `20.2.0`, React Navigation, `react-native-keychain@10.0.0`, `react-native-config@1.6.1`; Expo runtime/CLI/Router·Web/iOS 제거.
-- Google native: `react-native-nitro-google-signin@1.3.0`, `react-native-nitro-modules@0.36.5`.
-- integration toolchain: Node `v24.19.0`, npm `11.19.0`, Docker 29.6.1, Microsoft OpenJDK `21.0.12.1`, Android platform 36/build-tools 36.0.0/NDK `27.1.12297006`.
-- local product DB legacy: PostgreSQL 17 Alpine `127.0.0.1:5432/dsm`, UTC, `dsm-back-postgres-data`; 4 canonical migrations, zero drift. Integration checks use only named `--rm` disposable DBs.
+- F-001~F-083, 83건: `69 CONFIRMED / 2 FIXING / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`; 심각도는 `P1 10 / P2 53 / P3 20`.
+- Ledger는 320,321 bytes, SHA-256 `742EFEA9A9BDC01A674380458F6808B1709E716594F47F38FF906A0BDF7988F8`.
+- Strict UTF-8 JSON, schema, contiguous ID, fingerprint uniqueness·basis hash, status history 검증이 통과했다.
+- `RECHECKED`: F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083.
+- `UNKNOWN`: F-003, F-013, F-017. `REFUTED`: F-066. `FIXING`: F-067, F-068.
+- Round 12·13은 targeted revalidation이므로 자유 탐색 연속 조건에 포함하지 않는다. Round 11만 zero-new-confirmed-P0~P2 한 번으로 계산한다.
 
-## Android local environment
+## 게시된 구현
 
-- Android Studio Quail 3 `2026.1.3 Patch 1`: `C:\Users\jemie\AppData\Local\Programs\AndroidStudioQuail\android-studio\bin\studio64.exe`.
-- SDK `C:\Users\jemie\AppData\Local\Android\Sdk`; JDK 17 `C:\Users\jemie\.jdks\ms-17.0.20`; NDK `27.1.12297006`; API 36 `Medium_Phone` AVD.
-- product worktree `C:\DEV\fsr`, Android native 52 files tracked. Long-path Ninja issue resolved by short worktree + generated CMake cache rebuild.
-- pure RN Gradle sync/build/install, Metro `index.js`, login render PASS. fresh `assembleDebug` 365 tasks. Expo native modules absent; `org.gradle.parallel=false`, `org.gradle.tooling.parallel=false`.
+- F-005: Home·Ranking·MyPage·TaskSheets가 authenticated REST와 userId/epoch scoped ProductStore를 사용한다. Prototype context에는 theme·toast UI 상태만 남겼다.
+- F-083: Backend는 필수 UUIDv4 `clientMutationId`를 Task PK로 사용한다. 동일 owner·payload replay는 side effect 없이 반환하고 mismatch·foreign·deleted는 정보 비노출 409로 처리한다. `P2002`·`P2034` 경쟁은 동일 ID 재조회로 수렴한다.
+- F-083 Front는 preflight부터 single-flight이며 POST 시작 뒤 ambiguous 오류에만 ID를 유지한다. 성공·definite 오류·dispose에서 해제한다.
+- F-067: 인증된 `DELETE /auth/me`가 204를 반환한다. User row lock 뒤 blocking NotificationDelivery를 먼저 삭제하고 User cascade를 수행하며 반복 호출은 멱등적이다.
+- F-067 Android session은 삭제를 single-flight와 epoch로 fence한다. 서버 확인 전 실패에는 세션을 유지하고, 성공 뒤 Keychain을 지우며 ProductStore를 dispose한다. MyPage는 두 단계 파괴 확인을 요구한다.
+- F-068: 로그인과 MyPage가 HTTPS privacy 링크를 열고 MyPage가 외부 삭제 안내를 제공한다. Release는 URL 누락, HTTP, credential, `.invalid` host를 거부한다.
+- F-066: Android-only 범위를 현재 v1.3 기획 문서 3개에 명시했다.
 
-## Auth·session
+## 검증 스냅샷
 
-- Google/Kakao backend; Apple actual verification pending. Google `GOOGLE_CLIENT_ID` required + audience verification.
-- access 15m, refresh 30d. refresh `<recordId>.<secret>`, PK lookup+1 bcrypt; conditional revoke+replacement same transaction; family `sessionId` rotation. refresh/logout user-row `FOR UPDATE` lock.
-- Front access memory-only; refresh Android Keychain versioned service. serialized mutation queue, epoch guard, verified delete+tombstone.
-- authenticated client: first `401` single-flight refresh, max 1 replay, generation/epoch fences. controller first state `bootstrapping/recovering`; profile/onboarding fences; protocol/storage fail-closed; offline logout local clear + best-effort revoke.
-- `/auth/me`, idempotent onboarding, strict API URL/runtime validation, sanitized errors, exact-origin CORS complete.
+| 범위 | 통과 결과 | 열린 한계 |
+|---|---|---|
+| F-083 | Backend full 266·e2e 2, Front full 197, 양쪽 type/lint, PostgreSQL concurrency 10/10, Android debug 365, Metro, 독립 recheck 2건 | process restart/offline durable intent, device socket-cut, 구버전 rollout |
+| F-005/F-039 | Product 36, Front 23 suites/197, typecheck·lint, 독립 recheck | physical device relaunch |
+| F-040 | NodeNext/spec typecheck, Backend 266·e2e 2, PostgreSQL 10/10, lint, 독립 recheck | 원 condition 잔여 위험 없음 |
+| F-035 | Groovy/Gradle release gates, Front 197, Android debug 281, 독립 recheck | actual signer·OAuth·signed device |
+| F-067/F-068 | Backend 24 suites/269·e2e 2·build/lint, PostgreSQL 17.6 cascade 1/1, Front 24 suites/226·typecheck·lint 0/30, Android debug 281, URL 누락 차단 | 공개 URL·외부 처리·signed device·Play Console·독립 closure recheck |
 
-## Android Google integration
+- F-067 PostgreSQL test는 6개 migration 뒤 대상 사용자의 10개 계정 범위 관계를 제거하고 다른 사용자를 보존했다.
+- F-067 최종 검토에서 서버 204 후 Keychain 정리 중 중복 호출 경합을 재현·수정했으며 session test 44개와 Front 전체 226개가 통과했다.
+- Disposable PostgreSQL container와 ADB/Docker 보조 process는 종료했다.
 
-- application ID `com.dsm.dailyup`. adapter owns native ID-token/cancel/sanitized failure; `SessionController.signIn('GOOGLE', token)` owns backend exchange·Keychain·routing.
-- `GOOGLE_WEB_CLIENT_ID` and backend `GOOGLE_CLIENT_ID` must share Web OAuth audience; no frontend secret. ID token memory-only, no storage/log/error serialization.
-- current debug signer Android OAuth client added separately under user approval; existing clients unchanged. `F-025` RECHECKED. New-PC/release/Play signers need separate clients.
-- actual smoke: Google token→`/auth/login`→Keychain, force-stop/relaunch Home+refresh rotation, logout active refresh 0, post-logout Login. `F-026` provider failure→silent cancellation remains `CONFIRMED P2`.
-- `DSM_Back/.env` absent. smoke used ignored public client ID as process-only backend audience; no persistent repository config.
-- specs: `docs/superpowers/specs/2026-08-12-android-google-provider-login-design.md`, `docs/superpowers/plans/2026-08-12-android-google-provider-login.md`, `docs/superpowers/plans/2026-08-15-android-studio-local-development.md`.
+## 운영·보안 한계
 
-## Task·Ranking·Notification
+- 공개 privacy/deletion URL과 운영자 삭제 요청 절차가 없다. Google Play 앱 내부·외부 삭제 경로와 Data safety 증거는 아직 충족 확인되지 않았다.
+- 실제 upload/Play signer, production OAuth, signed-device cold start·link open, production readiness mapping, 운영 DB·Firebase 검증은 미완료다.
+- `C:\DEV\DSM_Back\.env`, keystore, private Gradle property는 memory·commit 대상이 아니다.
+- Dependency·lockfile와 Prisma schema·migration은 이번 통합에서 변경하지 않았다.
 
-- Task mutation·schedule sync·score recompute same Serializable transaction; Prisma `P2034` callback max 2 retries. Category actor-owned/default only.
-- UTC score 10/20/30 × 1.5/1.3/1.0/0.7, cap 900, 6 tiers. F-006 implemented/`RECHECKED`: per-user UTC `startAt` day max 20 active; score only same-day non-null `completedAt`+`COMPLETED`; late/early/null=0; completion timestamp transitions; data-only projection repair, no remote/prod DB. Migration follows current `20260825` chain and uses explicit `BEGIN`+Serializable+`COMMIT`, timezone-independent UTC bounds, required `DailyScore` metadata, all-User zero/tier enum projection and literal score/tier oracles. Achievement rate is numerator-first half-up in app+SQL, preserving max-20 behavior and canonicalizing legacy 57/800 to 7.13.
-- DAILY/WEEKLY/TOTAL ranking complete; Redis/batch/WebSocket pending.
-- 12A token lifecycle + Task-`NotificationSchedule` atomic sync; foreign owner token/FID pre-mutation 409.
-- 12B ADC only; Cron 30s, schedule 100, delivery 500, lease 5m, heartbeat 60s, max 3 device retries. ambiguous post-`sendStartedAt`→terminal `UNKNOWN`; payload `REMINDER_SYNC`/`version=1`; 12C before `FCM_DISPATCH_ENABLED=false`.
-- F-007 cancellation race: `ACCEPTED_RISK` + `MITIGATION_ONLY`.
+## 복구·중단 기록
 
-## 검증 기준선
-
-- integration final matrix: Backend 24 suites/215 tests, Prisma/build/lint; Front 18/162+type/lint; Android 365; lock roots; offline 66/66+28-source; Git/SDD PASS. Task 11 migration/invariant PASS.
-- canonical: Backend 23/214 + e2e 2 + build/lint/Prisma; Front 18/162 + type/lint; Android 365 tasks. URL cleanup/product diff/status gates PASS.
-- remote clean product checkout `e1f1a123d2822d02d7ccbe33f7cb9bb89f77c5c2`: Android tracked 52, forbidden 0; npm/frontend/Gradle gates PASS. F-016 closure remote HEAD `d9ff792f1b1f8161547e7ef7a63d50f636e615aa`.
-- Auth audit F-001~F-005 RECHECKED. Notification audit F-007 only accepted risk, other 12 RECHECKED. dependency audit 32(critical 0; Backend 15, Frontend 17).
-- Prisma generate serial with build/e2e due Windows DLL rename `EPERM`.
-- F-006 runtime: Node 24.19.0/npm 11.19.0/Prisma 6.19.3; unit 24 suites/245, e2e 2, focused Tasks 54/policy 18/Scores 11, PostgreSQL 17.11 r2 9/9, Prisma validate/generate/build/full ESLint PASS. Target migration SHA-256 `AA496C2C2D029D26C58083E888E360F79AA7EA8D10C876CF664F841BD16E291A`; atomic rollback/exactly-once/19+2 concurrency PASS; listener cleanup 0.
-
-## Git·외부 경계
-
-- Integration branch origin push `BLOCKED`; remote transfer 0, local-only. `main`/offline/Android product refs는 불변·분리.
-- 추가 Git stage/commit/push, PR/merge/deploy와 remote/prod DB/Firebase send는 새 승인 필요. No force push/reset/drop.
-- implementation exact 1~2 files; main owns approvals/shared memory/audit. high risk=`change-gate`; release=`release-audit`.
-- credential/token/SHA/client ID full values never Git/memory/chat/log.
-
-## 다음 작업·잔여 위험
-
-1. F-006 구현·disposable PostgreSQL 17.11·독립 recheck·audit closure 완료. Audit은 confirmed 21/unknown 2 때문에 열린 상태; direct DB write와 운영 migration은 별도 gate다. Git action은 미승인 상태로 중단한다.
-2. 남은 P1/UNKNOWN/P2-P3 audit → M12C → Firebase sandbox → dispatch decision → WebSocket → Redis/batch.
-
-- release signing/.env/OAuth provisioning, production, actual multi-connection refresh/logout, Firebase delivery/F-007 race unverified.
-- Task/Score/Ranking Android UI prototype, template branding, dependency 32, Apple, parser edge tests, revoked-token hook, UTC Cron pending.
-- 2026-08-31 F-006 execution은 exact 8 product paths, spec/plan, audit pair와 active memory만 변경했다. Shared/remote/prod DB, Firebase, deploy, offline branch와 Git stage/commit/push/PR/merge는 실행하지 않았다.
-- Docker 29.6.1/Desktop 4.82.0 backend는 stale runtime socket으로 불용이었다. Official EDB portable PostgreSQL 17.11을 ignored task runtime의 새 data dirs/loopback ports로 대체했고 service 설치 없이 종료했다. Docker container/image/volume과 기존 product DB는 불변이다.
-
-## Memory·지원 환경
-
-- error work searches `error-resolution-playbook.md`; matching `VERIFIED` only, revalidate current checkout. `MITIGATION_ONLY` gates persist.
-- `*.original.md` local recovery, excluded from Git/search/handoff/recompression. Post-Task15 `30441ca` active 3 pre-images are byte-exact ignored backups; existing backups unchanged.
-- `caveman-compress` direct run prohibited by `ER-20260720-014`; no external upload. Local `apply_patch` pass reduced active 3 from 32,501 to 28,737 bytes(11.6%); playbook read-only.
-- Obsidian 1.12.7: `C:\AiWiki\AiProject\DSM`; `Current`→`C:\DEV\.ai\docs`, `Planning`→`C:\DEV\Planing Document`; stale cache recovery `ER-20260722-001`.
+- 이전 세션 중단 원인은 완료된 결과 집계 중 반복 completion-policy error였다. 당시 Git lock, 잔류 test/build process, ledger 손상은 없었다.
+- Parent/child strict UTF-8 parse와 누락된 R11 Backend final 회수를 완료했다.
+- 기존 `*.original.md`·`*.failed-*`는 historical recovery일 뿐 active 입력이 아니다. 현재 압축에서 읽거나 수정하거나 stage하지 않았다.
