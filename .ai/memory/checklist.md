@@ -22,12 +22,16 @@
 - [x] Backend refresh-authenticated family logout·access `sid` 활성 검사 구현과 회귀 검증.
 - [x] Android server-first logout·실패 재시도 UX 구현과 회귀 검증.
 - [x] F-001/F-002 self-review·전체 gate·canonical audit FIXED 전이.
-- [/] 다음 로컬 P2 F-007/F-008/F-009 Task 무결성 범위·결합 영향 진단.
+- [x] F-007 PATCH date `null`이 validation 0건으로 통과하는 현재 실패 재현.
+- [x] F-008 status/completedAt 동기화가 `e2bda53a`에 이미 구현됐고 focused 81/81이 통과함을 source·blame으로 확인.
+- [x] F-009 server·migration 부재와 Android full-date update 호환성 진단.
+- [/] F-007/F-009 최소 구현·실제 PostgreSQL 검증 계획 승인 gate.
 
 ## 열린 gate
 
 - [ ] F-065 API 24~29 malicious-app PoC·OEM patch matrix와 독립 fix-recheck.
 - [ ] F-001/F-002 구현자와 독립된 fix-recheck와 production guard latency·availability 관찰.
+- [ ] F-007/F-008/F-009 구현 뒤 독립 fix-recheck; F-009 기존 invalid active row scan·정정과 CHECK validation.
 - [ ] F-011/F-029/F-030 구현자와 독립된 fix-recheck.
 - [ ] F-069 구현자와 독립된 fix-recheck.
 - [ ] F-069 실제 운영 cardinality·capacity·managed Redis failover·latency 증거.

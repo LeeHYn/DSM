@@ -22,35 +22,26 @@
 - F-068은 login·MyPage에 HTTPS privacy link와 내부 계정 삭제 안내를 제공한다. Release는 URL 누락, HTTP, credential, `.invalid` host를 거부한다.
 - F-001/F-002는 access JWT에 refresh-family `sid`를 넣고 공용 REST guard가 unrevoked·unexpired family row를 요구한다. Logout은 access JWT 없이 refresh token으로 해당 family를 잠가 폐기한다. Android는 서버 성공 전 local token을 보존하고 실패를 retryable 상태로 노출한다.
 - F-065는 API 24 지원과 exported `singleTask` launcher를 유지하면서 MainActivity에 `android:taskAffinity=""`와 `android:allowTaskReparenting="false"`를 선언했다. Package namespace affinity 상속이라는 finding 조건을 제거한다.
-- F-069은 DAILY·WEEKLY·TOTAL 전체 사용자 score, competition rank, total count를 한 번의 parameterized PostgreSQL window query로 계산한다. UTC 경계를 사용하고 0점 사용자도 포함한다.
-- F-011/F-029는 Redis 비구성·최종 miss에서도 같은 window query에 parameterized LIMIT을 붙여 사용한다. 반환 API는 내부 projection metadata를 제거하고 tie rank·userId 안정 정렬·전체 사용자 0점 모집단을 cache와 동일하게 유지한다.
-- F-030은 요청 시작의 단일 `Date` reference를 cache I/O, projection refresh와 개인 ranking DB 조회 전체에 전달한다.
-- 1분 Cron과 bootstrap warm은 local in-flight coalescing, Redis owner lock, active-generation freshness gate를 사용한다. Cache miss는 한 번의 projection 시도 뒤 bounded window-query DB 계산으로 fallback한다.
-- Redis publication은 immutable generation의 user hash·leaderboard list·completion marker·active pointer 구조다. Chunk data와 TTL은 transaction으로 함께 기록하며 owner-fenced Lua가 active pointer를 교체한다. 직전 generation은 진행 중 reader를 위해 30초만 유지한다.
-- 운영 환경은 유효한 `redis://` 또는 `rediss://` `REDIS_URL`을 fail-closed로 요구한다. Local compose는 loopback Redis 8 healthcheck를 사용하며 Backend 의존성은 exact `@redis/client` 6.2.1이다.
+- F-069은 UTC 기반 전체 사용자 window projection과 fenced immutable Redis generation을 cache-first로 제공한다. 1분 warm·lock·freshness gate·30초 reader grace를 사용하고 운영 `REDIS_URL`은 fail-closed다.
+- F-011/F-029/F-030의 Redis miss DB fallback도 같은 tie rank·0점 포함 모집단·단일 UTC reference 계약을 사용하며 parameterized LIMIT으로 bounded된다.
 
 ## F-069 검증 증거
 
-- Backend unit 25 suites/293 tests, e2e 2, build, type/lint, Prisma·dependency 검증과 PostgreSQL 17·Redis 8 통합 2/2가 통과했다. 통합은 migration 6개, cache-only API, tie, lock·stale-writer와 current/retired TTL을 확인했다.
-- Benchmark artifact는 36,011 bytes, SHA-256 `B5931E479E8842766AD79FED2AEB373792B012975AB5026408227FBE6767D7DE`다. 50,000 users·350,000 scores·10 cold samples의 projection p99/max는 DAILY 927.706ms, WEEKLY 1,674.051ms, TOTAL 994.351ms였고 concurrency 25 cache p99는 TOP100 22.023ms, personal 4.628ms였다.
-- Active generation은 약 51.4MB, rollover 직후 약 101.0MB, 31초 뒤 약 51.6MB였다. 기본 PostgreSQL plan은 temp block 1,121~1,160을 사용했으며 production SLO 증거가 아니다.
-- Disposable service와 임시 결과를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다.
+- Backend 293 unit·e2e 2·build/type/lint와 PostgreSQL 17·Redis 8 통합 2/2가 통과했다. 50,000-user benchmark의 projection p99/max는 0.928~1.674초, cache p99는 4.628~22.023ms, steady generation은 약 51.6MB였다. Production SLO 증거는 아니다.
+- 검증 service·임시 결과를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다.
 
 ## F-001/F-002 검증 증거
 
-- Backend auth 3 suites/32와 전체 26 suites/304, e2e 2, build, source/spec typecheck, full lint, changed-file Prettier와 Prisma validation이 통과했다. Front logout 4 suites/60과 전체 24 suites/229, typecheck, lint 0 errors/30 existing warnings가 통과했다.
-- PostgreSQL 17.10 통합 1/1에서 rotation predecessor로 headerless logout한 뒤 같은 family의 access·refresh가 401이고 다른 family는 200임을 확인했다. Android assembleDebug·lintDebug는 456 tasks로 성공했다.
-- Exact container를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다. Prisma schema·migration과 dependency는 변경하지 않았다.
+- Backend 304·e2e 2·build/type/lint와 Front 229·type/lint, Android 456 tasks가 통과했다. PostgreSQL 17.10 통합 1/1은 logout 뒤 같은 family access·refresh 401과 다른 family 200을 확인했다.
+- Exact container·Docker를 정리했고 Prisma schema·migration·dependency는 변경하지 않았다.
 
 ## F-065 검증 증거
 
-- Merged·packaged manifest가 빈 affinity와 reparenting 비활성화를 유지했고 `assembleDebug` 281 tasks와 `lintDebug` 412 tasks가 통과했다.
-- API 36 emulator cold launch는 4.391초였다. `dumpsys`는 `taskAffinity=null`, MainActivity 1개와 launcher·recents의 동일 task 재사용을 확인했다. 앱·emulator·ADB는 정리했다.
+- Merged·packaged manifest, Android build/lint와 API 36 cold launch·동일 task 재사용을 확인하고 앱·emulator·ADB를 정리했다.
 
 ## F-011/F-029/F-030 검증 증거
 
-- Focused 2 suites/22, Backend full 25 suites/297, e2e 2, build, source/spec typecheck와 full lint가 통과했다. LIMIT binding·population 검증·fallback 위임·UTC rollover를 포함한다.
-- PostgreSQL 17·Redis 8 migration 6개와 통합 2/2에서 fallback TOTAL `1,2,2`, DAILY inactive `0점/3위`, WEEKLY `1,1,3`을 확인했다. Exact container와 Docker를 정리했으며 schema·dependency·API shape·Front·Android는 변경하지 않았다.
+- Focused 22, Backend 297·e2e 2·build/type/lint와 PostgreSQL 17·Redis 8 통합 2/2가 tie·0점 모집단·UTC rollover를 확인했다. Schema·dependency·API·Front·Android는 변경하지 않았다.
 
 ## 잔여 위험·외부 gate
 

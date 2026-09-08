@@ -26,12 +26,22 @@
 - F-069는 PostgreSQL window projection과 fenced Redis generation을 cache-first로 제공하고, F-011/F-029/F-030 DB fallback도 같은 rank·population·UTC 계약으로 통일했다.
 - F-065는 minSdk 24와 exported `singleTask` launcher를 유지하면서 MainActivity의 `taskAffinity`를 비우고 task reparenting을 비활성화했다.
 
-## 다음 실행
+## F-007/F-008/F-009 실행 계약 — 승인 대기
 
-1. 현재 CONFIRMED P1은 0건이다. 다음 canonical P2 중 결합된 Task 무결성 범위인 F-007/F-008/F-009의 null date, status/completedAt, startAt/endAt 계약을 함께 진단한다.
-2. F-001/F-002/F-011/F-029/F-030/F-065/F-069의 구현자 독립 fix-recheck와 F-069 운영 성능·failover 증거를 확보한다.
-3. F-067/F-068 공개 URL·외부 삭제 절차·signed-device·Play Console 증거를 확보한다.
-4. 남은 finding은 P2→P3 순으로 수정하고, 서로 다른 자유 탐색에서 zero-new-confirmed-P0~P2 연속 두 round를 확보한다.
+- 재현 결과 F-007은 `IsOptional`이 PATCH `null` 검증을 건너뛰어 epoch 변환을 허용하고, F-009는 create·부분 update의 최종 `startAt < endAt` 관계를 server·DB 어디서도 강제하지 않는다.
+- 오류 해결 playbook의 F-007/F-008/F-009 표기는 과거 notification audit ID라 현재 root cause와 일치하지 않았고 재사용 가능한 VERIFIED record는 없다.
+- F-008은 `e2bda53a341d295f1e2f08032230d0325c6b7ba6`에서 일반 status PATCH의 `completedAt` 전이를 이미 동기화했고 현재 회귀 3건이 통과한다. 새 제품 수정 없이 전체 검증 후 audit를 실제 source에 맞춘다.
+- 추천 구현은 Update 날짜의 `undefined`만 생략하고 `null`은 400으로 거부하며, service가 날짜를 방어적으로 parse한 뒤 create와 기존 값이 병합된 update 구간을 write 전 검사하는 것이다. Android 편집은 두 날짜를 함께 전송하므로 변경이 없다.
+- DB에는 active Task의 `endAt > startAt` CHECK를 `NOT VALID`로 추가한다. 신규·수정 row는 즉시 강제하면서 기존 오염 row 때문에 deploy 전체가 중단되지 않게 하며, 기존 row scan·정정 후 constraint validation은 잔여 운영 gate로 둔다.
+- 제품·검증 writable allowlist: `DSM_Back/src/tasks/dto/update-task.dto.ts`, `DSM_Back/src/tasks/tasks.controller.spec.ts`, `DSM_Back/src/tasks/tasks.service.ts`, `DSM_Back/src/tasks/tasks.service.spec.ts`, `DSM_Back/prisma/migrations/20260909_enforce_task_temporal_integrity/migration.sql`, `DSM_Back/test/task-temporal-integrity.pg-spec.ts`.
+- 기록 writable allowlist: canonical audit의 `findings.jsonl`·`README.md`, active memory 4파일과 검증된 해결이 새 record 조건을 만족할 때의 `error-resolution-playbook.md`다. Front, dependency, Prisma schema와 기존 migration은 제외한다.
+- 성공 기준은 null·역전·0길이·부분 PATCH regression, 기존 F-008 전이, focused/full unit·e2e·build·type·lint·format·Prisma와 실제 PostgreSQL migration/direct-write 검증 통과다. 자체 change-gate 후 세 finding은 FIXED까지만 전이하고 독립 fix-recheck 전에는 RECHECKED로 올리지 않는다.
+
+## 후속 실행
+
+1. F-001/F-002/F-011/F-029/F-030/F-065/F-069과 이번 세 finding의 구현자 독립 fix-recheck를 확보한다.
+2. F-069 운영 성능·failover와 F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보한다.
+3. 남은 finding은 P2→P3 순으로 수정하고 zero-new-confirmed-P0~P2 연속 두 자유 탐색 round를 확보한다.
 
 ## 불변 조건
 
