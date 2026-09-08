@@ -68,6 +68,13 @@ describe('F-069 PostgreSQL window projection and Redis cache', () => {
   const cache = new RankingCacheService(configService);
   const projection = new RankingProjectionService(prisma, cache);
   const rankings = new RankingsService(prisma, cache, projection);
+  const disabledCache = new RankingCacheService({
+    get: jest.fn().mockReturnValue(undefined),
+  } as unknown as ConfigService);
+  const fallbackProjection = new RankingProjectionService(
+    prisma,
+    disabledCache,
+  );
 
   beforeAll(async () => {
     await prisma.$connect();
@@ -136,6 +143,40 @@ describe('F-069 PostgreSQL window projection and Redis cache', () => {
   });
 
   it('publishes all periods and serves requests after PostgreSQL disconnects', async () => {
+    await expect(
+      fallbackProjection.readLeaderboardFromDatabase(
+        RankingPeriod.TOTAL,
+        3,
+        REFERENCE,
+      ),
+    ).resolves.toMatchObject([
+      { userId: USER_IDS.first, rank: 1, score: 900 },
+      { userId: USER_IDS.second, rank: 2, score: 500 },
+      { userId: USER_IDS.third, rank: 2, score: 500 },
+    ]);
+    await expect(
+      fallbackProjection.readLeaderboardFromDatabase(
+        RankingPeriod.DAILY,
+        3,
+        REFERENCE,
+      ),
+    ).resolves.toMatchObject([
+      { userId: USER_IDS.first, rank: 1, score: 100 },
+      { userId: USER_IDS.second, rank: 2, score: 80 },
+      { userId: USER_IDS.third, rank: 3, score: 0 },
+    ]);
+    await expect(
+      fallbackProjection.readLeaderboardFromDatabase(
+        RankingPeriod.WEEKLY,
+        3,
+        REFERENCE,
+      ),
+    ).resolves.toMatchObject([
+      { userId: USER_IDS.second, rank: 1, score: 110 },
+      { userId: USER_IDS.third, rank: 1, score: 110 },
+      { userId: USER_IDS.first, rank: 3, score: 100 },
+    ]);
+
     await projection.refreshAll(REFERENCE);
     const generationKeys = await redisAdmin.keys(
       'dsm:rankings:v1:*:generation:*',

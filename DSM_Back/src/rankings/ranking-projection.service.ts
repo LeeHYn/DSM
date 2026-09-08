@@ -9,11 +9,15 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RankingCacheService } from './ranking-cache.service';
 import { startOfUtcDay, weeklyRange } from './rankings.policy';
-import type { RankingProjectionEntry } from './rankings.types';
+import type {
+  LeaderboardEntry,
+  RankingProjectionEntry,
+} from './rankings.types';
 
 const RANKING_PROJECTION_CRON_NAME = 'ranking-projection';
 const REFRESH_LOCK_TTL_MS = 2 * 60 * 1_000;
 const MIN_REFRESH_INTERVAL_MS = 45 * 1_000;
+const MAX_LEADERBOARD_LIMIT = 100;
 const RANKING_PERIODS = [
   RankingPeriod.DAILY,
   RankingPeriod.WEEKLY,
@@ -85,6 +89,32 @@ export class RankingProjectionService implements OnApplicationBootstrap {
     }
   }
 
+  async readLeaderboardFromDatabase(
+    period: RankingPeriod,
+    limit: number,
+    reference: Date,
+  ): Promise<LeaderboardEntry[]> {
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_LEADERBOARD_LIMIT
+    ) {
+      throw new Error('Invalid ranking leaderboard limit');
+    }
+
+    const rows = await this.queryProjection(period, reference, limit);
+    return this.normalizeProjection(rows, period, false).map(
+      ({ rank, userId, nickname, tier, profileImageUrl, score }) => ({
+        rank,
+        userId,
+        nickname,
+        tier,
+        profileImageUrl,
+        score,
+      }),
+    );
+  }
+
   private async projectUnderLock(
     period: RankingPeriod,
     reference: Date,
@@ -130,8 +160,11 @@ export class RankingProjectionService implements OnApplicationBootstrap {
   private queryProjection(
     period: RankingPeriod,
     reference: Date,
+    limit?: number,
   ): Promise<ProjectionRow[]> {
     const scoreRows = this.scoreRowsQuery(period, reference);
+    const limitClause =
+      limit === undefined ? Prisma.empty : Prisma.sql`LIMIT ${limit}`;
     return this.prisma.$queryRaw<ProjectionRow[]>(Prisma.sql`
       WITH "scoreRows" AS (
         ${scoreRows}
@@ -157,6 +190,7 @@ export class RankingProjectionService implements OnApplicationBootstrap {
         "totalUsers"
       FROM "rankedRows"
       ORDER BY "score" DESC, "userId" ASC
+      ${limitClause}
     `);
   }
 
@@ -214,8 +248,16 @@ export class RankingProjectionService implements OnApplicationBootstrap {
   private normalizeProjection(
     rows: ProjectionRow[],
     period: RankingPeriod,
+    requireComplete = true,
   ): RankingProjectionEntry[] {
-    const expectedTotal = rows.length;
+    const expectedTotal =
+      rows.length === 0 ? 0 : this.safeInteger(rows[0].totalUsers);
+    if (
+      expectedTotal < rows.length ||
+      (requireComplete && expectedTotal !== rows.length)
+    ) {
+      throw new Error('Incomplete ranking projection');
+    }
     const userIds = new Set<string>();
 
     return rows.map((row) => {

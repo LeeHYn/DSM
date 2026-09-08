@@ -29,6 +29,7 @@ const makeCacheMock = () => ({
 
 const makeProjectionMock = () => ({
   refreshPeriod: jest.fn().mockResolvedValue(false),
+  readLeaderboardFromDatabase: jest.fn(),
 });
 
 describe('RankingsService', () => {
@@ -148,6 +149,36 @@ describe('RankingsService', () => {
       });
     });
 
+    it('keeps one UTC reference across an awaited midnight DB fallback', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2026-09-08T23:59:59.999Z'));
+        prismaMock.dailyScore.findUnique.mockImplementation(() => {
+          jest.setSystemTime(new Date('2026-09-09T00:00:00.001Z'));
+          return Promise.resolve({ cappedScore: 100 });
+        });
+        prismaMock.dailyScore.count.mockResolvedValue(1);
+        prismaMock.user.count.mockResolvedValue(3);
+
+        await service.getMyRanking('user-1', RankingPeriod.DAILY);
+
+        const expectedDay = new Date('2026-09-08T00:00:00.000Z');
+        const [scoreInput] = prismaMock.dailyScore.findUnique.mock
+          .calls[0] as unknown as [
+          { where: { userId_scoreDate: { userId: string; scoreDate: Date } } },
+        ];
+        const [countInput] = prismaMock.dailyScore.count.mock
+          .calls[0] as unknown as [{ where: { scoreDate: Date } }];
+        expect(scoreInput.where.userId_scoreDate).toEqual({
+          userId: 'user-1',
+          scoreDate: expectedDay,
+        });
+        expect(countInput.where.scoreDate).toEqual(expectedDay);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('ranks by the 7-day weekly sum', async () => {
       prismaMock.dailyScore.aggregate.mockResolvedValue({
         _sum: { cappedScore: 420 },
@@ -183,30 +214,12 @@ describe('RankingsService', () => {
         service.getLeaderboard(RankingPeriod.TOTAL, 100),
       ).resolves.toEqual(cached);
       expect(projectionMock.refreshPeriod).not.toHaveBeenCalled();
+      expect(projectionMock.readLeaderboardFromDatabase).not.toHaveBeenCalled();
       expect(prismaMock.user.findMany).not.toHaveBeenCalled();
     });
 
-    it('returns a ranked total leaderboard', async () => {
-      prismaMock.user.findMany.mockResolvedValue([
-        {
-          id: 'u1',
-          nickname: 'A',
-          tier: 'GOLD',
-          profileImageUrl: null,
-          totalScore: 900,
-        },
-        {
-          id: 'u2',
-          nickname: 'B',
-          tier: 'SILVER',
-          profileImageUrl: null,
-          totalScore: 500,
-        },
-      ]);
-
-      const result = await service.getLeaderboard(RankingPeriod.TOTAL, 100);
-
-      expect(result).toEqual([
+    it('uses the shared window projection when Redis is unavailable', async () => {
+      const projected = [
         {
           rank: 1,
           userId: 'u1',
@@ -223,39 +236,56 @@ describe('RankingsService', () => {
           profileImageUrl: null,
           score: 500,
         },
-      ]);
-    });
-
-    it('joins weekly group sums with user info', async () => {
-      prismaMock.dailyScore.groupBy.mockResolvedValue([
-        { userId: 'u1', _sum: { cappedScore: 300 } },
-        { userId: 'u2', _sum: { cappedScore: 200 } },
-      ]);
-      prismaMock.user.findMany.mockResolvedValue([
-        { id: 'u1', nickname: 'A', tier: 'GOLD', profileImageUrl: null },
-        { id: 'u2', nickname: 'B', tier: 'SILVER', profileImageUrl: 'p.png' },
-      ]);
-
-      const result = await service.getLeaderboard(RankingPeriod.WEEKLY, 100);
-
-      expect(result).toEqual([
-        {
-          rank: 1,
-          userId: 'u1',
-          nickname: 'A',
-          tier: 'GOLD',
-          profileImageUrl: null,
-          score: 300,
-        },
         {
           rank: 2,
-          userId: 'u2',
-          nickname: 'B',
-          tier: 'SILVER',
-          profileImageUrl: 'p.png',
-          score: 200,
+          userId: 'u3',
+          nickname: 'C',
+          tier: 'BRONZE',
+          profileImageUrl: null,
+          score: 500,
         },
-      ]);
+      ];
+      projectionMock.readLeaderboardFromDatabase.mockResolvedValue(projected);
+
+      await expect(
+        service.getLeaderboard(RankingPeriod.TOTAL, 3),
+      ).resolves.toEqual(projected);
+
+      expect(projectionMock.readLeaderboardFromDatabase).toHaveBeenCalledWith(
+        RankingPeriod.TOTAL,
+        3,
+        expect.any(Date),
+      );
+    });
+
+    it('uses the request reference after a final Redis miss', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2026-09-08T23:59:59.999Z'));
+        cacheMock.isConfigured.mockReturnValue(true);
+        cacheMock.readLeaderboard.mockResolvedValue(null);
+        projectionMock.refreshPeriod.mockImplementation(() => {
+          jest.setSystemTime(new Date('2026-09-09T00:00:00.001Z'));
+          return Promise.resolve(false);
+        });
+        projectionMock.readLeaderboardFromDatabase.mockResolvedValue([]);
+
+        await service.getLeaderboard(RankingPeriod.WEEKLY, 100);
+
+        const readCalls = cacheMock.readLeaderboard.mock
+          .calls as unknown as Array<[RankingPeriod, number, Date]>;
+        const refreshCalls = projectionMock.refreshPeriod.mock
+          .calls as unknown as Array<[RankingPeriod, Date]>;
+        const fallbackCalls = projectionMock.readLeaderboardFromDatabase.mock
+          .calls as unknown as Array<[RankingPeriod, number, Date]>;
+        const reference = readCalls[0]?.[2];
+        expect(reference).toEqual(new Date('2026-09-08T23:59:59.999Z'));
+        expect(readCalls[1]?.[2]).toBe(reference);
+        expect(refreshCalls[0]?.[1]).toBe(reference);
+        expect(fallbackCalls[0]?.[2]).toBe(reference);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

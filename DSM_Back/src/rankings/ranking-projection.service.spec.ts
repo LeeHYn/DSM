@@ -133,6 +133,53 @@ describe('RankingProjectionService', () => {
     );
   });
 
+  it('returns a parameterized limited DB leaderboard without cache metadata', async () => {
+    prismaMock.$queryRaw.mockResolvedValue(projectionRows.slice(0, 2));
+
+    await expect(
+      service.readLeaderboardFromDatabase(RankingPeriod.DAILY, 2, REFERENCE),
+    ).resolves.toEqual([
+      {
+        userId: 'u1',
+        nickname: 'A',
+        tier: 'GOLD',
+        profileImageUrl: null,
+        score: 900,
+        rank: 1,
+      },
+      {
+        userId: 'u2',
+        nickname: 'B',
+        tier: 'SILVER',
+        profileImageUrl: 'b.png',
+        score: 500,
+        rank: 2,
+      },
+    ]);
+
+    const query = firstRawQuery(prismaMock);
+    expect(query.strings.join('')).toContain('LIMIT');
+    expect(query.values).toEqual(expect.arrayContaining(['2026-09-08', 2]));
+    expect(cacheMock.publishProjection).not.toHaveBeenCalled();
+  });
+
+  it('rejects an out-of-contract DB leaderboard limit before querying', async () => {
+    await expect(
+      service.readLeaderboardFromDatabase(RankingPeriod.TOTAL, 0, REFERENCE),
+    ).rejects.toThrow('Invalid ranking leaderboard limit');
+    expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('rejects a limited DB result larger than its reported population', async () => {
+    prismaMock.$queryRaw.mockResolvedValue(
+      projectionRows.slice(0, 2).map((row) => ({ ...row, totalUsers: 1n })),
+    );
+
+    await expect(
+      service.readLeaderboardFromDatabase(RankingPeriod.TOTAL, 2, REFERENCE),
+    ).rejects.toThrow('Incomplete ranking projection');
+  });
+
   it('does not query PostgreSQL when another instance holds the lock', async () => {
     cacheMock.acquireRefreshLock.mockResolvedValue('held');
 
