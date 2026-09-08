@@ -12,10 +12,12 @@
     android:theme="@style/AppTheme">
     <activity
       android:name=".MainActivity"
+      android:allowTaskReparenting="false"
       android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|smallestScreenSize"
       android:exported="true"
       android:launchMode="singleTask"
       android:screenOrientation="portrait"
+      android:taskAffinity=""
       android:theme="@style/Theme.App.SplashScreen"
       android:windowSoftInputMode="adjustResize">
       <intent-filter>

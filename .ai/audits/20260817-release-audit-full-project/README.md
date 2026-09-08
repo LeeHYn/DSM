@@ -3,9 +3,9 @@
 - Audit ID: `20260817-release-audit-full-project`
 - Mode: `release-audit`
 - Authoritative checkout: `C:\dsm-integration-review`
-- Branch baseline: `codex/integration-main-review@74406a0`
+- Branch baseline: `codex/integration-main-review@1d7a21d`
 - Canonical ledger: `findings.jsonl`
-- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. The approved F-069 work changes fifteen Backend dependency, environment, local-service, ranking source, test and benchmark paths and adds one audit evidence artifact; it does not change Prisma schema/migrations, Front, Android, WebSocket, external production services or Git publish state.
+- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records; it preserves minSdk 24, the exported launcher and `singleTask` behavior.
 
 ## Interrupted-session recovery
 
@@ -22,9 +22,9 @@ The recovered ledger contains 83 schema-valid findings.
 
 | Status | Count | IDs requiring attention |
 |---|---:|---|
-| `CONFIRMED` | 68 | Product fixes require separate plans and approval |
+| `CONFIRMED` | 67 | Product fixes require separate plans and approval |
 | `FIXING` | 2 | F-067, F-068 — public URL and external release evidence pending |
-| `FIXED` | 1 | F-069 — implementation verified; independent fix-recheck pending |
+| `FIXED` | 2 | F-065, F-069 — implementation verified; independent fix-recheck pending |
 | `REFUTED` | 1 | F-066 |
 | `RECHECKED` | 8 | F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083 |
 | `UNKNOWN` | 3 | F-003, F-013, F-017 |
@@ -36,8 +36,8 @@ The recovered ledger contains 83 schema-valid findings.
 | `P2` | 53 |
 | `P3` | 20 |
 
-- Ledger bytes: 325,286.
-- Ledger SHA-256: `F47A9F4927425D5B3D9F6BDF2651936485A6C36724B89E73E5A265ABB52A6C63`.
+- Ledger bytes: 327,886.
+- Ledger SHA-256: `0ED0B44595B6A438BD0EB56419C925E458F6DEB4C18A660ACA219477D4BC0867`.
 - IDs are contiguous from F-001 through F-083.
 - Finding IDs and fingerprint values are unique.
 - Every fingerprint value equals SHA-256 of its recorded basis.
@@ -90,7 +90,7 @@ F-083 first changed from `VALIDATING` to `CONFIRMED P2` after two independent da
 - F-040: `RECHECKED`. Four local runtime dynamic imports now use typed CommonJS loads after the fail-closed environment guard. Default NodeNext and spec CommonJS no-emit checks, actual PostgreSQL execution and an independent fix-recheck passed.
 - F-083: `RECHECKED`. The original response-loss retry condition is blocked by the Front attempt ID lifecycle and Backend primary-key replay. Process restart/offline durability remains F-076; actual device socket-cut injection and hard-delete retention remain residual gates.
 - F-013 remains `UNKNOWN`: the endpoint does not test DB connectivity, but repository evidence does not establish that production uses it as a readiness probe.
-- F-065: `CONFIRMED P3`. Official Android guidance, `minSdkVersion=24` and the launcher's inherited package affinity establish the conditional API 24–29 task-hijacking risk. No malicious-app/device PoC was run.
+- F-065: `FIXED P3`. `MainActivity` now has no task affinity and explicitly disables task reparenting while retaining the exported `singleTask` launcher and minSdk 24. Merged/packaged manifests, Android build/lint and API 36 task-stack smoke passed. Official guidance limits this app-side mitigation on old OS versions, and API 24–29 malicious-app/OEM verification plus an independent recheck remain open.
 - F-066: `REFUTED P1`. The user explicitly confirmed the v1.3 release as Android-only. Two independent reviewers found that the current Front contract, approved Android-only design and tracked native inventory match that scope, so the missing iOS project is not a release blocker. The three current v1.3 planning documents now explicitly exclude their retained historical iOS wording from release acceptance; a read-only follow-up review passed. A future return to iOS scope requires a separate deliverable audit.
 - F-067: `FIXING P1`. The authenticated 204 endpoint, transactional deletion order, Android session fence, two-stage UI and real PostgreSQL cascade test are implemented. Public web deletion, operator handling, signed-device cold start and Play Console evidence remain open.
 - F-068: `FIXING P1`. Login/MyPage legal links and release URL validation are implemented, with placeholder release hosts rejected. Actual public privacy/deletion content, signed-device link opening and Play Console/Data safety evidence remain open. Terms of Service stays outside this finding.
@@ -134,6 +134,13 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 - Runtime gates: Backend unit passed 24 suites/266 tests, normal e2e passed 1 suite/2 tests and PostgreSQL 17.10 passed the full 1 suite/10-test disposable database run.
 - Recheck and cleanup: `/root/f040_fix_recheck` independently returned `RECHECKED` with no new P0 or P1. Both exact task containers and the temporary migration prefix were removed, and Docker returned to its prior stopped state.
 
+## F-065 repository implementation
+
+- Manifest: `MainActivity` declares `android:taskAffinity=""` and `android:allowTaskReparenting="false"`. The launcher remains exported and `singleTask`; minSdk stays 24.
+- Packaged configuration: `processDebugMainManifest` and `apkanalyzer manifest print` both showed an empty affinity and disabled reparenting in the final debug artifact.
+- Static/runtime gates: `assembleDebug` passed 281 tasks. `lintDebug` passed 412 tasks with 0 errors and 49 existing warnings. On the installed API 36 `Medium_Phone` emulator, cold launch completed in 4.391 seconds; `dumpsys activity` reported `taskAffinity=null`, one `MainActivity` in task 25, and launcher/recents re-entry reused that task and instance. The app was uninstalled and the emulator/ADB were stopped.
+- Residual risk: Android's official guidance identifies minSdk 30 as the OS-level StrandHogg mitigation and says application configuration is partial for older variants. No API 24–29 attacker APK, exploit reproduction, OEM patch matrix or implementer-independent fix-recheck was run, so the finding is `FIXED`, not `RECHECKED`.
+
 ## F-069 repository implementation
 
 - Projection: a non-overlapping one-minute Cron computes DAILY, rolling seven-day WEEKLY and TOTAL score rows with PostgreSQL `RANK()` and `COUNT(*) OVER()`. Ties receive the same competition rank and UTC boundaries reuse the existing ranking policy.
@@ -169,4 +176,4 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 
 ## Termination status
 
-The release audit remains open. It has 68 confirmed findings, two fixes in progress, one fixed finding awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.
+The release audit remains open. It has 67 confirmed findings, two fixes in progress, two fixed findings awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-065 needs old-OS adversarial evidence and an independent fix-recheck. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.
