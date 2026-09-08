@@ -87,7 +87,7 @@ export class AuthService {
     });
   }
 
-  async logout(userId: string, rawRefreshToken: string): Promise<void> {
+  async logout(rawRefreshToken: string): Promise<void> {
     let parsed: { id: string; secret: string };
     try {
       parsed = this.parseRefreshToken(rawRefreshToken);
@@ -98,19 +98,15 @@ export class AuthService {
     const record = await this.prisma.refreshToken.findUnique({
       where: { id: parsed.id },
     });
-    if (
-      !record ||
-      record.userId !== userId ||
-      !(await bcrypt.compare(parsed.secret, record.tokenHash))
-    ) {
+    if (!record || !(await bcrypt.compare(parsed.secret, record.tokenHash))) {
       return;
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await this.lockUserForSessionMutation(tx, userId);
+      await this.lockUserForSessionMutation(tx, record.userId);
       await tx.refreshToken.updateMany({
         where: {
-          userId,
+          userId: record.userId,
           sessionId: record.sessionId,
           revokedAt: null,
         },
@@ -178,7 +174,12 @@ export class AuthService {
     client: RefreshTokenClient = this.prisma,
     sessionId?: string,
   ): Promise<TokenResponseDto> {
-    const payload: JwtPayload = { sub: userId, type: 'access' };
+    const resolvedSessionId = sessionId ?? crypto.randomUUID();
+    const payload: JwtPayload = {
+      sub: userId,
+      sid: resolvedSessionId,
+      type: 'access',
+    };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       expiresIn: ACCESS_TOKEN_TTL,
@@ -191,7 +192,7 @@ export class AuthService {
         userId,
         tokenHash,
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-        ...(sessionId === undefined ? {} : { sessionId }),
+        sessionId: resolvedSessionId,
       },
     });
 

@@ -26,17 +26,16 @@ it('uses public login and refresh endpoints without recursive auth', async () =>
   });
 });
 
-it('sends captured tokens once for best-effort logout', async () => {
+it('authenticates logout with the captured refresh token alone', async () => {
   const http = { request: jest.fn().mockResolvedValue(undefined) };
   const api = createAuthApi(http);
 
-  await api.revokeSession('access', 'record.secret');
+  await api.revokeSession('record.secret');
 
   expect(http.request).toHaveBeenCalledTimes(1);
   expect(http.request).toHaveBeenCalledWith({
     path: '/auth/logout',
     method: 'POST',
-    accessToken: 'access',
     body: { refreshToken: 'record.secret' },
     responseMode: 'empty',
   });

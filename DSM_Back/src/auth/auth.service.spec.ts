@@ -165,8 +165,24 @@ describe('AuthService', () => {
       });
       expect(prismaMock.refreshToken.create).toHaveBeenCalledWith({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: expect.not.objectContaining({ sessionId: expect.any(String) }),
+        data: expect.objectContaining({
+          userId: MOCK_USER.id,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          sessionId: expect.any(String),
+        }),
       });
+      expect(jwtMock.sign).toHaveBeenCalledWith(
+        {
+          sub: MOCK_USER.id,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          sid: expect.any(String),
+          type: 'access',
+        },
+        {
+          secret: 'test-access-secret-for-dsm-backend',
+          expiresIn: '15m',
+        },
+      );
     });
 
     it('fails service construction when the client ID is missing', () => {
@@ -208,6 +224,13 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('signed-access-token');
       expect(result.refreshToken).toMatch(/^rt-2\./);
+      expect(jwtMock.sign).toHaveBeenCalledWith(
+        { sub: MOCK_USER.id, sid: 'family-1', type: 'access' },
+        {
+          secret: 'test-access-secret-for-dsm-backend',
+          expiresIn: '15m',
+        },
+      );
       expect(prismaMock.refreshToken.findUnique).toHaveBeenCalledWith({
         where: { id: 'rt-1' },
       });
@@ -374,7 +397,7 @@ describe('AuthService', () => {
         count: 2,
       });
 
-      await service.logout(MOCK_USER.id, `rt-1.${secret}`);
+      await service.logout(`rt-1.${secret}`);
 
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
       expectUserRowLock(prismaMock.transactionClient.$queryRaw, MOCK_USER.id);
@@ -399,22 +422,18 @@ describe('AuthService', () => {
     it('does nothing when no matching token exists', async () => {
       prismaMock.refreshToken.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.logout(MOCK_USER.id, 'rt-1.not-found'),
-      ).resolves.toBeUndefined();
+      await expect(service.logout('rt-1.not-found')).resolves.toBeUndefined();
       expect(prismaMock.$transaction).not.toHaveBeenCalled();
     });
 
     it('does nothing for a malformed token', async () => {
-      await expect(
-        service.logout(MOCK_USER.id, 'legacy-no-dot'),
-      ).resolves.toBeUndefined();
+      await expect(service.logout('legacy-no-dot')).resolves.toBeUndefined();
 
       expect(prismaMock.refreshToken.findUnique).not.toHaveBeenCalled();
       expect(prismaMock.$transaction).not.toHaveBeenCalled();
     });
 
-    it('does nothing when the refresh token belongs to a different user', async () => {
+    it('uses the valid refresh token owner without an access-token identity', async () => {
       const secret = 'raw-secret';
       const hash = await bcrypt.hash(secret, 1);
       prismaMock.refreshToken.findUnique.mockResolvedValue({
@@ -426,11 +445,20 @@ describe('AuthService', () => {
         sessionId: 'other-family',
       });
 
-      await expect(
-        service.logout(MOCK_USER.id, `rt-1.${secret}`),
-      ).resolves.toBeUndefined();
+      await expect(service.logout(`rt-1.${secret}`)).resolves.toBeUndefined();
 
-      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      expectUserRowLock(prismaMock.transactionClient.$queryRaw, 'other-user');
+      expect(
+        prismaMock.transactionClient.refreshToken.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          userId: 'other-user',
+          sessionId: 'other-family',
+          revokedAt: null,
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: { revokedAt: expect.any(Date) },
+      });
     });
 
     it('does nothing when the refresh secret does not match', async () => {
@@ -445,7 +473,7 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.logout(MOCK_USER.id, 'rt-1.wrong-secret'),
+        service.logout('rt-1.wrong-secret'),
       ).resolves.toBeUndefined();
 
       expect(prismaMock.$transaction).not.toHaveBeenCalled();

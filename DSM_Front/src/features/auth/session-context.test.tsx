@@ -25,7 +25,7 @@ function createFakeController() {
     getAccessToken: jest.fn().mockReturnValue(null),
     getEpoch: jest.fn().mockReturnValue(0),
     getSnapshot: jest.fn(() => snapshot),
-    logout: jest.fn().mockResolvedValue(undefined),
+    logout: jest.fn().mockResolvedValue(true),
     refreshAccessToken: jest.fn().mockResolvedValue('access'),
     retryRecovery: jest.fn().mockResolvedValue(undefined),
     signIn: jest.fn().mockResolvedValue(undefined),

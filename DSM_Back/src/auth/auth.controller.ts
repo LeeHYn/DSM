@@ -36,12 +36,8 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard)
-  async logout(
-    @Req() req: Request & { user: JwtPayload },
-    @Body() dto: RefreshTokenDto,
-  ): Promise<void> {
-    await this.authService.logout(req.user.sub, dto.refreshToken);
+  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
+    await this.authService.logout(dto.refreshToken);
   }
 
   @Get('me')

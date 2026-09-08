@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { validate } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
 import { RevokeFcmTokenDto } from './dto/revoke-fcm-token.dto';
 import { NotificationsController } from './notifications.controller';
@@ -27,9 +28,8 @@ const makeNotificationsServiceMock = () => ({
   register: jest.fn().mockResolvedValue(REGISTERED_TOKEN),
   revoke: jest.fn().mockResolvedValue(undefined),
 });
-
 const makeAuthRequest = (userId = 'user-uuid-1') =>
-  ({ user: { sub: userId, type: 'access' } }) as never;
+  ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
 const getControllerHandler = (methodName: 'register' | 'revoke'): object => {
   const handler: unknown = Object.getOwnPropertyDescriptor(
@@ -69,6 +69,10 @@ describe('NotificationsController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();

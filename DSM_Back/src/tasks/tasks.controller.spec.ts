@@ -13,6 +13,7 @@ import { validate } from 'class-validator';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 
 const CLIENT_MUTATION_ID = '0cfe1042-769f-4d19-88bc-7a0d710553ca';
@@ -51,7 +52,7 @@ const makeTasksServiceMock = () => ({
 });
 
 const makeAuthRequest = (userId = 'user-uuid-1') =>
-  ({ user: { sub: userId, type: 'access' } }) as never;
+  ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
 const getControllerHandler = (methodName: 'issueClientMutationId'): object => {
   const handler: unknown = Object.getOwnPropertyDescriptor(
@@ -91,6 +92,10 @@ describe('TasksController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();

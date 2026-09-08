@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 const MOCK_CATEGORY = {
   id: 'cat-uuid-1',
@@ -22,9 +23,8 @@ const makeCategoriesServiceMock = () => ({
   update: jest.fn().mockResolvedValue(MOCK_CATEGORY),
   remove: jest.fn().mockResolvedValue(undefined),
 });
-
 const makeAuthRequest = (userId = 'user-uuid-1') =>
-  ({ user: { sub: userId, type: 'access' } }) as never;
+  ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
 describe('CategoriesController', () => {
   let controller: CategoriesController;
@@ -42,6 +42,10 @@ describe('CategoriesController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();

@@ -1,11 +1,11 @@
-# Full Project Release Audit — 2026-09-08 current state
+# Full Project Release Audit — 2026-09-09 current state
 
 - Audit ID: `20260817-release-audit-full-project`
 - Mode: `release-audit`
 - Authoritative checkout: `C:\dsm-integration-review`
-- Branch baseline: `codex/integration-main-review@c6b6675`
+- Branch baseline: `codex/integration-main-review@5a3c0aa`
 - Canonical ledger: `findings.jsonl`
-- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records. The F-011/F-029/F-030 follow-up changes five existing ranking source/test paths to make the bounded DB fallback use the same window projection and stable UTC reference.
+- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records. The F-011/F-029/F-030 follow-up changes five existing ranking source/test paths to make the bounded DB fallback use the same window projection and stable UTC reference. The combined F-001/F-002 closure changes twenty Backend/Front source and test paths, reuses the existing refresh-family schema and adds one disposable PostgreSQL integration specification.
 
 ## Interrupted-session recovery
 
@@ -22,9 +22,9 @@ The recovered ledger contains 83 schema-valid findings.
 
 | Status | Count | IDs requiring attention |
 |---|---:|---|
-| `CONFIRMED` | 64 | Product fixes require separate plans and approval |
+| `CONFIRMED` | 62 | Product fixes require separate plans and approval |
 | `FIXING` | 2 | F-067, F-068 — public URL and external release evidence pending |
-| `FIXED` | 5 | F-011, F-029, F-030, F-065, F-069 — implementation verified; independent fix-recheck pending |
+| `FIXED` | 7 | F-001, F-002, F-011, F-029, F-030, F-065, F-069 — implementation verified; independent fix-recheck pending |
 | `REFUTED` | 1 | F-066 |
 | `RECHECKED` | 8 | F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083 |
 | `UNKNOWN` | 3 | F-003, F-013, F-017 |
@@ -36,8 +36,8 @@ The recovered ledger contains 83 schema-valid findings.
 | `P2` | 53 |
 | `P3` | 20 |
 
-- Ledger bytes: 335,168.
-- Ledger SHA-256: `541135408F3C55CBFF5FD195DA96F05A5FA698195A8DB30FCA8BF62F5A8FE6EC`.
+- Ledger bytes: 342,548.
+- Ledger SHA-256: `0292C684E7B29B3090C5382A86C4FC5C851D504F4B516E0C7875263FFEBF4E26`.
 - IDs are contiguous from F-001 through F-083.
 - Finding IDs and fingerprint values are unique.
 - Every fingerprint value equals SHA-256 of its recorded basis.
@@ -82,6 +82,8 @@ F-083 first changed from `VALIDATING` to `CONFIRMED P2` after two independent da
 
 ## Existing fix rechecks and UNKNOWN resolution
 
+- F-001: `FIXED P2`. Explicit Android logout now uses the refresh token to revoke its server family before clearing Keychain or prototype state. Network and timeout failures retain the authenticated session and surface retry feedback; independent recheck remains open.
+- F-002: `FIXED P2`. Access JWTs carry their refresh-family `sid`, and the shared REST guard accepts them only while that family has an unrevoked, unexpired row. Logout therefore invalidates copied access JWTs after commit; indexed-lookup production cost and independent recheck remain open.
 - F-003: `UNKNOWN`. The external-property signing path, tracked helpers and clean handoff pass local checks. Two independent rechecks found no new P0/P1, but actual upload/Play signers, signer-specific OAuth and signed-device smoke are absent.
 - F-005: `RECHECKED`. Its first review was `UNKNOWN` because the standard Jest gate failed and no device smoke existed. The repaired standard gate, current 6-suite/36-test Product matrix and an isolated second reviewer establish removal of prototype-only state; physical-device relaunch remains residual operational risk.
 - F-011: `FIXED P2`. Redis and bounded DB fallback leaderboards now both use PostgreSQL competition `RANK()` with deterministic userId ordering. Returned ties agree with personal rank; independent recheck remains open.
@@ -137,6 +139,14 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 - Runtime gates: Backend unit passed 24 suites/266 tests, normal e2e passed 1 suite/2 tests and PostgreSQL 17.10 passed the full 1 suite/10-test disposable database run.
 - Recheck and cleanup: `/root/f040_fix_recheck` independently returned `RECHECKED` with no new P0 or P1. Both exact task containers and the temporary migration prefix were removed, and Docker returned to its prior stopped state.
 
+## F-001 and F-002 authentication revocation closure
+
+- Server boundary: login and refresh issue access JWTs with the same `sid` stored on their refresh family. `JwtAuthGuard` validates token type, subject and `sid`, then requires a matching unrevoked and unexpired family row. The logout endpoint no longer requires a still-valid access JWT; possession of a valid current or rotated predecessor refresh token identifies and revokes only that family under the existing User row lock.
+- Android behavior: explicit logout is single-flight and epoch-fenced. It reads the Keychain token, waits for server revocation, then clears local credentials. Network, timeout and other unconfirmed failures keep the access token and authenticated UI available for retry. MyPage clears prototype state only after success and shows a fixed retry message after failure.
+- Verification: Backend auth tests passed 3 suites/32 tests and the full Backend passed 26 suites/304 tests. Front logout-focused tests passed 4 suites/60 tests and the full Front passed 24 suites/229 tests. Backend normal e2e, build, source/spec typechecks, full non-fixing ESLint, changed-file Prettier and Prisma validation passed; Front typecheck/lint passed with 0 errors and 30 existing warnings. Android `assembleDebug` and `lintDebug` completed 456 tasks successfully.
+- Database: a task-owned PostgreSQL 17.10 database applied all six migrations and passed 1/1 HTTP integration. Headerless logout with an already-rotated predecessor token revoked its family; that family's access JWT and active refresh returned 401 afterward while another family for the same user remained accepted. The exact container was removed and Docker Desktop returned to stopped.
+- Residual risk: explicit logout cannot complete while the server is unreachable, requests admitted before the revocation commit can finish, and every protected REST request adds an indexed database lookup. Production latency/availability observation and implementer-independent fix rechecks remain open, so both findings are `FIXED`, not `RECHECKED`.
+
 ## F-065 repository implementation
 
 - Manifest: `MainActivity` declares `android:taskAffinity=""` and `android:allowTaskReparenting="false"`. The launcher remains exported and `singleTask`; minSdk stays 24.
@@ -187,4 +197,4 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 
 ## Termination status
 
-The release audit remains open. It has 64 confirmed findings, two fixes in progress, five fixed findings awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-011/F-029/F-030 need independent fix-recheck. F-065 needs old-OS adversarial evidence and an independent fix-recheck. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.
+The release audit remains open. It has 62 confirmed findings, two fixes in progress, seven fixed findings awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-001/F-002 and F-011/F-029/F-030 need independent fix-recheck. F-065 needs old-OS adversarial evidence and an independent fix-recheck. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.

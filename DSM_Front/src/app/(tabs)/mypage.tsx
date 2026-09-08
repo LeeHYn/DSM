@@ -95,6 +95,7 @@ export default function MyPageScreen() {
     useState<LegalLinkKind | null>(null);
   const deletionRequestInFlightRef = useRef(false);
   const legalRequestInFlightRef = useRef(false);
+  const logoutRequestInFlightRef = useRef(false);
   const {
     resetPrototype,
     setTheme,
@@ -102,9 +103,26 @@ export default function MyPageScreen() {
     theme,
   } = usePrototype();
 
-  const logoutSession = () => {
-    resetPrototype();
-    void logout();
+  const logoutSession = async () => {
+    if (logoutRequestInFlightRef.current) {
+      return;
+    }
+    logoutRequestInFlightRef.current = true;
+    try {
+      if (await logout()) {
+        resetPrototype();
+      } else {
+        showToast(
+          '로그아웃에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+        );
+      }
+    } catch {
+      showToast(
+        '로그아웃에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+      );
+    } finally {
+      logoutRequestInFlightRef.current = false;
+    }
   };
 
   const openConfiguredLegalLink = async (

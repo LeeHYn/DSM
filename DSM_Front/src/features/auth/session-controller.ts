@@ -59,7 +59,7 @@ export interface SessionControllerPort {
   getAccessToken(): string | null;
   getEpoch(): number;
   getSnapshot(): SessionSnapshot;
-  logout(): Promise<void>;
+  logout(): Promise<boolean>;
   refreshAccessToken(): Promise<string>;
   retryRecovery(): Promise<void>;
   signIn(provider: SocialProvider, providerToken: string): Promise<void>;
@@ -86,6 +86,9 @@ export class SessionController implements SessionControllerPort {
     | { epoch: number; operation: Promise<void> }
     | null = null;
   private refreshPromise: Promise<string> | null = null;
+  private sessionLogout:
+    | { epoch: number; operation: Promise<boolean> }
+    | null = null;
   private unauthorizedCleanupPromise: Promise<void> | null = null;
   private snapshot: SessionSnapshot = {
     state: { status: 'bootstrapping' },
@@ -314,20 +317,83 @@ export class SessionController implements SessionControllerPort {
     return true;
   }
 
-  async logout(): Promise<void> {
-    const accessToken = this.accessToken;
-    this.epoch += 1;
-    this.accessToken = null;
+  logout(): Promise<boolean> {
+    if (this.sessionLogout?.epoch === this.epoch) {
+      return this.sessionLogout.operation;
+    }
+
+    const state = this.snapshot.state;
+    const epoch = ++this.epoch;
     this.setAction('logging-out');
+    const operation = this.logoutInternal(epoch, state);
+    const logout = { epoch, operation };
+    this.sessionLogout = logout;
+    const clear = () => {
+      if (this.sessionLogout === logout) {
+        this.sessionLogout = null;
+      }
+    };
+    void operation.then(clear, clear);
+    return operation;
+  }
+
+  private async logoutInternal(
+    epoch: number,
+    state: SessionState,
+  ): Promise<boolean> {
+    let refreshToken: string | null;
+    try {
+      refreshToken = await this.dependencies.tokenStore.read();
+    } catch (error) {
+      if (epoch === this.epoch) {
+        this.publishStorageError('read', error);
+      }
+      return false;
+    }
+
+    if (epoch !== this.epoch) {
+      return false;
+    }
+
+    if (!refreshToken) {
+      this.publish({
+        state,
+        action: 'idle',
+        error: new ApiError('unauthorized', SAFE_ERROR_MESSAGES.unauthorized),
+      });
+      return false;
+    }
 
     try {
-      const refreshToken = await this.dependencies.tokenStore.readAndClear();
-      this.publishUnauthenticated();
-      if (accessToken && refreshToken) {
-        await this.revokeCapturedBestEffort(accessToken, refreshToken);
-      }
+      await this.dependencies.authApi.revokeSession(refreshToken);
     } catch (error) {
-      this.publishStorageError('clear', error);
+      if (epoch === this.epoch) {
+        this.publish({
+          state,
+          action: 'idle',
+          error: this.sanitizeError(error),
+        });
+      }
+      return false;
+    }
+
+    if (epoch !== this.epoch) {
+      return false;
+    }
+
+    this.accessToken = null;
+    try {
+      await this.dependencies.tokenStore.readAndClear();
+      if (epoch !== this.epoch) {
+        return false;
+      }
+      this.publishUnauthenticated();
+      return true;
+    } catch (error) {
+      if (epoch === this.epoch) {
+        this.publishStorageError('clear', error);
+      }
+      return false;
     }
   }
 
@@ -404,13 +470,12 @@ export class SessionController implements SessionControllerPort {
 
   private async clearUnauthorizedSession(revokeSession: boolean): Promise<void> {
     const cleanupEpoch = this.epoch + 1;
-    const accessToken = this.accessToken;
     this.epoch = cleanupEpoch;
     this.accessToken = null;
     try {
       const refreshToken = await this.dependencies.tokenStore.readAndClear();
-      if (revokeSession && accessToken && refreshToken) {
-        await this.revokeCapturedBestEffort(accessToken, refreshToken);
+      if (revokeSession && refreshToken) {
+        await this.revokeCapturedBestEffort(refreshToken);
       }
       if (this.epoch === cleanupEpoch) {
         this.publishUnauthenticated();
@@ -608,15 +673,12 @@ export class SessionController implements SessionControllerPort {
   }
 
   private async revokeBestEffort(pair: TokenPair): Promise<void> {
-    await this.revokeCapturedBestEffort(pair.accessToken, pair.refreshToken);
+    await this.revokeCapturedBestEffort(pair.refreshToken);
   }
 
-  private async revokeCapturedBestEffort(
-    accessToken: string,
-    refreshToken: string,
-  ): Promise<void> {
+  private async revokeCapturedBestEffort(refreshToken: string): Promise<void> {
     try {
-      await this.dependencies.authApi.revokeSession(accessToken, refreshToken);
+      await this.dependencies.authApi.revokeSession(refreshToken);
     } catch {
       // Logout and stale-pair cleanup are intentionally best effort.
     }

@@ -38,6 +38,8 @@ beforeEach(() => {
     resolveRefresh = resolve;
   });
   authApi.rotateRefreshToken.mockReturnValue(refreshDeferred);
+  authApi.revokeSession.mockResolvedValue(undefined);
+  tokenStore.read.mockResolvedValue(null);
   tokenStore.writeIfCurrent.mockResolvedValue(true);
   tokenStore.readAndClear.mockResolvedValue(null);
   controller = new SessionController({
@@ -104,8 +106,78 @@ it('logout fences a late refresh write', async () => {
 
   await Promise.allSettled([refresh, logout]);
 
+  await expect(logout).resolves.toBe(true);
+  expect(authApi.revokeSession).toHaveBeenCalledWith('old.secret');
+  expect(authApi.revokeSession.mock.invocationCallOrder[0]).toBeLessThan(
+    tokenStore.readAndClear.mock.invocationCallOrder[0],
+  );
   expect(controller.getSnapshot().state.status).toBe('unauthenticated');
   expect(controller.getAccessToken()).toBeNull();
+});
+
+it('coalesces duplicate logout calls into one server revocation', async () => {
+  await authenticateCurrentUser();
+  let signalRevocationStarted!: () => void;
+  const revocationStarted = new Promise<void>((resolve) => {
+    signalRevocationStarted = resolve;
+  });
+  let resolveRevocation!: () => void;
+  const revocationResponse = new Promise<void>((resolve) => {
+      resolveRevocation = resolve;
+  });
+  authApi.revokeSession.mockImplementation(() => {
+    signalRevocationStarted();
+    return revocationResponse;
+  });
+
+  const first = controller.logout();
+  const second = controller.logout();
+
+  expect(first).toBe(second);
+  await revocationStarted;
+  expect(authApi.revokeSession).toHaveBeenCalledTimes(1);
+  resolveRevocation();
+  await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+  expect(tokenStore.readAndClear).toHaveBeenCalledTimes(1);
+});
+
+it('does not clear a newer sign-in when an old logout response arrives late', async () => {
+  await authenticateCurrentUser();
+  let signalRevocationStarted!: () => void;
+  const revocationStarted = new Promise<void>((resolve) => {
+    signalRevocationStarted = resolve;
+  });
+  let resolveRevocation!: () => void;
+  const revocationResponse = new Promise<void>((resolve) => {
+    resolveRevocation = resolve;
+  });
+  authApi.revokeSession.mockImplementation(() => {
+    signalRevocationStarted();
+    return revocationResponse;
+  });
+  const newerPair = {
+    accessToken: 'new.header.payload.signature',
+    refreshToken: 'new.record.secret',
+  };
+  authApi.exchangeProviderToken.mockResolvedValue(newerPair);
+  authenticatedClient.request.mockResolvedValue({
+    userId: 'user-2',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
+
+  const oldLogout = controller.logout();
+  await revocationStarted;
+  await controller.signIn('GOOGLE', 'new-provider-token');
+  resolveRevocation();
+
+  await expect(oldLogout).resolves.toBe(false);
+  expect(tokenStore.readAndClear).not.toHaveBeenCalled();
+  expect(controller.getAccessToken()).toBe(newerPair.accessToken);
+  expect(controller.getSnapshot().state).toEqual({
+    status: 'authenticated',
+    userId: 'user-2',
+    onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+  });
 });
 
 it('clears the session after refresh returns 401', async () => {
@@ -133,7 +205,6 @@ it('revokes a rotated pair when secure storage write fails', async () => {
   await controller.bootstrap();
 
   expect(authApi.revokeSession).toHaveBeenCalledWith(
-    TOKEN_PAIR.accessToken,
     TOKEN_PAIR.refreshToken,
   );
   expect(controller.getSnapshot().state).toEqual({
@@ -200,6 +271,7 @@ it('does not restore a logged-out session when an obsolete profile succeeds', as
     resolveProfile = resolve;
   });
   authApi.exchangeProviderToken.mockResolvedValue(TOKEN_PAIR);
+  tokenStore.read.mockResolvedValue(TOKEN_PAIR.refreshToken);
   authenticatedClient.request.mockImplementationOnce(() => {
     signalProfileStarted();
     return profileResponse;
@@ -489,25 +561,44 @@ it('does not publish a late onboarding completion after logout', async () => {
   });
 });
 
-it('logs out locally when server revocation is offline', async () => {
-  tokenStore.readAndClear.mockResolvedValue('record.secret');
+it('keeps the authenticated session retryable when server revocation is offline', async () => {
+  await authenticateCurrentUser();
   authApi.revokeSession.mockRejectedValue(
-    new ApiError('network', 'Network unavailable'),
+    new ApiError('network', 'diagnostic-network-message'),
   );
 
-  await controller.logout();
+  await expect(controller.logout()).resolves.toBe(false);
 
-  expect(controller.getSnapshot().state.status).toBe('unauthenticated');
-  expect(controller.getAccessToken()).toBeNull();
+  expect(authApi.revokeSession).toHaveBeenCalledWith('old.secret');
+  expect(tokenStore.readAndClear).not.toHaveBeenCalled();
+  expect(controller.getAccessToken()).toBe(TOKEN_PAIR.accessToken);
+  expect(controller.getSnapshot()).toEqual({
+    state: {
+      status: 'authenticated',
+      userId: 'user-1',
+      onboardingCompletedAt: '2026-07-25T00:00:00.000Z',
+    },
+    action: 'idle',
+    error: expect.objectContaining({
+      kind: 'network',
+      message: 'Network unavailable',
+    }),
+  });
+  expect(controller.getSnapshot().error?.message).not.toBe(
+    'diagnostic-network-message',
+  );
 });
 
 it('blocks in storage-error when local clear cannot be verified', async () => {
+  tokenStore.read.mockResolvedValue('record.secret');
   tokenStore.readAndClear.mockRejectedValue(
     new ApiError('storage', 'Secure token storage failed'),
   );
 
-  await controller.logout();
+  await expect(controller.logout()).resolves.toBe(false);
 
+  expect(authApi.revokeSession).toHaveBeenCalledWith('record.secret');
+  expect(controller.getAccessToken()).toBeNull();
   expect(controller.getSnapshot().state).toEqual({
     status: 'storage-error',
     operation: 'clear',
@@ -522,7 +613,6 @@ it('revokes and never publishes a pair whose storage epoch is stale', async () =
   await controller.bootstrap();
 
   expect(authApi.revokeSession).toHaveBeenCalledWith(
-    TOKEN_PAIR.accessToken,
     TOKEN_PAIR.refreshToken,
   );
   expect(controller.getAccessToken()).toBeNull();
@@ -718,7 +808,6 @@ it.each(['bootstrap', 'sign-in'] as const)(
     }
 
     expect(authApi.revokeSession).toHaveBeenCalledWith(
-      TOKEN_PAIR.accessToken,
       TOKEN_PAIR.refreshToken,
     );
     expect(controller.getSnapshot().state.status).toBe('unauthenticated');
@@ -739,7 +828,6 @@ it('keeps local malformed-profile cleanup successful when server revoke is offli
   await controller.bootstrap();
 
   expect(authApi.revokeSession).toHaveBeenCalledWith(
-    TOKEN_PAIR.accessToken,
     TOKEN_PAIR.refreshToken,
   );
   expect(controller.getSnapshot().state.status).toBe('unauthenticated');

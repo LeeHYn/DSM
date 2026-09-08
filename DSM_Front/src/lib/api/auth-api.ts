@@ -7,7 +7,7 @@ export interface AuthApi {
     providerToken: string,
   ): Promise<TokenPair>;
   rotateRefreshToken(refreshToken: string): Promise<TokenPair>;
-  revokeSession(accessToken: string, refreshToken: string): Promise<void>;
+  revokeSession(refreshToken: string): Promise<void>;
 }
 
 export function createAuthApi(http: HttpClient): AuthApi {
@@ -28,11 +28,10 @@ export function createAuthApi(http: HttpClient): AuthApi {
         validate: parseTokenPair,
       });
     },
-    revokeSession(accessToken, refreshToken) {
+    revokeSession(refreshToken) {
       return http.request<void>({
         path: '/auth/logout',
         method: 'POST',
-        accessToken,
         body: { refreshToken },
         responseMode: 'empty',
       });

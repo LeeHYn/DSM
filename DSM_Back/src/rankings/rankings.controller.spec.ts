@@ -5,6 +5,7 @@ import { RankingPeriod } from '@prisma/client';
 import { RankingsController } from './rankings.controller';
 import { RankingsService } from './rankings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 const MY_RANKING = {
   period: RankingPeriod.TOTAL,
@@ -30,9 +31,8 @@ const makeServiceMock = () => ({
   getLeaderboard: jest.fn().mockResolvedValue(LEADERBOARD),
   createSnapshot: jest.fn().mockResolvedValue({ id: 'rs-1' }),
 });
-
 const makeAuthRequest = (userId = 'user-uuid-1') =>
-  ({ user: { sub: userId, type: 'access' } }) as never;
+  ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
 describe('RankingsController', () => {
   let controller: RankingsController;
@@ -50,6 +50,10 @@ describe('RankingsController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();

@@ -29,7 +29,7 @@ jest.mock('@/config/legal-links', () => ({
 }));
 
 function makeAuthenticatedSession(
-  logout: jest.MockedFunction<() => Promise<void>>,
+  logout: jest.MockedFunction<() => Promise<boolean>>,
   action: 'idle' | 'logging-out' | 'deleting-account' = 'idle',
   deleteAccount: jest.MockedFunction<() => Promise<boolean>> = jest
     .fn()
@@ -66,8 +66,8 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-it('resets prototype state and invokes secure logout without manual routing', async () => {
-  const logout = jest.fn().mockResolvedValue(undefined);
+it('resets prototype state only after secure logout succeeds', async () => {
+  const logout = jest.fn().mockResolvedValue(true);
   const resetPrototype = jest.fn();
   mockUseSession.mockReturnValue(makeAuthenticatedSession(logout));
   mockUsePrototype.mockReturnValue({
@@ -82,16 +82,38 @@ it('resets prototype state and invokes secure logout without manual routing', as
   expect(screen.getByText('누적 점수 321점')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: '로그아웃' }));
 
-  expect(resetPrototype).toHaveBeenCalledTimes(1);
   expect(logout).toHaveBeenCalledTimes(1);
-  expect(resetPrototype.mock.invocationCallOrder[0]).toBeLessThan(
-    logout.mock.invocationCallOrder[0],
+  await waitFor(() => expect(resetPrototype).toHaveBeenCalledTimes(1));
+  expect(logout.mock.invocationCallOrder[0]).toBeLessThan(
+    resetPrototype.mock.invocationCallOrder[0],
+  );
+});
+
+it('keeps local state and shows retry feedback when secure logout fails', async () => {
+  const logout = jest.fn().mockResolvedValue(false);
+  const resetPrototype = jest.fn();
+  const showToast = jest.fn();
+  mockUseSession.mockReturnValue(makeAuthenticatedSession(logout));
+  mockUsePrototype.mockReturnValue({
+    resetPrototype,
+    setTheme: jest.fn(),
+    showToast,
+    theme: 'dark',
+  });
+
+  await render(<MyPageScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: '로그아웃' }));
+
+  await waitFor(() => expect(showToast).toHaveBeenCalledTimes(1));
+  expect(resetPrototype).not.toHaveBeenCalled();
+  expect(showToast).toHaveBeenCalledWith(
+    '로그아웃에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
   );
 });
 
 it('disables the accessible logout button while secure logout is pending', async () => {
   mockUseSession.mockReturnValue(
-    makeAuthenticatedSession(jest.fn().mockResolvedValue(undefined), 'logging-out'),
+    makeAuthenticatedSession(jest.fn().mockResolvedValue(false), 'logging-out'),
   );
 
   await render(<MyPageScreen />);
@@ -181,7 +203,7 @@ it('keeps local account state and shows safe retry feedback when deletion fails'
 it('disables account actions while account deletion is pending', async () => {
   mockUseSession.mockReturnValue(
     makeAuthenticatedSession(
-      jest.fn().mockResolvedValue(undefined),
+      jest.fn().mockResolvedValue(false),
       'deleting-account',
     ),
   );
@@ -194,7 +216,7 @@ it('disables account actions while account deletion is pending', async () => {
 
 it('opens privacy and external account deletion guidance links', async () => {
   mockUseSession.mockReturnValue(
-    makeAuthenticatedSession(jest.fn().mockResolvedValue(undefined)),
+    makeAuthenticatedSession(jest.fn().mockResolvedValue(false)),
   );
   await render(<MyPageScreen />);
 
@@ -215,7 +237,7 @@ it('shows safe feedback when an external legal link cannot be opened', async () 
   const showToast = jest.fn();
   mockOpenLegalLink.mockResolvedValue(false);
   mockUseSession.mockReturnValue(
-    makeAuthenticatedSession(jest.fn().mockResolvedValue(undefined)),
+    makeAuthenticatedSession(jest.fn().mockResolvedValue(false)),
   );
   mockUsePrototype.mockReturnValue({
     resetPrototype: jest.fn(),

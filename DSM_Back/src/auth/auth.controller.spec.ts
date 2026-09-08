@@ -5,6 +5,7 @@ import { SocialProvider } from '@prisma/client';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 const TOKEN_RESPONSE = {
   accessToken: 'access-token',
@@ -41,6 +42,10 @@ describe('AuthController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();
@@ -68,15 +73,27 @@ describe('AuthController', () => {
     expect(result).toEqual(TOKEN_RESPONSE);
   });
 
+  it('logout delegates with the refresh token without access-token identity', async () => {
+    await expect(
+      controller.logout({ refreshToken: 'record.secret' }),
+    ).resolves.toBeUndefined();
+
+    expect(authServiceMock.logout).toHaveBeenCalledWith('record.secret');
+  });
+
   it('me returns the canonical current-user projection', async () => {
-    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
+    const req = {
+      user: { sub: 'user-uuid-1', sid: 'session-1', type: 'access' },
+    } as never;
 
     await expect(controller.me(req)).resolves.toEqual(CURRENT_USER);
     expect(authServiceMock.getCurrentUser).toHaveBeenCalledWith('user-uuid-1');
   });
 
   it('completeOnboarding delegates with the authenticated user', async () => {
-    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
+    const req = {
+      user: { sub: 'user-uuid-1', sid: 'session-1', type: 'access' },
+    } as never;
 
     await expect(controller.completeOnboarding(req)).resolves.toEqual(
       CURRENT_USER,
@@ -87,7 +104,9 @@ describe('AuthController', () => {
   });
 
   it('deleteAccount delegates with the authenticated user', async () => {
-    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
+    const req = {
+      user: { sub: 'user-uuid-1', sid: 'session-1', type: 'access' },
+    } as never;
 
     await expect(controller.deleteAccount(req)).resolves.toBeUndefined();
     expect(authServiceMock.deleteAccount).toHaveBeenCalledWith('user-uuid-1');
