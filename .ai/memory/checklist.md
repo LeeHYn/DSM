@@ -14,14 +14,17 @@
 - [x] F-069 50,000-user/350,000-score benchmark, full plan과 generation memory lifecycle artifact 보존.
 - [x] Active memory를 현재 결정·증거·gate 중심으로 재압축.
 - [x] F-069 제품·감사 18개 exact path를 `c3205dfa2e5e04524513ef8e11beba737af074e0`으로 commit·push.
+- [x] F-065 MainActivity 빈 task affinity·reparenting 비활성화와 merged/packaged manifest 확인.
+- [x] F-065 Android assembleDebug 281 tasks, lintDebug 412 tasks, API 36 cold launch·동일 task 재진입 검증.
 
 ## 현재
 
-- [/] F-065 API 24~29 task-affinity finding과 Android manifest·activity·navigation 대조.
+- [/] F-065 제품·감사·memory exact-path checkpoint commit·push.
 
 ## 열린 gate
 
-- [ ] F-065 API 24~29 task-affinity 수정·검증.
+- [ ] F-065 API 24~29 malicious-app PoC·OEM patch matrix와 독립 fix-recheck.
+- [ ] F-011/F-029/F-030을 F-069 cache·legacy DB fallback과 대조해 targeted revalidation.
 - [ ] F-069 구현자와 독립된 fix-recheck.
 - [ ] F-069 실제 운영 cardinality·capacity·managed Redis failover·latency 증거.
 - [ ] F-067/F-068 공개 privacy/deletion URL·외부 처리·signed-device·Play Console/Data safety 증거.
