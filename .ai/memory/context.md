@@ -16,38 +16,21 @@
 
 ## 구현 결정
 
-- F-005는 Home·Ranking·MyPage·TaskSheets를 authenticated REST와 user/epoch scoped ProductStore에 연결했다. Prototype context는 theme·toast UI 상태만 담당한다.
-- F-083은 UUIDv4 `clientMutationId`를 Task PK로 사용한다. 동일 owner·payload replay는 중복 side effect 없이 반환하고 mismatch·foreign·deleted 정보는 409로 노출하지 않는다. Front는 ambiguous transport 오류에만 동일 ID를 보존한다.
-- F-067은 `DELETE /auth/me` 204, User row lock, blocking NotificationDelivery 선삭제와 User cascade를 구현했다. Android session 삭제는 single-flight·epoch fence를 사용하고 서버 성공 뒤 Keychain과 ProductStore를 정리한다.
-- F-068은 login·MyPage에 HTTPS privacy link와 내부 계정 삭제 안내를 제공한다. Release는 URL 누락, HTTP, credential, `.invalid` host를 거부한다.
-- F-001/F-002는 access JWT에 refresh-family `sid`를 넣고 공용 REST guard가 unrevoked·unexpired family row를 요구한다. Logout은 access JWT 없이 refresh token으로 해당 family를 잠가 폐기한다. Android는 서버 성공 전 local token을 보존하고 실패를 retryable 상태로 노출한다.
-- F-007/F-009는 PATCH 날짜의 absent와 null을 구분하고 service에서 입력 type·parse 결과와 merged `endAt > startAt`를 검사한다. 새 active-row `NOT VALID` CHECK는 신규·수정 invalid row를 차단하면서 legacy row 정정과 최종 validation을 분리한다. F-008 completion 전이 로직은 기존 `e2bda53`에서 구현됐다.
-- F-065는 API 24 지원과 exported `singleTask` launcher를 유지하면서 MainActivity에 `android:taskAffinity=""`와 `android:allowTaskReparenting="false"`를 선언했다. Package namespace affinity 상속이라는 finding 조건을 제거한다.
-- F-069은 UTC 기반 전체 사용자 window projection과 fenced immutable Redis generation을 cache-first로 제공한다. 1분 warm·lock·freshness gate·30초 reader grace를 사용하고 운영 `REDIS_URL`은 fail-closed다.
-- F-011/F-029/F-030의 Redis miss DB fallback도 같은 tie rank·0점 포함 모집단·단일 UTC reference 계약을 사용하며 parameterized LIMIT으로 bounded된다.
+- F-005/F-083은 authenticated user-scoped 제품 상태와 Task idempotency를 종결했다. F-067/F-068은 account deletion·session fence·legal URL gate를 구현했으나 외부 URL·Play 증거가 남았다.
+- F-001/F-002는 access JWT와 refresh family를 `sid`로 결합하고 Android가 server-first logout 실패를 재시도 가능하게 유지한다. F-007/F-009는 null·parse·merged interval을 service와 staged CHECK에서 방어하며 F-008 completion 전이는 `e2bda53`에서 구현됐다.
+- F-011/F-029/F-030/F-069는 cache·DB fallback의 tie·전체 사용자·UTC 계약, PostgreSQL window projection과 fenced Redis generation을 제공한다. F-065는 MainActivity의 package affinity를 비우고 reparenting을 막는다.
 
-## F-069 검증 증거
+## 로컬 검증 checkpoint
 
-- Backend 293 unit·e2e 2·build/type/lint와 PostgreSQL 17·Redis 8 통합 2/2가 통과했다. 50,000-user benchmark의 projection p99/max는 0.928~1.674초, cache p99는 4.628~22.023ms, steady generation은 약 51.6MB였다. Production SLO 증거는 아니다.
-- 검증 service·임시 결과를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다.
+- F-001/F-002는 Backend 304·Front 229·Android 456·PostgreSQL 1/1, F-007/F-008/F-009는 Backend 314·PostgreSQL fresh 3/3·legacy upgrade를 통과했다.
+- F-011/F-029/F-030은 Backend 297·PostgreSQL/Redis 2/2, F-069는 Backend 293·통합 2/2와 50,000-user 합성 benchmark, F-065는 manifest·build·lint·API 36 smoke를 통과했다. 합성 수치는 production SLO 증거가 아니다.
+- 모든 task-owned service·container·임시 prefix를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다.
 
-## F-001/F-002 검증 증거
+## F-012 진단
 
-- Backend 304·e2e 2·build/type/lint와 Front 229·type/lint, Android 456 tasks가 통과했다. PostgreSQL 17.10 통합 1/1은 logout 뒤 같은 family access·refresh 401과 다른 family 200을 확인했다.
-- Exact container·Docker를 정리했고 Prisma schema·migration·dependency는 변경하지 않았다.
-
-## F-007/F-008/F-009 검증 증거
-
-- Baseline null validation 0건과 신규 regression 9건 RED를 확인했다. 수정 뒤 focused 2 suites/91, Backend full 26 suites/314, e2e 2, build, source/spec typecheck, full lint, Prettier와 Prisma validation이 통과했다.
-- PostgreSQL 17 fresh 7-migration 통합 3/3이 신규·수정 invalid active row를 차단했다. Invalid legacy row가 있는 6-migration DB도 upgrade됐고 soft-delete 뒤 `VALIDATE CONSTRAINT`가 성공했다. Exact container·임시 prefix를 제거하고 Docker Desktop을 정지 상태로 복구했다.
-
-## F-065 검증 증거
-
-- Merged·packaged manifest, Android build/lint와 API 36 cold launch·동일 task 재사용을 확인하고 앱·emulator·ADB를 정리했다.
-
-## F-011/F-029/F-030 검증 증거
-
-- Focused 22, Backend 297·e2e 2·build/type/lint와 PostgreSQL 17·Redis 8 통합 2/2가 tie·0점 모집단·UTC rollover를 확인했다. Schema·dependency·API·Front·Android는 변경하지 않았다.
+- 인증된 `POST /rankings/snapshot`은 호출마다 새 row를 만들며 schema에 uniqueness·retention·bucket이 없다. Front와 다른 Backend source에는 호출자가 없지만 Milestone 11의 승인된 API 계약에는 endpoint가 포함된다. 현재 focused baseline은 2 suites/15 tests다.
+- 추천안은 API를 보존하면서 nullable `snapshotDate` DATE와 staged non-null·unique DB 계약으로 사용자·period·UTC 날짜당 최초 row 하나만 허용하는 것이다. Legacy row를 비파괴적으로 보존하고 production 정리·validation은 별도 gate로 둔다. API 제거는 migration이 없지만 기존 계약과 미확인 외부 client를 깨뜨린다.
+- 현재 product·audit은 미변경이며 추천안과 대안의 사용자 승인을 기다린다. 과거 playbook의 F-012는 NotificationDelivery index라 적용 대상이 아니다.
 
 ## 잔여 위험·외부 gate
 
@@ -57,7 +40,7 @@
 - F-001/F-002는 offline에서 명시적 logout을 완료할 수 없고 보호 REST 요청마다 indexed family 조회가 추가된다. Commit 전 승인된 in-flight 요청, production latency·availability와 독립 fix-recheck가 남았다.
 - F-007/F-008/F-009는 독립 fix-recheck가 남았다. F-008의 역사적 contradictory row와 same-value COMPLETED의 legacy null은 자동 보정하지 않으며, F-009는 production invalid-row scan·정정 또는 soft-delete 뒤 CHECK validation이 필요하다.
 - 실제 upload/Play signer, production OAuth, signed-device cold start·link open, readiness mapping과 운영 DB·Firebase 증거가 미완료다.
-- 현재 CONFIRMED P1은 0건이다. 다음 로컬 P2는 F-012 RankingSnapshot 무제한 생성이다.
+- 현재 CONFIRMED P1은 0건이다. 다음 로컬 P2 F-012는 진단과 계획을 마쳤고 구현 승인 대기다.
 
 ## 안전·복구 규칙
 

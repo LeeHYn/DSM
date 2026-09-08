@@ -17,13 +17,13 @@
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `plan.md` | 4,887 | `54420B4A3E292C45090C253EC2E9E5103EBE5445B8D5ED0BC663B29419F84F93` |
-| `context.md` | 7,403 | `9A32E654DBDE9E21359EEE0216407FD926DC3584A76C420BCBCD4891B85008EA` |
-| `checklist.md` | 3,790 | `2CE4AE478719B6D8CB7A4D38A89CA4DD30B371A44300FFA07A46BB464549FE55` |
+| `plan.md` | 6,944 | `E372613ED27FF8B910D29FF882669A63BBD4FACC45C531D86907315FD7EF922B` |
+| `context.md` | 5,666 | `243BAC93079D8A9C6EFD4B56D2FC334C80FF33C6901E41BDA4E2EFE7C7EDDF0F` |
+| `checklist.md` | 4,107 | `1A2D6021579FFD45E89D0582E8401BAC96F7733CAFC047A15B84F983CDFE6AE8` |
 
-- Active 3 합계: 16,080 bytes.
-- 2026-09-08 압축 전 기준 16,922 bytes보다 842 bytes, 5.0% 작다.
-- 중복된 세션 연대기·검증 반복·과거 snapshot 표를 제외하고 F-001/F-002 인증 폐기와 F-007/F-008/F-009 시간 무결성 결과, 다음 F-012, 열린 gate와 안전 경계를 보존했다.
+- Active 3 합계: 16,717 bytes.
+- 2026-09-08 압축 전 기준 16,922 bytes보다 205 bytes, 1.2% 작다.
+- 중복된 세션 연대기·검증 반복·과거 snapshot 표를 제외하고 최근 종결 결과, F-012 진단·선택지·exact allowlist, 열린 gate와 안전 경계를 보존했다.
 
 ## Recovery 정책
 

@@ -30,13 +30,16 @@
 - [x] F-007/F-009 regression·DTO/service 방어·PostgreSQL CHECK 구현.
 - [x] Focused 91, Backend 314·e2e 2·build/type/lint/format과 PostgreSQL fresh 3/3·legacy upgrade 검증.
 - [x] F-007/F-008/F-009 audit FIXED 전이와 제품·감사 commit·push.
-- [ ] 다음 P2 F-012 RankingSnapshot 무제한 생성 범위 진단.
+- [x] F-012 공개 POST·service·schema·소비자·요구사항과 과거 deferred branch 진단.
+- [x] Focused ranking baseline 2 suites/15 tests와 반복 호출당 신규 durable row 생성 확인.
+- [/] 공개 API 보존형 일일 멱등화 또는 API 제거 선택과 exact allowlist 승인.
 
 ## 열린 gate
 
 - [ ] F-065 API 24~29 malicious-app PoC·OEM patch matrix와 독립 fix-recheck.
 - [ ] F-001/F-002 구현자와 독립된 fix-recheck와 production guard latency·availability 관찰.
 - [ ] F-007/F-008/F-009 독립 fix-recheck; F-008/F-009 legacy row scan·정정과 F-009 CHECK validation.
+- [ ] F-012 legacy snapshot 분류·backfill·중복 정책과 staged CHECK validation.
 - [ ] F-011/F-029/F-030 구현자와 독립된 fix-recheck.
 - [ ] F-069 구현자와 독립된 fix-recheck.
 - [ ] F-069 실제 운영 cardinality·capacity·managed Redis failover·latency 증거.

@@ -28,16 +28,24 @@
 - F-069는 PostgreSQL window projection과 fenced Redis generation을 cache-first로 제공하고, F-011/F-029/F-030 DB fallback도 같은 rank·population·UTC 계약으로 통일했다.
 - F-065는 minSdk 24와 exported `singleTask` launcher를 유지하면서 MainActivity의 `taskAffinity`를 비우고 task reparenting을 비활성화했다.
 
-## F-007/F-008/F-009 완료 증거
+## 최근 완료 증거
 
-- Baseline은 null validation 0건과 신규 regression 9건 RED였고, 최종 focused 2 suites/91 및 Backend full 26 suites/314가 통과했다. E2e 2, build, source/spec typecheck, full lint, Prettier와 Prisma validation도 통과했다.
-- PostgreSQL 17 fresh 7-migration 통합 3/3이 신규·수정 invalid active row를 차단했다. Invalid legacy row가 있는 6-migration DB도 upgrade됐고 soft-delete 뒤 `VALIDATE CONSTRAINT`가 성공했다.
-- Exact container·임시 prefix를 제거하고 Docker Desktop을 정지 상태로 복구했다. Canonical ledger는 schema·history·fingerprint 검증 뒤 세 finding을 FIXED로 전이했다.
-- 제품·감사는 `317253cff1fd938b847017697f049582720261f9`로 commit·push됐다. 독립 fix-recheck 전에는 RECHECKED로 올리지 않는다.
+- F-007/F-008/F-009는 focused 91, Backend 314, e2e 2, build·type·lint·format·Prisma와 PostgreSQL 17 fresh 3/3·legacy upgrade를 통과했다. 제품·감사 `317253cff1fd938b847017697f049582720261f9`와 직전 closure memory는 원격에 있고 당시 작업 트리는 깨끗했다.
+
+## F-012 실행 계약 — 승인 대기
+
+- 재현 조건은 인증 사용자의 `POST /rankings/snapshot` 반복 호출이다. 현재 service는 매번 `RankingSnapshot.create`를 실행하며 uniqueness·retention·time bucket이 없다. Front와 다른 Backend source에는 이 POST의 소비자가 없지만, 승인된 Milestone 11 API 계약에는 endpoint가 명시돼 있다.
+- 오류 해결 playbook의 기존 F-012는 NotificationDelivery index 문제로 root cause가 다르며 현재 문제에 적용할 VERIFIED record는 없다. 현재 ranking controller/service focused baseline은 2 suites/15 tests가 통과한다.
+- 추천안은 공개 API를 보존하고 사용자·period·UTC 날짜당 최초 snapshot 하나만 만드는 것이다. 같은 날짜의 반복 호출은 기존 row를 반환해 durable write와 ranking 재계산을 생략하고, 세 period를 합쳐 사용자당 하루 최대 3개로 row 증가를 제한한다.
+- 새 nullable `snapshotDate` DATE, non-null `NOT VALID` CHECK와 non-null row 대상 unique index를 추가한다. Legacy row는 null로 보존해 migration을 비파괴적으로 적용하고 신규·수정 row부터 날짜와 uniqueness를 강제한다. Production legacy 분류·backfill·중복 해소·constraint validation은 별도 gate다.
+- 대안은 저장소 소비자가 없는 공개 POST와 service method를 제거하는 것이다. DB 변경은 없지만 기존 Milestone 11 API 계약과 외부 미확인 client를 깨뜨릴 수 있어 추천하지 않는다.
+- 제품 writable allowlist는 `DSM_Back/src/rankings/rankings.service.spec.ts`, `DSM_Back/src/rankings/rankings.service.ts`, `DSM_Back/prisma/schema.prisma`, 새 `DSM_Back/prisma/migrations/20260909_bound_ranking_snapshot_writes/migration.sql`, 새 `DSM_Back/test/ranking-snapshot-idempotency.pg-spec.ts`다. 각 구현 단계는 1~2개 파일만 수정한다.
+- 기록 allowlist는 canonical audit의 `findings.jsonl`·`README.md`, active memory 4파일과 검증된 새 해결이 중복되지 않을 때의 `error-resolution-playbook.md`다. Controller/API response, Front, Android, dependency, 기존 migration은 제외한다.
+- 성공 기준은 unit RED/GREEN에서 same-day 재사용·UTC 경계·period 분리·무 write를 확인하고, 실제 PostgreSQL fresh·legacy upgrade·동시 최초 호출에서 정확히 한 row를 증명한 뒤 focused/full unit·e2e·build·type·lint·format·Prisma·ledger 검증을 통과하는 것이다. 데이터 무결성 P2 change-gate를 적용하며 자체 검토 뒤 FIXED까지만 전이한다.
 
 ## 후속 실행
 
-1. 다음 canonical P2 F-012의 RankingSnapshot 생성 경로·소비자·retention과 결합 영향을 진단한다.
+1. F-012의 시간 버킷 멱등화 또는 공개 API 제거 선택을 승인받고 선택된 exact allowlist만 실행한다.
 2. 열 개 FIXED finding의 구현자 독립 fix-recheck, F-008/F-009 legacy-state scan·CHECK validation과 F-069 운영 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보하고 남은 P2→P3를 진행한다.
 
