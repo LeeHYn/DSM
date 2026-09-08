@@ -87,6 +87,8 @@
 | `ER-20260816-003` | `VERIFIED` | Metro, Windows Temp, cache, `EPERM` | Metro cache deserialize 실패 뒤 bundle이 멈추거나 reset이 권한 오류로 종료됨 |
 | `ER-20260817-001` | `VERIFIED` | Android, Google OAuth, debug signer, Credential Manager, `[16]` | 계정 선택 뒤 `Account reauth failed`로 ID token 전에 Login으로 복귀함 |
 | `ER-20260827-001` | `VERIFIED` | Prisma migration, PostgreSQL enum, disposable seed | migration upgrade seed가 존재하지 않는 enum literal로 중단됨 |
+| `ER-20260909-001` | `VERIFIED` | NestJS, class-validator, PATCH, null, Date | optional 날짜 `null`이 검증을 건너뛰고 epoch로 저장됨 |
+| `ER-20260909-002` | `VERIFIED` | Prisma migration, PostgreSQL CHECK, `NOT VALID`, legacy data | 기존 오염 row 때문에 무결성 CHECK 배포가 중단될 수 있음 |
 
 ## 해결 record
 
@@ -1346,6 +1348,34 @@
   [Prisma schema](../../DSM_Back/prisma/schema.prisma),
   [forward migration](../../DSM_Back/prisma/migrations/20260825_integration_backend_deltas/migration.sql)
 - `lastVerifiedAt`: `2026-08-27`
+
+### ER-20260909-001 — class-validator optional 날짜의 explicit null 차단
+
+- `resolutionId`: `ER-20260909-001`
+- `status`: `VERIFIED`
+- 증상/signature: PATCH의 optional 날짜에 `null`을 보내도 validation error가 0건이고, service의 `new Date(null)`이 Unix epoch를 만들어 유효 timestamp로 저장한다.
+- 적용 조건: NestJS ValidationPipe, class-validator 0.15의 `IsOptional`, 문자열 날짜 DTO와 service-side `Date` 변환을 함께 사용하는 경우.
+- root cause: `IsOptional`은 `undefined`와 `null` 모두에서 나머지 validator를 건너뛰지만 service는 둘을 다르게 처리했다.
+- 해결 절차: 생략만 허용할 필드에는 `ValidateIf((_object, value) => value !== undefined)`와 원래 validator를 결합한다. Service도 입력 type과 parse 결과를 write 전에 검사하고, omitted·null·malformed 사례와 side-effect 부재를 회귀 테스트한다.
+- 검증: null 두 필드가 오류 0건인 baseline과 9건 RED를 재현했다. 수정 뒤 Task focused 2 suites/91, Backend full 26 suites/314, e2e 2, build/type/lint/format이 통과했다.
+- 재발 방지/금지: 실제로 null이 “값 지우기”인 nullable 필드까지 일괄 변경하지 않는다. 각 PATCH 필드의 absent/null 계약과 persistence type을 먼저 대조한다.
+- 적용 불가 또는 잔여 위험: public DTO를 거치지 않는 내부 호출은 service 방어 검사가 필요하고, 다른 optional 필드는 별도 계약 검토 대상이다.
+- 근거: [UpdateTaskDto](../../DSM_Back/src/tasks/dto/update-task.dto.ts), [Task service](../../DSM_Back/src/tasks/tasks.service.ts), [release audit](../audits/20260817-release-audit-full-project/README.md)
+- `lastVerifiedAt`: `2026-09-09`
+
+### ER-20260909-002 — legacy data가 있는 PostgreSQL CHECK의 staged rollout
+
+- `resolutionId`: `ER-20260909-002`
+- `status`: `VERIFIED`
+- 증상/signature: 새 무결성 CHECK를 즉시 검증하면 과거 버그로 저장된 row 하나 때문에 전체 migration이 실패하지만, 기존 값을 임의 수정할 안전한 규칙은 없다.
+- 적용 조건: Prisma가 관리하는 PostgreSQL table에 soft-delete column이 있고 신규·수정 active row부터 관계 invariant를 강제해야 하는 경우.
+- root cause: 일반 `ADD CONSTRAINT CHECK`는 기존 row를 즉시 scan하며, 데이터 의미를 모르는 migration은 안전한 자동 보정을 할 수 없다.
+- 해결 절차: active row predicate를 포함한 CHECK를 `NOT VALID`로 추가해 신규·수정 row부터 강제한다. Canonical prefix DB에 invalid legacy row를 seed한 upgrade와 fresh chain을 모두 실행하고, 운영 scan·정정 또는 soft-delete 뒤 `VALIDATE CONSTRAINT`를 별도 gate로 수행한다.
+- 검증: PostgreSQL 17에서 fresh 7-migration chain과 통합 3/3이 통과했다. Invalid row가 있는 6-migration DB도 upgrade됐고 신규 invalid insert는 named CHECK로 거부됐으며 soft-delete 후 validation이 성공했다.
+- 재발 방지/금지: 사용자 날짜를 임의 값으로 clamp·재작성하거나 검증되지 않은 constraint를 완료로 숨기지 않는다. Constraint 이름, `convalidated`, invalid-row count와 최종 validation을 관찰한다.
+- 적용 불가 또는 잔여 위험: hard invariant가 즉시 전 row에 성립해야 하거나 legacy row를 허용할 수 없으면 배포 전 명시적 데이터 정정 계획과 validated CHECK가 필요하다.
+- 근거: [migration.sql](../../DSM_Back/prisma/migrations/20260909_enforce_task_temporal_integrity/migration.sql), [PostgreSQL test](../../DSM_Back/test/task-temporal-integrity.pg-spec.ts), [release audit](../audits/20260817-release-audit-full-project/README.md)
+- `lastVerifiedAt`: `2026-09-09`
 
 ## 새 record 템플릿
 
