@@ -5,7 +5,7 @@
 - Authoritative checkout: `C:\dsm-integration-review`
 - Branch baseline: `codex/integration-main-review@5a3c0aa`
 - Canonical ledger: `findings.jsonl`
-- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records. The F-011/F-029/F-030 follow-up changes five existing ranking source/test paths to make the bounded DB fallback use the same window projection and stable UTC reference. The combined F-001/F-002 closure changes twenty Backend/Front source and test paths, reuses the existing refresh-family schema and adds one disposable PostgreSQL integration specification.
+- Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records. The F-011/F-029/F-030 follow-up changes five existing ranking source/test paths to make the bounded DB fallback use the same window projection and stable UTC reference. The combined F-001/F-002 closure changes twenty Backend/Front source and test paths, reuses the existing refresh-family schema and adds one disposable PostgreSQL integration specification. F-007/F-008/F-009 change four existing Task source/test paths and add one staged temporal CHECK migration plus one PostgreSQL specification; F-008 product logic was already shipped in `e2bda53`.
 
 ## Interrupted-session recovery
 
@@ -22,9 +22,9 @@ The recovered ledger contains 83 schema-valid findings.
 
 | Status | Count | IDs requiring attention |
 |---|---:|---|
-| `CONFIRMED` | 62 | Product fixes require separate plans and approval |
+| `CONFIRMED` | 59 | Product fixes require separate plans and approval |
 | `FIXING` | 2 | F-067, F-068 — public URL and external release evidence pending |
-| `FIXED` | 7 | F-001, F-002, F-011, F-029, F-030, F-065, F-069 — implementation verified; independent fix-recheck pending |
+| `FIXED` | 10 | F-001, F-002, F-007, F-008, F-009, F-011, F-029, F-030, F-065, F-069 — implementation verified; independent fix-recheck pending |
 | `REFUTED` | 1 | F-066 |
 | `RECHECKED` | 8 | F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083 |
 | `UNKNOWN` | 3 | F-003, F-013, F-017 |
@@ -36,8 +36,8 @@ The recovered ledger contains 83 schema-valid findings.
 | `P2` | 53 |
 | `P3` | 20 |
 
-- Ledger bytes: 342,548.
-- Ledger SHA-256: `0292C684E7B29B3090C5382A86C4FC5C851D504F4B516E0C7875263FFEBF4E26`.
+- Ledger bytes: 349,243.
+- Ledger SHA-256: `ECE3871BBBF9CD8623682230CA5B20746438671710F723E00BBA725083A9B566`.
 - IDs are contiguous from F-001 through F-083.
 - Finding IDs and fingerprint values are unique.
 - Every fingerprint value equals SHA-256 of its recorded basis.
@@ -84,6 +84,9 @@ F-083 first changed from `VALIDATING` to `CONFIRMED P2` after two independent da
 
 - F-001: `FIXED P2`. Explicit Android logout now uses the refresh token to revoke its server family before clearing Keychain or prototype state. Network and timeout failures retain the authenticated session and surface retry feedback; independent recheck remains open.
 - F-002: `FIXED P2`. Access JWTs carry their refresh-family `sid`, and the shared REST guard accepts them only while that family has an unrevoked, unexpired row. Logout therefore invalidates copied access JWTs after commit; indexed-lookup production cost and independent recheck remain open.
+- F-007: `FIXED P2`. PATCH date fields skip validation only when absent; explicit null and service-level non-string values now fail before writes. Focused and full Backend gates passed; independent recheck remains open.
+- F-008: `FIXED P2`. The completion transition shipped in `e2bda53` stamps `completedAt` when generic PATCH enters COMPLETED and clears it when leaving. Historical contradictory rows and direct DB writes remain a scan gate; independent recheck remains open.
+- F-009: `FIXED P2`. Create and merged partial update intervals require `endAt > startAt`, and a staged PostgreSQL CHECK blocks invalid new or updated active rows. Existing invalid rows must be remediated before constraint validation; independent recheck remains open.
 - F-003: `UNKNOWN`. The external-property signing path, tracked helpers and clean handoff pass local checks. Two independent rechecks found no new P0/P1, but actual upload/Play signers, signer-specific OAuth and signed-device smoke are absent.
 - F-005: `RECHECKED`. Its first review was `UNKNOWN` because the standard Jest gate failed and no device smoke existed. The repaired standard gate, current 6-suite/36-test Product matrix and an isolated second reviewer establish removal of prototype-only state; physical-device relaunch remains residual operational risk.
 - F-011: `FIXED P2`. Redis and bounded DB fallback leaderboards now both use PostgreSQL competition `RANK()` with deterministic userId ordering. Returned ties agree with personal rank; independent recheck remains open.
@@ -147,6 +150,14 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 - Database: a task-owned PostgreSQL 17.10 database applied all six migrations and passed 1/1 HTTP integration. Headerless logout with an already-rotated predecessor token revoked its family; that family's access JWT and active refresh returned 401 afterward while another family for the same user remained accepted. The exact container was removed and Docker Desktop returned to stopped.
 - Residual risk: explicit logout cannot complete while the server is unreachable, requests admitted before the revocation commit can finish, and every protected REST request adds an indexed database lookup. Production latency/availability observation and implementer-independent fix rechecks remain open, so both findings are `FIXED`, not `RECHECKED`.
 
+## F-007, F-008 and F-009 Task temporal-integrity closure
+
+- API and service boundary: optional PATCH dates now distinguish absence from explicit null. The service parses dates defensively and validates both create intervals and the final existing-plus-PATCH interval before capacity, category, notification, Task or score writes.
+- Completion state: source and blame review found that `e2bda53` already synchronized `completedAt` for generic transitions into and out of COMPLETED. The current focused and full regressions reconfirmed those paths, so F-008 required canonical reconciliation rather than another product edit.
+- Database rollout: migration `20260909_enforce_task_temporal_integrity` adds `Task_active_interval_order_check` as `NOT VALID`. It immediately rejects invalid new or updated active rows, permits legacy invalid rows to be corrected or soft-deleted and avoids failing deployment solely because historical data exists.
+- Verification: the pre-fix regression run failed 9 cases and the final focused run passed 2 suites/91 tests. Backend passed 26 suites/314 tests, normal e2e 2, build, source/spec typechecks, full non-fixing ESLint, changed-file Prettier and Prisma validation. Fresh PostgreSQL 17 databases applied 7 migrations and passed the committed 3/3 suite. A six-migration database containing an active reversed row upgraded successfully; subsequent invalid writes failed, and remediation followed by `VALIDATE CONSTRAINT` succeeded.
+- Residual risk: production must scan legacy interval and completion-state contradictions. Invalid active intervals must be corrected or soft-deleted before validating the staged CHECK. All three findings need implementer-independent fix-recheck and therefore remain `FIXED`, not `RECHECKED`.
+
 ## F-065 repository implementation
 
 - Manifest: `MainActivity` declares `android:taskAffinity=""` and `android:allowTaskReparenting="false"`. The launcher remains exported and `singleTask`; minSdk stays 24.
@@ -197,4 +208,4 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 
 ## Termination status
 
-The release audit remains open. It has 62 confirmed findings, two fixes in progress, seven fixed findings awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-001/F-002 and F-011/F-029/F-030 need independent fix-recheck. F-065 needs old-OS adversarial evidence and an independent fix-recheck. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.
+The release audit remains open. It has 59 confirmed findings, two fixes in progress, ten fixed findings awaiting independent recheck, one refuted finding, three unknowns, eight rechecked findings and no candidate still validating. F-001/F-002, F-007/F-008/F-009 and F-011/F-029/F-030 need independent fix-recheck; F-008/F-009 also retain production legacy-state gates and F-009 needs CHECK validation. F-065 needs old-OS adversarial evidence and an independent fix-recheck. F-067/F-068 need public legal resources, external deletion handling, signed-device and Play Console evidence. F-069 needs an independent fix-recheck and production performance evidence remains residual. F-003/F-017 need actual signer, OAuth, production endpoint and signed-device evidence; F-013 needs production readiness wiring. Rounds 12 and 13 were targeted revalidation rather than distinct free-exploration rounds, so only Round 11 counts toward the required two consecutive zero-new-confirmed-P0–P2 rounds. This checkout is not release-ready.

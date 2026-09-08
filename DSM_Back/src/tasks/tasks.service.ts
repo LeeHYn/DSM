@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -31,8 +32,9 @@ export class TasksService {
   }
 
   async create(userId: string, dto: CreateTaskDto): Promise<Task> {
-    const startAt = new Date(dto.startAt);
-    const endAt = new Date(dto.endAt);
+    const startAt = this.parseTaskDate(dto.startAt, 'startAt');
+    const endAt = this.parseTaskDate(dto.endAt, 'endAt');
+    this.assertTaskInterval(startAt, endAt);
 
     try {
       return await this.runSerializableTransaction(async (client) => {
@@ -123,7 +125,14 @@ export class TasksService {
       const now = new Date();
       const existing = await this.findOneWithClient(userId, id, client);
       const nextStartAt =
-        dto.startAt !== undefined ? new Date(dto.startAt) : existing.startAt;
+        dto.startAt !== undefined
+          ? this.parseTaskDate(dto.startAt, 'startAt')
+          : existing.startAt;
+      const nextEndAt =
+        dto.endAt !== undefined
+          ? this.parseTaskDate(dto.endAt, 'endAt')
+          : existing.endAt;
+      this.assertTaskInterval(nextStartAt, nextEndAt);
       if (!this.isSameUtcDay(existing.startAt, nextStartAt)) {
         await this.assertDailyTaskCapacity(userId, nextStartAt, id, client);
       }
@@ -168,8 +177,8 @@ export class TasksService {
           ...(dto.description !== undefined && {
             description: dto.description,
           }),
-          ...(dto.startAt !== undefined && { startAt: new Date(dto.startAt) }),
-          ...(dto.endAt !== undefined && { endAt: new Date(dto.endAt) }),
+          ...(dto.startAt !== undefined && { startAt: nextStartAt }),
+          ...(dto.endAt !== undefined && { endAt: nextEndAt }),
           ...(dto.difficulty !== undefined && { difficulty: dto.difficulty }),
           ...(dto.status !== undefined && { status: dto.status }),
           ...completionData,
@@ -318,6 +327,23 @@ export class TasksService {
         nextAttemptAt: null,
       },
     });
+  }
+
+  private parseTaskDate(value: unknown, field: 'startAt' | 'endAt'): Date {
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${field} must be an ISO 8601 date string`);
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`${field} must be an ISO 8601 date string`);
+    }
+    return parsed;
+  }
+
+  private assertTaskInterval(startAt: Date, endAt: Date): void {
+    if (endAt.getTime() <= startAt.getTime()) {
+      throw new BadRequestException('endAt must be after startAt');
+    }
   }
 
   private utcDayRange(reference: Date): { dayStart: Date; nextDay: Date } {

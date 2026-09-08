@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsBoolean,
   IsDateString,
+  ValidateIf,
 } from 'class-validator';
 import { TaskDifficulty, TaskStatus } from '@prisma/client';
 
@@ -16,12 +17,12 @@ export class UpdateTaskDto {
   @IsOptional()
   description?: string;
 
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDateString()
-  @IsOptional()
   startAt?: string;
 
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDateString()
-  @IsOptional()
   endAt?: string;
 
   @IsEnum(TaskDifficulty)

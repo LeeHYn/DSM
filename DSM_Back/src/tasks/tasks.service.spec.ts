@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, type Task, TaskDifficulty, TaskStatus } from '@prisma/client';
 import crypto from 'node:crypto';
 import { TasksService } from './tasks.service';
@@ -197,6 +201,22 @@ describe('TasksService', () => {
       expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.task.create).not.toHaveBeenCalled();
     });
+
+    it.each([
+      ['zero-length', '2026-06-03T06:00:00Z'],
+      ['reversed', '2026-06-03T05:59:59Z'],
+    ])(
+      'rejects a %s interval before opening a transaction',
+      async (_label, endAt) => {
+        await expect(
+          service.create('user-uuid-1', makeCreateTaskDto({ endAt })),
+        ).rejects.toBeInstanceOf(BadRequestException);
+
+        expect(prismaMock.$transaction).not.toHaveBeenCalled();
+        expect(transactionMock.task.create).not.toHaveBeenCalled();
+        expect(scoresMock.recompute).not.toHaveBeenCalled();
+      },
+    );
 
     it('returns a matching replay before capacity and category checks without repeating side effects', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-06-01T00:00:00Z'));
@@ -710,6 +730,43 @@ describe('TasksService', () => {
       expect(transactionMock.task.count).not.toHaveBeenCalled();
     });
 
+    it.each(['startAt', 'endAt'] as const)(
+      'defensively rejects a null %s before writing',
+      async (property) => {
+        transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+
+        await expect(
+          service.update('user-uuid-1', 'task-uuid-1', {
+            [property]: null,
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+
+        expect(transactionMock.task.update).not.toHaveBeenCalled();
+        expect(scoresMock.recompute).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ['startAt reaches the existing end', { startAt: '2026-06-03T07:00:00Z' }],
+      ['endAt reaches the existing start', { endAt: '2026-06-03T06:00:00Z' }],
+      [
+        'both dates are reversed',
+        {
+          startAt: '2026-06-03T08:00:00Z',
+          endAt: '2026-06-03T07:00:00Z',
+        },
+      ],
+    ])('rejects an invalid merged interval when %s', async (_label, dto) => {
+      transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
+
+      await expect(
+        service.update('user-uuid-1', 'task-uuid-1', dto),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+    });
+
     it('loads the owned task before rejecting a move into a full UTC day', async () => {
       transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
       transactionMock.task.count.mockResolvedValue(20);
@@ -718,6 +775,7 @@ describe('TasksService', () => {
       await expect(
         service.update('user-uuid-1', 'task-uuid-1', {
           startAt: '2026-06-04T00:00:00.000Z',
+          endAt: '2026-06-04T01:00:00.000Z',
           categoryId: 'missing-category',
         }),
       ).rejects.toMatchObject({
@@ -770,6 +828,7 @@ describe('TasksService', () => {
       await expect(
         service.update('user-uuid-1', 'task-uuid-1', {
           startAt: '2026-06-03T23:59:59.999Z',
+          endAt: '2026-06-04T00:59:59.999Z',
           categoryId: 'missing-category',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -783,6 +842,7 @@ describe('TasksService', () => {
       const endOfDayTask = {
         ...MOCK_TASK,
         startAt: new Date('2026-06-03T23:59:59.999Z'),
+        endAt: new Date('2026-06-04T00:59:59.999Z'),
       };
       transactionMock.task.findFirst.mockResolvedValue(endOfDayTask);
       transactionMock.task.count.mockResolvedValue(19);
@@ -884,7 +944,10 @@ describe('TasksService', () => {
       [
         'start time',
         MOCK_TASK,
-        { startAt: '2026-06-04T06:00:00Z' },
+        {
+          startAt: '2026-06-04T06:00:00Z',
+          endAt: '2026-06-04T07:00:00Z',
+        },
         new Date('2026-06-04T06:00:00Z'),
       ],
       [
@@ -910,6 +973,10 @@ describe('TasksService', () => {
             'startAt' in dto && dto.startAt
               ? new Date(dto.startAt)
               : existingTask.startAt,
+          endAt:
+            'endAt' in dto && dto.endAt
+              ? new Date(dto.endAt)
+              : existingTask.endAt,
         };
         transactionMock.task.findFirst.mockResolvedValue(existingTask);
         transactionMock.task.update.mockResolvedValue(updatedTask);
@@ -1044,12 +1111,14 @@ describe('TasksService', () => {
       const movedTask = {
         ...MOCK_TASK,
         startAt: new Date('2026-06-04T06:00:00Z'),
+        endAt: new Date('2026-06-04T07:00:00Z'),
       };
       transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
       transactionMock.task.update.mockResolvedValue(movedTask);
 
       await service.update('user-uuid-1', 'task-uuid-1', {
         startAt: '2026-06-04T06:00:00Z',
+        endAt: '2026-06-04T07:00:00Z',
       });
 
       expect(
@@ -1161,12 +1230,14 @@ describe('TasksService', () => {
       const movedTask = {
         ...MOCK_TASK,
         startAt: new Date('2026-06-04T06:00:00Z'),
+        endAt: new Date('2026-06-04T07:00:00Z'),
       };
       transactionMock.task.findFirst.mockResolvedValue(MOCK_TASK);
       transactionMock.task.update.mockResolvedValue(movedTask);
 
       await service.update('user-uuid-1', 'task-uuid-1', {
         startAt: '2026-06-04T06:00:00Z',
+        endAt: '2026-06-04T07:00:00Z',
       });
 
       expect(scoresMock.recompute).toHaveBeenNthCalledWith(

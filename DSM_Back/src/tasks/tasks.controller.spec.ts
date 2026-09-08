@@ -15,6 +15,7 @@ import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 const CLIENT_MUTATION_ID = '0cfe1042-769f-4d19-88bc-7a0d710553ca';
 
@@ -221,5 +222,20 @@ describe('CreateTaskDto validation', () => {
     });
 
     await expect(validate(dto)).resolves.toEqual([]);
+  });
+});
+
+describe('UpdateTaskDto validation', () => {
+  it.each(['startAt', 'endAt'] as const)(
+    'rejects an explicit null %s',
+    async (property) => {
+      const dto = Object.assign(new UpdateTaskDto(), { [property]: null });
+
+      await expectValidationError(dto, property);
+    },
+  );
+
+  it('accepts omitted dates', async () => {
+    await expect(validate(new UpdateTaskDto())).resolves.toEqual([]);
   });
 });
