@@ -1,99 +1,36 @@
-- [x] 마일스톤 1: 백엔드/프론트엔드 세팅 계획 수립 및 승인 대기
-- [x] 마일스톤 2: `DSM_Back` (NestJS) 초기 세팅
-- [x] 마일스톤 3: `DSM_Front` (React Native/Expo) 초기 세팅
-- [x] 마일스톤 4: 생성된 프로젝트 구조 커밋 및 푸시
-- [x] 마일스톤 5: `DSM_Back` 백엔드 기반 구축 + DB/Prisma 세팅
-- [x] 마일스톤 6: `DSM_Back` 인증(Auth) 모듈 구현
-  - [x] JWT 액세스/리프레시 토큰 발급
-  - [x] 소셜 로그인 (Google, Kakao — Apple은 개발자 계정 필요)
-  - [x] 리프레시 토큰 순환 (bcrypt 해시 저장)
-  - [x] 로그아웃 (토큰 폐기)
-  - [x] JwtAuthGuard (Bearer 토큰 검증)
-  - [x] GET /auth/me (보호된 엔드포인트 예시)
-- [x] 마일스톤 7: 일과(Task) CRUD API 구현
-  - [x] POST /tasks (생성)
-  - [x] GET /tasks?date=YYYY-MM-DD (목록 조회, 날짜 필터)
-  - [x] GET /tasks/:id (단건 조회)
-  - [x] PATCH /tasks/:id (수정)
-  - [x] DELETE /tasks/:id (소프트 삭제)
-  - [x] PATCH /tasks/:id/complete (완료 처리)
-  - [x] 유닛 테스트 (서비스 + 컨트롤러)
-- [x] 마일스톤 8: 카테고리(Category) CRUD API 구현
-  - [x] POST /categories (생성, 이름 중복 시 409 Conflict)
-  - [x] GET /categories (사용자 + 기본 카테고리 목록)
-  - [x] GET /categories/:id (단건 조회, 기본 카테고리 포함)
-  - [x] PATCH /categories/:id (수정, 기본 카테고리 보호)
-  - [x] DELETE /categories/:id (삭제, 기본 카테고리 보호 / 하드 삭제)
-  - [x] 기본 카테고리(isDefault) 읽기 전용, 타 사용자 소유 카테고리 숨김
-  - [x] 유닛 테스트 (서비스 10 + 컨트롤러 5)
-- [x] 마일스톤 9: 리프레시 토큰 조회 구조 개선
-  - [x] 토큰 포맷 `<recordId>.<secret>`로 변경 (issueTokens)
-  - [x] refreshTokens/logout: findUnique(PK) + 단일 bcrypt.compare로 O(1) 조회
-  - [x] parseRefreshToken 헬퍼 (malformed 토큰 방어)
-  - [x] 엣지 케이스 테스트 (malformed/missing/revoked/expired/wrong-secret) — auth 8/8 통과
-  - [ ] (선택, 보류) 폐기 토큰 재사용 감지 훅
-  - [x] 스키마/마이그레이션 변경 없음 확인
-- [x] 마일스톤 10: 점수(DailyScore) 집계 로직 구현
-  - [x] scores.policy: 난이도 점수(10/20/30) + 보정계수(1.5/1.3/1.0/0.7) + 상한 900 + 6단계 티어
-  - [x] ScoresService.recompute: UTC일 기준 일과 집계 → DailyScore upsert → 누적 totalScore/티어 갱신
-  - [x] GET /scores?date= (일별), GET /scores/summary (누적 totalScore+티어) — JwtAuthGuard
-  - [x] Tasks 연동: create/update/remove/complete 시 재계산(update는 변경 전/후 양일)
-  - [x] 유닛 테스트 (정책 8 + 서비스 5 + 컨트롤러 3, Tasks 트리거 검증 포함)
-  - [x] 스키마/마이그레이션 변경 없음
-  - [ ] (보류) Cron UTC 자정 마감
-- [x] 마일스톤 11: 랭킹/백분위(FR-04) 구현
-  - [x] rankings.policy: 순위(전체 유저 기준) + 상위% + UTC 일/주간 범위 헬퍼
-  - [x] RankingsService: getMyRanking(DAILY/WEEKLY/TOTAL), getLeaderboard(TOP-N), createSnapshot
-  - [x] GET /rankings?period=, GET /rankings/leaderboard?period=&limit=, POST /rankings/snapshot — JwtAuthGuard
-  - [x] 조회 시 실시간 계산 (DailyScore/User), 주간은 groupBy-having
-  - [x] 유닛 테스트 (정책 6 + 서비스 6 + 컨트롤러 4)
-  - [x] 스키마/마이그레이션 변경 없음
-  - [ ] (보류) 배치/Redis 캐싱, WebSocket 실시간(NFR-02/03), 자동 Cron 스냅샷
-- [x] 지원 작업: 서브 에이전트 운영 체계 구축
-  - [x] `.ai/agents/README.md` 공통 운영 계약 및 역할 레지스트리 작성
-  - [x] `investigator`, `planner`, `backend-developer`, `frontend-developer`, `reviewer` 역할 문서 작성
-  - [x] `.ai/system_prompt.md`에 서브 에이전트 위임 프로토콜 연결
-  - [x] `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`를 저장소 로컬 `.ai/system_prompt.md`에 연결
-  - [x] 거부 시나리오 검증: 역할과 필수 위임 필드가 누락된 서브 에이전트가 수정 없이 중단
-  - [x] 허용 시나리오 검증: `reviewer`가 완전한 위임 계약으로 읽기 전용 감사 수행
-  - [x] 리뷰 findings 반영: memory 책임, SSOT 범위, migration, 외부 공식 문서 조회, 승인 상태의 모순 제거
-  - [x] 최종 read-only 재감사: 이전 findings 6건 해소, 신규 findings 없음
-- [x] 지원 작업: 에이전트 간 Context Compiler 역할 구축
-  - [x] `.ai/agents/context-compiler.md` 읽기 전용 encode/decode 역할 계약 작성
-  - [x] `.ai/agents/README.md` 역할 레지스트리와 선택적 사용 경계 연결
-  - [x] `.ai/system_prompt.md`에 다중 문서·에이전트 handoff 호출 조건과 원문 비대체 원칙 연결
-  - [x] `AgentEnvelope v1` JSON 예시 파싱 및 필수 키 18개 검증
-  - [x] 허용·round-trip 시나리오: `구현 승인 대기`와 정확한 파일 경로 보존
-  - [x] 거부 시나리오: 필수 필드 누락과 해결되지 않은 conflict 감지
-  - [x] 경계 시나리오: envelope가 필수 SSOT 원문 읽기를 대체하지 않음을 확인
-  - [x] `.ai/memory/plan.md`, `context.md`, `checklist.md` 승인·결정·완료 상태 동기화
-- [x] 지원 작업: Context Compiler 하이브리드 Handoff 확장
-  - [x] `English Task Prompt` 영어 Markdown 실행 프롬프트 계약 추가
-  - [x] `Required Markdown Reads` 정확한 `.md` 경로·이유·`full|sections` 읽기 계약 추가
-  - [x] `AgentEnvelope v1.1`에 delivery·language·Markdown read·translation 필드 추가
-  - [x] `.ai/agents/README.md`와 `.ai/system_prompt.md` 하이브리드 라우팅 연결
-  - [x] `.ai/memory/context.md` 기술 결정 동기화
-  - [x] 영어 번역 검증: 실행 지시는 영어, 결과 보고 언어 기본값은 한국어(`ko`)
-  - [x] 원문 보존 검증: `.ai/system_prompt.md`, 소스 경로와 `구현 승인 대기` 유지
-  - [x] Markdown 라우팅 검증: 정확한 경로, read scope, 파일 존재와 `full|sections` 모드 확인
-  - [x] 거부 시나리오 검증: 필수 Markdown 누락 또는 번역 conflict 시 실행용 handoff 중단
-  - [x] 계획·결정·체크리스트 승인·완료 상태 동기화
-- [x] 지원 작업: 현재 프로그램 전체 읽기 전용 코드 리뷰
-  - [x] `DSM_Back` 소스·테스트·Prisma schema·설정·package/lockfile 전체 검토
-  - [x] `DSM_Front` 소스·스크립트·설정·package/lockfile 전체 검토
-  - [x] 인증·인가·점수 원자성·랭킹·UTC 경계·오류 처리·운영 설정 교차 검토
-  - [x] 백엔드 Jest `--runInBand --no-cache`: 16 suites, 78 tests 통과
-  - [x] 백엔드 `tsc --noEmit --incremental false`: 통과
-  - [x] 프런트 `tsc --noEmit --incremental false`: CSS module type 선언 누락 1건 확인
-  - [x] lockfile 2개 JSON parse 및 root dependency 일치 확인
-  - [x] findings 현재 줄 번호 재검증 및 제품 파일 무변경 확인
-  - [x] 후속 수정: 사용자 지정 5건을 별도 승인 품질 수정 작업으로 수행
-- [x] 품질 수정: 사용자 지정 즉시 처리 5건
-  - [x] Google 로그인 audience 검증 강제
-  - [x] Refresh token 동시 재사용 차단
-  - [x] Task의 타 사용자 Category 연결 차단
-  - [x] Task 변경과 점수 재계산 원자성 보장
-  - [x] 프런트 CSS module TypeScript 오류 해소
-  - [x] reviewer P2 반영: Serializable isolation + Prisma P2034 bounded retry
-  - [x] 독립 reviewer 재검토: 기존 finding 해결, 신규 finding 없음
-  - [x] 최종 검증: 백엔드 16 suites·99 tests, 백엔드·프런트 TypeScript 통과
+# DSM 공정표 — 2026-09-08
+
+표기: `[x]` 완료, `[/]` 진행 중, `[ ]` 미완료·외부 gate. 세부 계약과 검증 수치는 `context.md`를 따른다.
+
+## 완료
+
+- [x] 중단 세션의 child final 60개를 회수·중복 판정하고 canonical audit F-001~F-083을 구성.
+- [x] Audit 구조·fingerprint·status history·strict UTF-8 검증.
+- [x] F-005 authenticated Product REST·ProductStore 구현과 독립 recheck.
+- [x] F-006·F-016·F-025·F-035·F-039·F-040 종결 및 독립 검증.
+- [x] F-083 Task create idempotency·retry fence 구현, PostgreSQL concurrency 10/10, 독립 recheck 2건.
+- [x] Android-only 범위 확정과 F-066 독립 검토 2건 `REFUTED`.
+- [x] F-067/F-068 URL 미정 승인 구현: Backend 204 transaction delete, PostgreSQL cascade, Android session/Keychain/ProductStore fence, 두 단계 UI, legal links, release URL gate.
+- [x] F-067/F-068 전체 Backend·Front·Android 회귀와 최종 경합 검토.
+- [x] 제품·감사·계획 48개 exact path commit `02681c7` 및 integration push.
+- [x] Integration active memory 압축, commit `74406a0`, push.
+- [x] Root active memory 3개와 README 압축·hash 갱신, exact commit·push.
+- [x] 두 branch remote equality와 tracked working state 확인.
+
+## 열린 gate
+
+- [ ] F-067/F-068 공개 `PRIVACY_POLICY_URL`·`ACCOUNT_DELETION_URL`과 외부 요청 처리 절차.
+- [ ] F-067/F-068 signed-device·Play Console/Data safety 증거와 독립 P1 recheck 2건.
+- [ ] F-003/F-017 actual signer·production OAuth·signed artifact/device 증거.
+- [ ] F-013 production readiness mapping.
+- [ ] F-065 API 24~29 task-affinity 처리와 F-069 Redis/batch architecture.
+- [ ] 남은 `CONFIRMED` finding을 별도 계획·승인 후 P1→P2→P3 순으로 수정·recheck.
+- [ ] 서로 다른 자유 탐색에서 zero-new-confirmed-P0~P2 연속 두 round.
+- [ ] code/config/artifact/audit 일치 후 release-ready 재판정.
+
+## 유지 규칙
+
+- [x] `DSM_Back/.env`, key·keystore·private Gradle property를 읽거나 stage하지 않음.
+- [x] `git add -A` 없이 exact path만 stage.
+- [x] 기존 recovery `*.original.md`·`*.failed-*`를 읽기·수정·삭제·stage하지 않음.
+- [x] Source/test 변경은 검증된 integration commit에, 조정 상태는 root active memory에 분리.
