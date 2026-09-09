@@ -8,8 +8,8 @@
 - [ ] Docker PostgreSQL·Redis 기동, migration·API health 검증: 재부팅 완료, stale socket 삭제 사용자 조치 대기.
 - [x] Backend/Front 전체 548 tests·정적 gate·Android debug 365 tasks. 로컬 DB 검증은 위 별도 항목으로 남김.
 - [x] 독립 reviewer의 main 고유 변경·충돌·병합 gate 검토 및 기존 single-branch clone 문서 수정.
-- [ ] 기존 세팅 변경과 새 검증 결과 memory 동기화·commit.
-- [ ] main 통합·최종 검증·원격 push와 clean tree 확인.
+- [x] 기존 세팅 변경과 새 검증 결과 memory 동기화·commit, root README·clone 가이드 main 전환.
+- [x] main 통합·tree/ancestry 검증·원격 반영 `9e33031`, 로컬 main fast-forward와 clean tree 확인.
 
 ## 현재 PC D드라이브 세팅 — 2026-09-09
 

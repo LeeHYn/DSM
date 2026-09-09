@@ -2,7 +2,7 @@
 
 ## 현재 PC D드라이브 환경 구성
 
-- 현재 작업 경로는 `D:\DSM`이다. `codex/integration-main-review@32dec29`의 검증된 제품 tree를 `main`으로 병합한다. 아래의 `C:\DEV` 등은 원격에 기록된 이전 PC checkpoint다.
+- 현재 작업 경로·branch는 `D:\DSM`, `main`이다. `codex/integration-main-review@32dec29`의 검증된 제품 tree가 merge commit `9e330314d100644886a4104d07c7197f12616ee5`로 원격 main에 반영됐고 로컬 main도 같은 상태다. 아래의 `C:\DEV` 등은 이전 PC checkpoint다.
 - 사용자 clone·세팅 요청에 따라 Git 2.53.0.windows.3, Node 22.23.2/npm 10.9.8, Microsoft JDK 17.0.20.1+1, Docker Desktop을 `D:\DSM\.local`에 준비했다. npm·Gradle·Android 캐시와 Docker data root도 D드라이브로 구성했다.
 - Backend `.env`와 Front `.env.local`을 이 PC에서 새로 생성했다. DB/JWT는 난수이며 OAuth는 placeholder/빈 설정, FCM dispatch는 false다. Git ignore 상태를 확인했고 기존 타 PC secret은 접근하지 않았다.
 - DB는 프로젝트 지침대로 Docker Compose의 PostgreSQL 17/Redis 8을 사용한다. Portable PostgreSQL은 설치하지 않았고 사전 다운로드 archive는 제거했다.
@@ -16,7 +16,9 @@
 
 ## Checkout·책임 경계
 
-- 조정 checkout은 `C:\DEV`의 `main`, 제품·감사 checkout은 `C:\dsm-integration-review`의 `codex/integration-main-review`다.
+- 현재 PC의 개발·감사 기준은 `D:\DSM/main`이다. 병합 당시 원격 main과 integration 양쪽 ancestry, 로컬·GitHub tree 일치, 제품·audit 무변경과 clean tracked tree를 확인했다. 아래 두 C드라이브 경로는 이전 PC 이력이며 현재 checkout으로 사용하지 않는다.
+
+- 이전 PC의 조정 checkout은 `C:\DEV/main`, 제품·감사 checkout은 `C:\dsm-integration-review/codex/integration-main-review`였다.
 - F-012 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`와 외부 PC 문서 `af2ff2640b1fa27111302766baa61aada15b304d`까지 원격 upstream에 있다.
 - 제품 범위는 Android 전용 DSM v1.3이다. Backend는 NestJS·Prisma 6·PostgreSQL, 클라이언트는 React Native Community CLI 기반 Android다.
 - Canonical audit는 `.ai/audits/20260817-release-audit-full-project/findings.jsonl`이다. Root 완료와 release-ready 판정은 구분한다.

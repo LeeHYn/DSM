@@ -9,8 +9,8 @@
 | `checklist.md` | 완료 공정과 열린 gate | main agent |
 
 - 위 3개만 active memory다. 이 README는 routing과 byte/hash ledger다.
-- 현재 PC는 `D:\DSM`이며 검증된 integration 제품 tree의 main 병합을 진행한다. 재부팅과 548 tests·정적 gate·Android debug 재검증은 완료했다. Docker stale socket의 수동 삭제가 실행 정책에 차단돼 사용자 직접 조치를 요청했고 DB·API 검증이 남았다. 아래 C드라이브 checkout 기록은 이전 PC의 원격 checkpoint다.
-- 조정 범위는 root `main`, 제품·감사는 `codex/integration-main-review`이다.
+- 현재 PC는 `D:\DSM/main`이며 merge `9e33031`로 원격 main 병합·동기화를 마쳤다. 재부팅과 548 tests·정적 gate·Android debug 재검증은 완료했다. Docker stale socket의 수동 삭제가 실행 정책에 차단돼 사용자 직접 조치를 요청했고 DB·API 검증이 남았다. 아래 C드라이브 checkout 기록은 이전 PC의 원격 checkpoint다.
+- 현재 개발·제품·감사는 `main` 기준이며 기존 integration branch와 로컬 이력은 보존했다.
 - F-012 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`와 외부 PC 문서 `af2ff2640b1fa27111302766baa61aada15b304d`까지 원격에 있다.
 - Canonical audit는 83건: `58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`. Release-ready가 아니다.
 
@@ -18,11 +18,11 @@
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `plan.md` | 11,657 | `B2F7FA99EAAA7A14C157F11239E36182810FEC54B18E7E045E433F4A20EC53D2` |
-| `context.md` | 10,113 | `33FB38821C806921D5237C013158FE9AF04852DBDCE7A0C1ED85C7B439B5537F` |
-| `checklist.md` | 6,711 | `68D405A8FE9D1F512B15DB5D6E9950147BA4C0DDBA4064D952D7BFE37B73365A` |
+| `plan.md` | 12,143 | `478628C7EBFF994BB95E192D8BEF321F8719613B464DE614000D7DCA71582561` |
+| `context.md` | 10,523 | `D67D880ADDC7A272741E62D0D3D920447043292858414498A92F5B35C19590C0` |
+| `checklist.md` | 6,798 | `CEDEDD0A60D1F5DD1A5D3831A91F94D5CBE61218906E8A2DE07999F594CF4D79` |
 
-- Active 3 합계: 28,481 bytes.
+- Active 3 합계: 29,464 bytes.
 - 원격의 압축 snapshot은 16,844 bytes였으며, 현재 PC 설치·재검증·main 병합과 Docker 복구 대기를 추가했다. 해시는 strict UTF-8/LF 파일 bytes 기준이며 repository-local core.autocrlf=input으로 보존한다.
 - F-012와 이전 PC checkpoint를 보존했다. 현재 PC 실행 도우미는 `D:\DSM\.local`, 상세 일반 절차는 tracked setup guide에 있다.
 

@@ -12,6 +12,7 @@
 - 현재 검증: Backend 317/317·E2E 2/2·build·non-fixing lint, Front fresh-cache 229/229·typecheck·lint 0 errors/30 existing warnings, Android assembleDebug 365 tasks 성공. Keychain 기본 cache 실패 7건은 `ER-20260816-002`의 cache-only 재현으로 분리했다.
 - Windows 재부팅은 적용됐다. Docker Desktop 4.90.0은 `sailor-ingest.sock` stale runtime socket rename 오류로 기동하지 못한다. 공식 stop/start·restart로도 지속되고 수동 단일 파일 삭제는 사용자 추가 승인 뒤에도 실행 정책에서 차단됐다. Docker를 종료해 두고 사용자에게 해당 파일 직접 삭제를 요청했다. DB/Redis·migration·API는 아직 미검증이며 전체 로컬 세팅 완료로 주장하지 않는다.
 - 병합은 개발 통합 작업으로 독립 진행한다. Reviewer가 main 고유 제품 변경 없음과 memory 충돌 처리 방향을 확인했다. main 고유 Round 11/12/13 조건, F-083/F-005/F-039 외부 검증 한계를 보존했다. CLI GitHub 인증 부재로 연결된 GitHub API를 사용하며 main protection=false를 확인했다.
+- 병합 완료: `9e330314d100644886a4104d07c7197f12616ee5`가 원격 main에 게시됐고 `D:\DSM`도 main으로 fast-forward했다. 부모는 기존 main `bc1ae45`와 integration `32dec29`이며 tree `fceb133ec72f67c87254893b589ad60efe1ad526`는 로컬 충돌 해결 결과와 동일하다. 제품·audit tree는 검증한 integration과 동일하며 변경은 세팅·memory 문서에 한정된다. Docker 복구·DB/API 검증은 별도 미완료 항목으로 유지한다.
 
 ## 현재 PC D드라이브 개발 환경 준비 — 2026-09-09
 
@@ -33,7 +34,7 @@
 ## 목표·경계
 
 - 제품 범위는 Android 전용 DSM v1.3이다.
-- 제품·감사 checkout은 `codex/integration-main-review`이며 F-012 제품·감사 checkpoint `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`까지 원격과 같다. 이 memory snapshot이 해당 기준을 후속 기록한다.
+- 현재 개발·제품·감사 checkout은 `D:\DSM`의 `main`이다. integration `32dec29`까지의 제품·감사와 세팅 문서를 병합했으며, F-012 제품·감사 checkpoint는 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`다.
 - F-012 범위는 ranking service/spec, Prisma schema, 새 snapshot migration·PostgreSQL spec이다. 공개 controller/API shape, Front, Android, dependency와 기존 migration은 변경하지 않았다.
 - 실제 환경 파일, private Gradle property, key·keystore와 recovery snapshot은 읽기·수정·stage하지 않는다.
 
