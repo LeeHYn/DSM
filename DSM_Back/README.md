@@ -1,3 +1,5 @@
+> **DSM Backend local 개발**: 새 PC clone, `.env`, Docker PostgreSQL·Redis, Prisma migration과 검증은 [Windows clone·개발 가이드](../docs/setup/windows-clone-and-development.md)를 따르세요. 아래 Nest 안내는 upstream template 보존용이며 DSM의 현재 실행·배포 절차를 대체하지 않습니다.
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

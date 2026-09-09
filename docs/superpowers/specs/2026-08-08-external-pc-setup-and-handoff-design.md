@@ -1,4 +1,6 @@
-# External PC Setup and Handoff Design
+# Historical External PC Setup and Handoff Design
+
+> **역사 기록 — 현재 실행 지침이 아닙니다.** 이 문서는 당시 설계 근거를 보존합니다. 현재 Windows clone·개발 절차는 [Windows clone·개발 가이드](../../setup/windows-clone-and-development.md)를 사용하세요.
 
 ## Status and provenance
 

@@ -1,4 +1,6 @@
-# External PC Setup and Handoff Plan
+# Historical External PC Setup and Handoff Plan
+
+> **역사 기록 — 현재 실행 지침이 아닙니다.** 이 문서는 2026-08-08 branch·migration·Git 제약을 보존합니다. 현재 Windows clone·개발 절차는 [Windows clone·개발 가이드](../../setup/windows-clone-and-development.md)를 사용하세요.
 
 > Reconciled on 2026-08-27 from historical candidate `c79a042b3c1e115fc0b092a8bddcd3e6723439d6`. Current refs and tracked repository facts override the historical snapshot.
 
