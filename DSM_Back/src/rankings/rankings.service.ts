@@ -20,7 +20,14 @@ export class RankingsService {
     userId: string,
     period: RankingPeriod,
   ): Promise<MyRanking> {
-    const reference = new Date();
+    return this.getMyRankingAt(userId, period, new Date());
+  }
+
+  private async getMyRankingAt(
+    userId: string,
+    period: RankingPeriod,
+    reference: Date,
+  ): Promise<MyRanking> {
     if (this.cache.isConfigured()) {
       const cached = await this.cache.readMyRanking(userId, period, reference);
       if (cached) {
@@ -70,16 +77,32 @@ export class RankingsService {
     userId: string,
     period: RankingPeriod,
   ): Promise<RankingSnapshot> {
-    const ranking = await this.getMyRanking(userId, period);
-    return this.prisma.rankingSnapshot.create({
-      data: {
-        userId,
-        period,
-        rank: ranking.rank,
-        percentile: ranking.percentile,
-        score: ranking.score,
-        snapshotAt: new Date(),
-      },
+    const reference = new Date();
+    const snapshotDate = startOfUtcDay(reference);
+    const where = { userId, period, snapshotDate };
+    const existing = await this.prisma.rankingSnapshot.findFirst({ where });
+    if (existing) {
+      return existing;
+    }
+
+    const ranking = await this.getMyRankingAt(userId, period, reference);
+    await this.prisma.rankingSnapshot.createMany({
+      data: [
+        {
+          userId,
+          period,
+          rank: ranking.rank,
+          percentile: ranking.percentile,
+          score: ranking.score,
+          snapshotDate,
+          snapshotAt: reference,
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    return this.prisma.rankingSnapshot.findFirstOrThrow({
+      where,
     });
   }
 

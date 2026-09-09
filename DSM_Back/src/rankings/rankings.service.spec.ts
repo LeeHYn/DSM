@@ -18,7 +18,12 @@ const makePrismaMock = () => ({
     groupBy: jest.fn(),
     findMany: jest.fn(),
   },
-  rankingSnapshot: { create: jest.fn() },
+  rankingSnapshot: {
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    findFirstOrThrow: jest.fn(),
+  },
 });
 
 const makeCacheMock = () => ({
@@ -290,27 +295,158 @@ describe('RankingsService', () => {
   });
 
   describe('createSnapshot', () => {
-    it("persists the user's current standing", async () => {
-      prismaMock.user.findUniqueOrThrow.mockResolvedValue({ totalScore: 500 });
-      prismaMock.user.count.mockResolvedValueOnce(9).mockResolvedValueOnce(50);
-      prismaMock.rankingSnapshot.create.mockResolvedValue({ id: 'rs-1' });
+    const existingSnapshot = {
+      id: 'rs-1',
+      userId: 'user-1',
+      period: RankingPeriod.TOTAL,
+      rank: 10,
+      percentile: 20,
+      score: 500,
+      snapshotDate: new Date('2026-09-09T00:00:00.000Z'),
+      snapshotAt: new Date('2026-09-09T08:30:00.000Z'),
+      createdAt: new Date('2026-09-09T08:30:00.000Z'),
+    };
 
-      await service.createSnapshot('user-1', RankingPeriod.TOTAL);
+    it('returns the existing UTC-day snapshot without ranking work or a write', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2026-09-09T23:59:59.999Z'));
+        prismaMock.rankingSnapshot.findFirst.mockResolvedValue(
+          existingSnapshot,
+        );
 
-      expect(prismaMock.rankingSnapshot.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({
+        await expect(
+          service.createSnapshot('user-1', RankingPeriod.TOTAL),
+        ).resolves.toBe(existingSnapshot);
+
+        expect(prismaMock.rankingSnapshot.findFirst).toHaveBeenCalledWith({
+          where: {
             userId: 'user-1',
             period: RankingPeriod.TOTAL,
+            snapshotDate: new Date('2026-09-09T00:00:00.000Z'),
+          },
+        });
+        expect(prismaMock.user.findUniqueOrThrow).not.toHaveBeenCalled();
+        expect(prismaMock.rankingSnapshot.create).not.toHaveBeenCalled();
+        expect(prismaMock.rankingSnapshot.createMany).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("persists the user's first UTC-day snapshot", async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2026-09-09T08:30:00.000Z'));
+        prismaMock.rankingSnapshot.findFirst.mockResolvedValue(null);
+        prismaMock.user.findUniqueOrThrow.mockResolvedValue({
+          totalScore: 500,
+        });
+        prismaMock.user.count
+          .mockResolvedValueOnce(9)
+          .mockResolvedValueOnce(50);
+        prismaMock.rankingSnapshot.createMany.mockResolvedValue({ count: 1 });
+        prismaMock.rankingSnapshot.findFirstOrThrow.mockResolvedValue(
+          existingSnapshot,
+        );
+
+        await expect(
+          service.createSnapshot('user-1', RankingPeriod.TOTAL),
+        ).resolves.toBe(existingSnapshot);
+
+        expect(prismaMock.rankingSnapshot.createMany).toHaveBeenCalledWith({
+          data: [
+            {
+              userId: 'user-1',
+              period: RankingPeriod.TOTAL,
+              rank: 10,
+              percentile: 20,
+              score: 500,
+              snapshotDate: new Date('2026-09-09T00:00:00.000Z'),
+              snapshotAt: new Date('2026-09-09T08:30:00.000Z'),
+            },
+          ],
+          skipDuplicates: true,
+        });
+        expect(
+          prismaMock.rankingSnapshot.findFirstOrThrow,
+        ).toHaveBeenCalledWith({
+          where: {
+            userId: 'user-1',
+            period: RankingPeriod.TOTAL,
+            snapshotDate: new Date('2026-09-09T00:00:00.000Z'),
+          },
+        });
+        expect(prismaMock.rankingSnapshot.create).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('returns the winning row when another request creates the bucket first', async () => {
+      prismaMock.rankingSnapshot.findFirst.mockResolvedValue(null);
+      prismaMock.user.findUniqueOrThrow.mockResolvedValue({ totalScore: 500 });
+      prismaMock.user.count.mockResolvedValueOnce(9).mockResolvedValueOnce(50);
+      prismaMock.rankingSnapshot.createMany.mockResolvedValue({ count: 0 });
+      prismaMock.rankingSnapshot.findFirstOrThrow.mockResolvedValue(
+        existingSnapshot,
+      );
+
+      await expect(
+        service.createSnapshot('user-1', RankingPeriod.TOTAL),
+      ).resolves.toBe(existingSnapshot);
+      expect(prismaMock.rankingSnapshot.createMany).toHaveBeenCalledTimes(1);
+      expect(prismaMock.rankingSnapshot.findFirstOrThrow).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('uses one UTC reference when ranking refresh crosses midnight', async () => {
+      jest.useFakeTimers();
+      try {
+        const beforeMidnight = new Date('2026-09-09T23:59:59.999Z');
+        jest.setSystemTime(beforeMidnight);
+        prismaMock.rankingSnapshot.findFirst.mockResolvedValue(null);
+        cacheMock.isConfigured.mockReturnValue(true);
+        cacheMock.readMyRanking
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            period: RankingPeriod.WEEKLY,
+            score: 500,
             rank: 10,
             percentile: 20,
-            score: 500,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            snapshotAt: expect.any(Date),
+            totalUsers: 50,
+          });
+        projectionMock.refreshPeriod.mockImplementation(() => {
+          jest.setSystemTime(new Date('2026-09-10T00:00:00.001Z'));
+          return Promise.resolve(true);
+        });
+        prismaMock.rankingSnapshot.createMany.mockResolvedValue({ count: 1 });
+        prismaMock.rankingSnapshot.findFirstOrThrow.mockResolvedValue({
+          ...existingSnapshot,
+          period: RankingPeriod.WEEKLY,
+        });
+
+        await service.createSnapshot('user-1', RankingPeriod.WEEKLY);
+
+        const readCalls = cacheMock.readMyRanking.mock
+          .calls as unknown as Array<[string, RankingPeriod, Date]>;
+        const reference = readCalls[0]?.[2];
+        expect(reference).toEqual(beforeMidnight);
+        expect(readCalls[1]?.[2]).toBe(reference);
+        expect(prismaMock.rankingSnapshot.createMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: [
+              expect.objectContaining({
+                snapshotDate: new Date('2026-09-09T00:00:00.000Z'),
+                snapshotAt: reference,
+              }),
+            ],
           }),
-        }),
-      );
+        );
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });
