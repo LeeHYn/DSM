@@ -33,7 +33,10 @@
 - [x] F-012 공개 POST·service·schema·소비자·요구사항과 과거 deferred branch 진단.
 - [x] Focused ranking baseline 2 suites/15 tests와 반복 호출당 신규 durable row 생성 확인.
 - [x] 사용자 `ㄱ`으로 공개 API 보존형 일일 멱등화와 exact allowlist 승인.
-- [/] F-012 unit RED와 service·schema/migration 구현.
+- [x] F-012 unit RED 4건, service·schema/migration과 PostgreSQL spec 구현.
+- [x] Focused 18, Backend 317·e2e 2·build/type/lint/format·Prisma 검증.
+- [x] PostgreSQL fresh·legacy 3/3, legacy 2행 보존과 20개 동시 호출 1 ID 검증.
+- [x] F-012 audit FIXED 전이와 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213` commit·push.
 
 ## 열린 gate
 
@@ -51,6 +54,6 @@
 ## 유지 규칙
 
 - [x] 실제 .env, key·keystore·private Gradle property와 recovery 파일 미접근·미변경.
-- [x] F-007/F-009에서 Front·dependency·Prisma schema·기존 migration을 보존하고 새 migration 1개만 추가.
+- [x] F-012에서 controller/API response·Front·Android·dependency·기존 migration을 보존.
 - [x] 제품·감사는 integration branch에 게시했고 root checkout은 미변경.
 - [x] stage 시 git add -A 없이 exact path만 사용.

@@ -89,6 +89,7 @@
 | `ER-20260827-001` | `VERIFIED` | Prisma migration, PostgreSQL enum, disposable seed | migration upgrade seed가 존재하지 않는 enum literal로 중단됨 |
 | `ER-20260909-001` | `VERIFIED` | NestJS, class-validator, PATCH, null, Date | optional 날짜 `null`이 검증을 건너뛰고 epoch로 저장됨 |
 | `ER-20260909-002` | `VERIFIED` | Prisma migration, PostgreSQL CHECK, `NOT VALID`, legacy data | 기존 오염 row 때문에 무결성 CHECK 배포가 중단될 수 있음 |
+| `ER-20260909-003` | `VERIFIED` | RankingSnapshot, idempotency, UTC bucket, partial unique index | 반복 snapshot POST가 호출마다 영구 row를 생성함 |
 
 ## 해결 record
 
@@ -1375,6 +1376,20 @@
 - 재발 방지/금지: 사용자 날짜를 임의 값으로 clamp·재작성하거나 검증되지 않은 constraint를 완료로 숨기지 않는다. Constraint 이름, `convalidated`, invalid-row count와 최종 validation을 관찰한다.
 - 적용 불가 또는 잔여 위험: hard invariant가 즉시 전 row에 성립해야 하거나 legacy row를 허용할 수 없으면 배포 전 명시적 데이터 정정 계획과 validated CHECK가 필요하다.
 - 근거: [migration.sql](../../DSM_Back/prisma/migrations/20260909_enforce_task_temporal_integrity/migration.sql), [PostgreSQL test](../../DSM_Back/test/task-temporal-integrity.pg-spec.ts), [release audit](../audits/20260817-release-audit-full-project/README.md)
+- `lastVerifiedAt`: `2026-09-09`
+
+### ER-20260909-003 — legacy 보존형 일일 snapshot 멱등화
+
+- `resolutionId`: `ER-20260909-003`
+- `status`: `VERIFIED`
+- 증상/signature: 인증된 snapshot 생성 endpoint를 같은 사용자가 반복 호출할 때마다 동일 period의 영구 row가 추가되고 ranking 계산도 반복된다.
+- 적용 조건: NestJS·Prisma·PostgreSQL에서 공개 create endpoint를 호환성 때문에 유지하면서, 사용자·period·UTC 날짜별 최초 상태만 보존하고 역사적 중복 row의 의미는 아직 확정하지 못한 경우.
+- root cause: service가 매 호출마다 무조건 `create`하고 schema에 idempotency bucket이나 unique contract가 없어 application race와 직접 write를 제한하지 못했다.
+- 해결 절차: 요청 시작 시각 하나에서 UTC 날짜 bucket을 계산한다. 기존 bucket row가 있으면 계산 전에 반환하고, 없으면 같은 기준 시각으로 값을 계산해 `createMany(skipDuplicates)`로 삽입한 뒤 winner를 다시 읽는다. Nullable DATE column, 신규·수정 row용 `NOT VALID` non-null CHECK와 non-null partial unique index를 함께 배포한다.
+- 검증: 수정 전 새 unit 4건이 실패했고 수정 후 focused 2 suites/18, Backend 26 suites/317, e2e 2와 정적 gate가 통과했다. PostgreSQL 17 fresh·legacy DB에서 각각 3/3이 통과했고, legacy 같은 날짜 row 2개는 null bucket으로 보존됐으며 20개 동시 최초 호출은 한 ID로 합쳐졌다.
+- 재발 방지/금지: 선행 조회만으로 race 안전성을 주장하거나 in-memory lock을 DB uniqueness 대신 사용하지 않는다. 요청 중 UTC 자정이 바뀌지 않도록 하나의 reference를 재사용하고 공개 API를 소비자 검색만으로 삭제하지 않는다.
+- 적용 불가 또는 잔여 위험: 모든 역사 row가 즉시 유효 bucket을 가져야 하면 배포 전 backfill·dedupe 정책과 validated constraint가 필요하다. SQL-only partial index는 후속 migration drift를 감시해야 하고 직접 DB writer는 같은 contract를 따라야 한다.
+- 근거: [Ranking service](../../DSM_Back/src/rankings/rankings.service.ts), [migration.sql](../../DSM_Back/prisma/migrations/20260909_bound_ranking_snapshot_writes/migration.sql), [PostgreSQL test](../../DSM_Back/test/ranking-snapshot-idempotency.pg-spec.ts), [release audit](../audits/20260817-release-audit-full-project/README.md)
 - `lastVerifiedAt`: `2026-09-09`
 
 ## 새 record 템플릿

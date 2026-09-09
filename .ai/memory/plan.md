@@ -3,13 +3,14 @@
 ## 목표·경계
 
 - 제품 범위는 Android 전용 DSM v1.3이다.
-- 제품·감사 checkout은 `codex/integration-main-review`이며 F-007/F-008/F-009 checkpoint `317253cff1fd938b847017697f049582720261f9`까지 원격과 같다. 이 memory snapshot이 해당 기준을 후속 기록한다.
-- 이번 범위는 새 temporal-integrity migration 1개를 추가했고 Front, dependency, Prisma schema와 기존 migration은 변경하지 않았다.
+- 제품·감사 checkout은 `codex/integration-main-review`이며 F-012 제품·감사 checkpoint `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`까지 원격과 같다. 이 memory snapshot이 해당 기준을 후속 기록한다.
+- F-012 범위는 ranking service/spec, Prisma schema, 새 snapshot migration·PostgreSQL spec이다. 공개 controller/API shape, Front, Android, dependency와 기존 migration은 변경하지 않았다.
 - 실제 환경 파일, private Gradle property, key·keystore와 recovery snapshot은 읽기·수정·stage하지 않는다.
 
 ## Canonical audit
 
-- F-001~F-083, 83건: 59 CONFIRMED / 2 FIXING / 10 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN.
+- F-001~F-083, 83건: 58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN.
+- F-012는 공개 snapshot API를 유지하면서 사용자·period·UTC 날짜당 1행으로 신규 write를 제한해 FIXED다. Legacy 정리·CHECK validation과 독립 fix-recheck가 남았다.
 - F-007/F-008/F-009는 PATCH null·completion metadata·Task interval 계약과 PostgreSQL active-row CHECK 검증을 마쳐 FIXED다. 독립 fix-recheck와 production legacy scan이 남았다.
 - F-001/F-002는 refresh-authenticated server-first logout과 access `sid` 활성-family 검사, 전체·실제 PostgreSQL·Android 검증을 마쳐 FIXED다. 독립 fix-recheck가 남았다.
 - F-011/F-029/F-030은 cache와 DB fallback의 tie·전체 사용자·UTC anchor 계약을 통일하고 전체·실제 서비스 검증을 마쳐 FIXED다. 독립 fix-recheck가 남았다.
@@ -30,24 +31,20 @@
 
 ## 최근 완료 증거
 
-- F-007/F-008/F-009는 focused 91, Backend 314, e2e 2, build·type·lint·format·Prisma와 PostgreSQL 17 fresh 3/3·legacy upgrade를 통과했다. 제품·감사 `317253cff1fd938b847017697f049582720261f9`와 직전 closure memory는 원격에 있고 당시 작업 트리는 깨끗했다.
+- F-012는 unit RED 4건을 거쳐 focused 18, Backend 317, e2e 2, build·type·lint·format·Prisma를 통과했다. PostgreSQL 17 fresh·legacy가 각각 3/3을 통과했고 20개 동시 최초 호출은 1개 ID로 합쳐졌다. 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`은 원격에 있다.
 
-## F-012 실행 계약 — 승인됨
+## F-012 종결 계약
 
-- 사용자는 2026-09-09 `ㄱ`으로 공개 API 보존형 일일 멱등화, exact writable allowlist와 검증 계약을 승인했다.
-- 재현 조건은 인증 사용자의 `POST /rankings/snapshot` 반복 호출이다. 현재 service는 매번 `RankingSnapshot.create`를 실행하며 uniqueness·retention·time bucket이 없다. Front와 다른 Backend source에는 이 POST의 소비자가 없지만, 승인된 Milestone 11 API 계약에는 endpoint가 명시돼 있다.
-- 오류 해결 playbook의 기존 F-012는 NotificationDelivery index 문제로 root cause가 다르며 현재 문제에 적용할 VERIFIED record는 없다. 현재 ranking controller/service focused baseline은 2 suites/15 tests가 통과한다.
-- 추천안은 공개 API를 보존하고 사용자·period·UTC 날짜당 최초 snapshot 하나만 만드는 것이다. 같은 날짜의 반복 호출은 기존 row를 반환해 durable write와 ranking 재계산을 생략하고, 세 period를 합쳐 사용자당 하루 최대 3개로 row 증가를 제한한다.
-- 새 nullable `snapshotDate` DATE, non-null `NOT VALID` CHECK와 non-null row 대상 unique index를 추가한다. Legacy row는 null로 보존해 migration을 비파괴적으로 적용하고 신규·수정 row부터 날짜와 uniqueness를 강제한다. Production legacy 분류·backfill·중복 해소·constraint validation은 별도 gate다.
-- 대안은 저장소 소비자가 없는 공개 POST와 service method를 제거하는 것이다. DB 변경은 없지만 기존 Milestone 11 API 계약과 외부 미확인 client를 깨뜨릴 수 있어 추천하지 않는다.
-- 제품 writable allowlist는 `DSM_Back/src/rankings/rankings.service.spec.ts`, `DSM_Back/src/rankings/rankings.service.ts`, `DSM_Back/prisma/schema.prisma`, 새 `DSM_Back/prisma/migrations/20260909_bound_ranking_snapshot_writes/migration.sql`, 새 `DSM_Back/test/ranking-snapshot-idempotency.pg-spec.ts`다. 각 구현 단계는 1~2개 파일만 수정한다.
-- 기록 allowlist는 canonical audit의 `findings.jsonl`·`README.md`, active memory 4파일과 검증된 새 해결이 중복되지 않을 때의 `error-resolution-playbook.md`다. Controller/API response, Front, Android, dependency, 기존 migration은 제외한다.
-- 성공 기준은 unit RED/GREEN에서 same-day 재사용·UTC 경계·period 분리·무 write를 확인하고, 실제 PostgreSQL fresh·legacy upgrade·동시 최초 호출에서 정확히 한 row를 증명한 뒤 focused/full unit·e2e·build·type·lint·format·Prisma·ledger 검증을 통과하는 것이다. 데이터 무결성 P2 change-gate를 적용하며 자체 검토 뒤 FIXED까지만 전이한다.
+- 2026-09-09 사용자 `ㄱ` 승인에 따라 공개 API를 보존하고 사용자·period·UTC 날짜당 최초 snapshot 하나만 생성한다. 같은 날 반복 호출은 기존 immutable row를 반환해 ranking 재계산과 durable write를 생략한다.
+- `snapshotDate DATE`와 non-null `NOT VALID` CHECK, non-null row 대상 partial unique index가 신규·수정 write를 제한한다. `createMany(skipDuplicates)` 뒤 winner를 읽어 동시 최초 호출도 한 row로 합친다.
+- Legacy row 두 개가 같은 날짜에 있어도 null bucket으로 보존한 채 7→8 migration upgrade가 성공했다. 신규 null·중복은 거부됐고 fresh·legacy DB 모두 committed 3/3 spec을 통과했다.
+- F-012는 canonical audit에서 `FIXED`다. 구현자 독립 recheck가 없으므로 `RECHECKED`가 아니며, production legacy 분류·backfill·중복 해소·CHECK validation은 별도 gate다.
+- 해결 패턴은 기존 playbook 항목과 중복되지 않아 `ER-20260909-003`으로 기록한다.
 
 ## 후속 실행
 
-1. F-012의 승인된 일일 멱등화 regression·service·schema/migration·PostgreSQL 검증을 순서대로 실행한다.
-2. 열 개 FIXED finding의 구현자 독립 fix-recheck, F-008/F-009 legacy-state scan·CHECK validation과 F-069 운영 증거를 확보한다.
+1. 열한 개 FIXED finding의 구현자 독립 fix-recheck, F-008/F-009/F-012 legacy-state scan·정리와 staged CHECK validation을 수행한다.
+2. F-069 운영 cardinality·capacity·latency·failover 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보하고 남은 P2→P3를 진행한다.
 
 ## 불변 조건
