@@ -90,6 +90,8 @@
 | `ER-20260909-001` | `VERIFIED` | NestJS, class-validator, PATCH, null, Date | optional 날짜 `null`이 검증을 건너뛰고 epoch로 저장됨 |
 | `ER-20260909-002` | `VERIFIED` | Prisma migration, PostgreSQL CHECK, `NOT VALID`, legacy data | 기존 오염 row 때문에 무결성 CHECK 배포가 중단될 수 있음 |
 | `ER-20260909-003` | `VERIFIED` | RankingSnapshot, idempotency, UTC bucket, partial unique index | 반복 snapshot POST가 호출마다 영구 row를 생성함 |
+| `ER-20260909-004` | `VERIFIED` | Windows setup, Microsoft OpenJDK, SHA-256 | 추정한 checksum URL suffix 때문에 배포본 hash 검증이 실패함 |
+| `ER-20260909-005` | `VERIFIED` | Windows Metro, FallbackWatcher, ENOENT, CMakeTmp | native build의 임시 폴더 삭제로 Metro가 종료됨 |
 
 ## 해결 record
 
@@ -1272,6 +1274,7 @@
 - root cause: 이전 transform/module-resolution 상태가 cache에 남아 test가 설정한 mock과 production import가 같은 identity를 보지 못했다.
 - 해결 절차: 제품 코드를 바꾸기 전에 focused fresh cache로 재현성을 분리하고, verified project-local Jest cache만 제거한 뒤 unique fresh cache로 full suite를 실행한다.
 - 검증: fresh cache full run에서 18 suites, 161 tests 전부 통과했다.
+- 현재 PC 재검증(2026-09-09): 동일 제품 tree의 기본 cache full run은 Keychain 정상 case 7건이 storage error로 실패했다. `npm.cmd test -- --cacheDirectory D:/DSM/.local/jest-front-resume-20260909`로 cache만 분리한 full run은 24 suites/229 tests 통과했다. 제품 코드·mock을 수정하지 않았다.
 - 재발 방지/금지: cache-only 실패를 제품의 fail-closed storage 동작을 약화해 해결하지 않는다. Windows sandbox에서는 system Temp 대신 project-local cache를 사용한다.
 - 근거: [Jest config](../../DSM_Front/jest.config.js), [Keychain tests](../../DSM_Front/src/features/auth/token-store.native.test.ts)
 - `lastVerifiedAt`: `2026-08-16`
@@ -1390,6 +1393,34 @@
 - 재발 방지/금지: 선행 조회만으로 race 안전성을 주장하거나 in-memory lock을 DB uniqueness 대신 사용하지 않는다. 요청 중 UTC 자정이 바뀌지 않도록 하나의 reference를 재사용하고 공개 API를 소비자 검색만으로 삭제하지 않는다.
 - 적용 불가 또는 잔여 위험: 모든 역사 row가 즉시 유효 bucket을 가져야 하면 배포 전 backfill·dedupe 정책과 validated constraint가 필요하다. SQL-only partial index는 후속 migration drift를 감시해야 하고 직접 DB writer는 같은 contract를 따라야 한다.
 - 근거: [Ranking service](../../DSM_Back/src/rankings/rankings.service.ts), [migration.sql](../../DSM_Back/prisma/migrations/20260909_bound_ranking_snapshot_writes/migration.sql), [PostgreSQL test](../../DSM_Back/test/ranking-snapshot-idempotency.pg-spec.ts), [release audit](../audits/20260817-release-audit-full-project/README.md)
+- `lastVerifiedAt`: `2026-09-09`
+
+### ER-20260909-004 — Microsoft OpenJDK 다운로드 checksum 주소 확인
+
+- `resolutionId`: `ER-20260909-004`
+- `status`: `VERIFIED`
+- 증상/signature: Microsoft JDK ZIP을 내려받은 뒤 `.sha256`를 붙인 URL에서 64자리 checksum을 얻지 못해 압축 해제 전 검증이 실패한다.
+- 적용 조건: Windows 새 PC에서 Microsoft OpenJDK ZIP을 직접 설치하며 SHA-256 확인을 수행하는 경우.
+- root cause: 공식 checksum 링크를 읽지 않고 suffix를 추정했다. 해당 Microsoft 배포본의 실제 링크는 `.zip.sha256sum.txt`다.
+- 해결 절차: Microsoft 공식 download page의 해당 버전·OS·architecture 행에서 ZIP과 checksum 링크를 함께 확인한다. checksum 응답이 byte array면 UTF-8 문자열로 변환하고, 다운로드 파일의 SHA-256와 일치할 때만 압축을 푼다.
+- 검증: 이 PC에서 Microsoft JDK 17.0.20.1 Windows x64 ZIP과 공식 SHA-256의 일치를 확인하고 압축 해제, `java -version`, Gradle 9.0.0/JDK 17 실행이 성공했다.
+- 재발 방지/금지: 링크 suffix를 임의 추정하거나 hash 불일치를 무시하고 바이너리를 실행하지 않는다.
+- 적용 불가 또는 잔여 위험: 다른 배포자·다른 버전의 checksum URL 규칙은 별도로 확인한다. 버전 변경 시 현재 파일을 다시 검증해야 한다.
+- 근거: [Microsoft OpenJDK 다운로드](https://learn.microsoft.com/en-us/java/openjdk/download), 현재 PC 설치·검증 출력.
+- `lastVerifiedAt`: `2026-09-09`
+
+### ER-20260909-005 — Windows Metro의 native build 임시 폴더 감시 제외
+
+- `resolutionId`: `ER-20260909-005`
+- `status`: `VERIFIED`
+- 증상/signature: Android native build와 Metro를 함께 실행하면 `metro-file-map/FallbackWatcher`의 `fs.watch`가 `node_modules/.../android/.cxx/.../CMakeTmp/...`에서 `ENOENT`를 발생시키며 Metro process가 종료된다.
+- 적용 조건: Windows의 Metro fallback watcher가 React Native dependency의 Android generated build directories까지 감시하는 경우.
+- root cause: watcher가 디렉터리를 열거한 직후 CMake가 해당 임시 디렉터리를 삭제하는 경합이다.
+- 해결 절차: 기존 Metro config를 보존·상속하고 `resolver.blockList`에 `android/.cxx`, `android/build`, `android/.gradle`, `android/app/.cxx`, `android/app/build`만 추가한다. 이 PC에서는 ignored `.local/metro.config.cjs`를 `--config`로 적용한다. 소스 경로는 제외하지 않는다.
+- 검증: Android 기본 config 실행에서 실제 `ENOENT`를 확인했다. 로컬 config에서 실제 오류 경로가 제외되고 `src/App.tsx`는 유지됨을 검증했다. bundle HTTP 200, native 임시 디렉터리 20개 생성·삭제 후 Metro health 유지, API 36 에뮬레이터에서 cold launch·로그인 화면 표시를 확인했다.
+- 재발 방지/금지: `node_modules` 전체나 앱 소스를 blockList에 넣지 않는다. 이 PC의 `dev.cmd metro`를 사용하거나 동일한 `--config`를 명시한다.
+- 적용 불가 또는 잔여 위험: 처음 bundle 로드 실패 뒤 reload만으로 빈 화면이 남을 수 있다. 현재 검증은 AVD 정상 종료·재시작 후 cold launch 기준이며 React Native reload 복구 자체를 수정한 것은 아니다. 다른 watcher 오류 경로는 별도 진단한다.
+- 근거: [Metro blockList 문서](https://metrobundler.dev/docs/configuration/#blocklist), 이 PC `.local/logs/metro.stderr.log`, `.local/metro.config.cjs`, 현재 setup 검증 출력.
 - `lastVerifiedAt`: `2026-09-09`
 
 ## 새 record 템플릿

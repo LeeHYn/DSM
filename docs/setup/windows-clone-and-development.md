@@ -1,10 +1,10 @@
 # Windows에서 DSM clone·개발하기
 
-이 문서는 새 Windows PC에서 현재 DSM integration branch를 clone해 Backend와 Android 앱을 로컬에서 개발·검증하는 기준 절차입니다. 실제 소스, `package.json`, Prisma migration, `.env.example`을 기준으로 작성했습니다.
+이 문서는 새 Windows PC에서 DSM `main`을 clone해 Backend와 Android 앱을 로컬에서 개발·검증하는 기준 절차입니다. 실제 소스, `package.json`, Prisma migration, `.env.example`을 기준으로 작성했습니다.
 
 ## 범위와 안전 경계
 
-- 대상 branch는 `codex/integration-main-review`입니다. 이 branch는 현재 작업 통합본이며 release-ready 판정은 아닙니다.
+- 대상 branch는 `main`입니다. `codex/integration-main-review`의 작업 통합본을 병합한 개발 기준이며 release-ready 판정은 아닙니다.
 - 각 PC는 자체 `.env`, `.env.local`, Android SDK, debug keystore, Docker volume을 사용합니다. 이 파일과 값은 Git에 올리지 않습니다.
 - 초기화에는 lockfile 기반 `npm ci`와 `prisma migrate deploy`를 사용합니다. `npm install`, `prisma db push`, 기존 migration 수정, production/shared DB 연결은 초기 clone 절차에 포함하지 않습니다.
 - FCM dispatch는 local 기본값인 `false`를 유지합니다. release signing·Google Cloud Console·Play Console 변경은 프로젝트 관리자 승인 후에만 수행합니다.
@@ -27,18 +27,20 @@ PowerShell에서 `npm` 실행이 정책에 막히면 문서의 `npm.cmd`와 `npx
 원하는 상위 폴더에서 실행합니다.
 
 ```powershell
-git clone --branch codex/integration-main-review --single-branch https://github.com/LeeHYn/DSM.git DSM
+git clone --branch main --single-branch https://github.com/LeeHYn/DSM.git DSM
 Set-Location .\DSM
 git branch --show-current
 git status --short --branch
 git log -1 --oneline
 ```
 
-첫 명령 뒤 branch 이름이 `codex/integration-main-review`이고 tracked 변경이 없어야 합니다. 다른 branch를 clone했다면 파일을 복사하거나 `main`을 억지로 합치지 말고, 먼저 올바른 remote branch를 fetch·switch합니다.
+첫 명령 뒤 branch 이름이 `main`이고 tracked 변경이 없어야 합니다. 다른 branch를 clone했다면 기존 변경을 먼저 보존하고 아래처럼 `main`을 추적 대상에 추가한 뒤 전환·갱신합니다. 이는 이전 가이드로 integration만 single-branch clone한 경우도 지원합니다. 로컬 `main`이 이미 있다면 `git switch --track origin/main`은 `git switch main`으로 바꿉니다. fast-forward 갱신이 거부되면 별도 변경이 있으므로 강제 reset하지 말고 이력을 확인합니다.
 
 ```powershell
+git remote set-branches --add origin main
 git fetch origin
-git switch --track origin/codex/integration-main-review
+git switch --track origin/main
+git pull --ff-only origin main
 ```
 
 ## 2. Backend local 환경
@@ -141,7 +143,7 @@ Set-Location .\android
 Set-Location ..\..
 git status --short --branch
 git fetch origin
-git pull --ff-only origin codex/integration-main-review
+git pull --ff-only origin main
 git status --short --branch
 ```
 
@@ -170,7 +172,7 @@ docker compose stop
 
 ## 완료 확인
 
-- [ ] 올바른 integration branch에서 clone했고 `git status`가 깨끗하다.
+- [ ] 개발 기준 `main`에서 clone했고 `git status`가 깨끗하다.
 - [ ] Backend `.env`와 Frontend `.env.local`은 local 전용이며 Git ignore 상태다.
 - [ ] Docker PostgreSQL·Redis가 healthy이고 문서 작성 시점의 8개 Prisma migration이 적용됐다.
 - [ ] Backend test·build·non-fixing lint·Prisma validation이 통과했다.

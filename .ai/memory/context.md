@@ -1,5 +1,19 @@
 # DSM 현재 맥락 — 2026-09-09
 
+## 현재 PC D드라이브 환경 구성
+
+- 현재 작업 경로는 `D:\DSM`이다. `codex/integration-main-review@32dec29`의 검증된 제품 tree를 `main`으로 병합한다. 아래의 `C:\DEV` 등은 원격에 기록된 이전 PC checkpoint다.
+- 사용자 clone·세팅 요청에 따라 Git 2.53.0.windows.3, Node 22.23.2/npm 10.9.8, Microsoft JDK 17.0.20.1+1, Docker Desktop을 `D:\DSM\.local`에 준비했다. npm·Gradle·Android 캐시와 Docker data root도 D드라이브로 구성했다.
+- Backend `.env`와 Front `.env.local`을 이 PC에서 새로 생성했다. DB/JWT는 난수이며 OAuth는 placeholder/빈 설정, FCM dispatch는 false다. Git ignore 상태를 확인했고 기존 타 PC secret은 접근하지 않았다.
+- DB는 프로젝트 지침대로 Docker Compose의 PostgreSQL 17/Redis 8을 사용한다. Portable PostgreSQL은 설치하지 않았고 사전 다운로드 archive는 제거했다.
+- WSL 2.7.13.0 설치와 VirtualMachinePlatform 적용 후 2026-09-09 22:39 KST에 Windows가 재부팅됐다. Docker Desktop 4.90.0은 `%LOCALAPPDATA%\Docker\run\sailor-ingest.sock` rename/access 오류로 기동하지 못한다. 공식 restart와 force stop/start 후에도 동일했다. 사용자의 단일 소켓 삭제 승인 뒤에도 도구 정책이 차단해 직접 삭제를 요청했으며 Docker는 종료해 두었다. DB migration·실서버 health는 아직 검증하지 않았다.
+- 재개 후 현재 검증: Backend 317/317, E2E 2/2, build·non-fixing lint·Prisma validate 성공. Front 기본 cache에서 Keychain 7건 실패 후 새 isolated cache만 지정하자 24 suites/229 tests가 통과했고 typecheck·lint 0 errors/30 existing warnings도 확인했다. `ER-20260816-002` 재검증이며 제품 수정은 없었다. Prisma generate와 Android Metro bundle·24 assets는 최초 설치 때 통과했다.
+- `D:\DSM\.local\env.ps1`은 도구 경로를 현재 PowerShell 세션에 설정한다. `dev.cmd backend|metro|emulator|android|build|db|stop`은 해당 실행을 돕는다. `setup-resume.ps1 -Action db|health`는 Docker 복구 후 migration·runtime health 확인용이다. 제품 코드·lockfile·schema·migration·audit은 변경하지 않았다.
+- Android SDK 36, Build Tools 36.0.0, NDK 27.1.12297006, CMake 3.22.1, API 36 AVD `DSM_API_36`을 설치했다. 재개 후 JDK 17/Gradle 9.0.0 `assembleDebug`도 3분 10초, 365 tasks(42 executed/323 up-to-date)로 성공했다. APK는 `DSM_Front/android/app/build/outputs/apk/debug/app-debug.apk`에 있다.
+- 첫 Metro는 동시 native build의 `.cxx/CMakeTmp` 삭제로 `ENOENT` 종료됐다. 기존 Metro config를 상속하는 ignored `.local/metro.config.cjs`에서 native build 폴더만 blockList에 추가했다. 실제 bundle HTTP 200, native 임시 폴더 20개 생성·삭제 후 health 유지와 API 36 앱 로그인 화면을 확인했다. 처음 번들 로드 실패 후 reload만으로는 빈 화면이 남아 AVD를 정상 종료·재시작하고 cold launch로 재검증했다.
+- Google OAuth 인증, 실제 backend 연결, signed device, 운영·release 조건은 미검증이다. 안내와 로그인 화면은 현재 Codex 작업의 `outputs/DSM-setup.md`, `outputs/DSM-android.png`다.
+- 설치 중 JDK checksum 주소 오류는 공식 `.sha256sum.txt`로 확인해 해결했다. 기존 오류 기록과 중복을 검색한 뒤 `ER-20260909-004`와 Metro watcher `ER-20260909-005`를 기록했다.
+
 ## Checkout·책임 경계
 
 - 조정 checkout은 `C:\DEV`의 `main`, 제품·감사 checkout은 `C:\dsm-integration-review`의 `codex/integration-main-review`다.
@@ -13,6 +27,7 @@
 - Ledger는 352,219 bytes, SHA-256 `CF538F3AD9FBF186F51DDAEB1B7601D9C1B232F2415BC7C11314AE1DF69DA15C`이다. UTF-8/LF, schema, 연속 ID, fingerprint 고유성·basis hash와 status history 검증이 통과했다.
 - `RECHECKED`: F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083. `UNKNOWN`: F-003, F-013, F-017. `REFUTED`: F-066. `FIXING`: F-067, F-068. `FIXED`: F-001, F-002, F-007, F-008, F-009, F-011, F-012, F-029, F-030, F-065, F-069.
 - 열한 개 `FIXED` 항목은 구현자 자체 검증을 마쳤으며 독립 fix-recheck 전에는 `RECHECKED`로 올리지 않는다.
+- main 고유 기록 보존: Round 12·13은 targeted revalidation이므로 자유 탐색 연속 조건에서 제외하며 Round 11만 zero-new-confirmed-P0~P2 1회로 계산한다.
 
 ## 구현 결정
 
@@ -36,6 +51,8 @@
 - Canonical 상태는 `FIXED`; 제품·감사 commit은 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`이다. 독립 fix-recheck와 production legacy 정리가 남았다.
 
 ## 잔여 위험·외부 gate
+
+- main 고유 기록 보존: F-083 process restart/offline durable intent, device socket-cut, 구버전 rollout 검증과 F-005/F-039 physical-device relaunch는 남아 있다.
 
 - F-069은 실제 운영 cardinality, Redis capacity, query plan, managed failover와 p50/p95/p99가 미측정이다. Cache miss가 projection 후에도 남으면 bounded window-query fallback이 DB sort 부하를 만들 수 있다. WebSocket delta는 F-074 범위다.
 - F-065 app-side 설정은 공식 Android 문서상 구형 OS의 모든 StrandHogg 변형에 대한 완전한 보장이 아니다. API 24~29 malicious-app PoC, OEM patch matrix와 독립 fix-recheck가 남았다.

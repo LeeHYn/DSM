@@ -2,6 +2,31 @@
 
 표기: [x] 완료, [/] 진행 중, [ ] 미완료·외부 gate.
 
+## 세팅 재개·main 병합 — 2026-09-09
+
+- [x] 사용자 세팅 재개·병합 승인, 기존 memory와 실제 Git 상태 대조.
+- [ ] Docker PostgreSQL·Redis 기동, migration·API health 검증: 재부팅 완료, stale socket 삭제 사용자 조치 대기.
+- [x] Backend/Front 전체 548 tests·정적 gate·Android debug 365 tasks. 로컬 DB 검증은 위 별도 항목으로 남김.
+- [x] 독립 reviewer의 main 고유 변경·충돌·병합 gate 검토 및 기존 single-branch clone 문서 수정.
+- [ ] 기존 세팅 변경과 새 검증 결과 memory 동기화·commit.
+- [ ] main 통합·최종 검증·원격 push와 clean tree 확인.
+
+## 현재 PC D드라이브 세팅 — 2026-09-09
+
+- [x] `D:\DSM` clone, 원격 branch와 현재 Windows 개발 문서 확인.
+- [x] 전용 Node.js 22.23.2/npm 10.9.8 다운로드·SHA-256 검증·설치.
+- [x] Backend·Frontend lockfile 기반 의존성 설치: 884/988 packages.
+- [x] 새 PC 전용 ignored 환경 파일과 `.local/env.ps1`, `dev.ps1`, `dev.cmd` 실행 도우미 준비.
+- [x] Backend 26 suites/317 tests, build, non-fixing lint, E2E 2 tests, Prisma Client generate/validate.
+- [x] Front 24 suites/229 tests, typecheck, lint 오류 0/기존 경고 30, Android Metro bundle 생성.
+- [x] JDK 17·Android SDK 36/Build Tools 36.0.0/NDK 27.1.12297006/CMake 3.22.1 및 API 36 AVD 준비.
+- [x] Android `assembleDebug`: 365 tasks, 4개 ABI, APK 생성·에뮬레이터 설치 성공.
+- [x] Windows Metro native build watcher 오류를 `.local/metro.config.cjs`로 회피, 폴더 생성·삭제 후 health 유지 및 bundle HTTP 200 검증.
+- [x] 에뮬레이터 재시작 후 cold launch, 데일리업 로그인 화면과 native runtime 오류 없음 확인.
+- [x] Docker Desktop·WSL 2.7.13.0 설치 및 Compose 구성 검증.
+- [ ] WSL 기능 활성화를 위한 Windows 재부팅 후 PostgreSQL·Redis healthy, migration·API health 확인.
+- [x] 실제 검증 결과·미완료 조건·실행 방법을 `outputs/DSM-setup.md`와 memory에 기록. Windows 재부팅 전 checkpoint이며 DB 포함 전체 세팅 완료는 아님.
+
 ## 완료
 
 - [x] Canonical audit F-001~F-083 구성과 strict UTF-8·schema·fingerprint·status-history 검증.

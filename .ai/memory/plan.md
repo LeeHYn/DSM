@@ -1,5 +1,35 @@
 # DSM 실행 계획 — 2026-09-09
 
+## 세팅 재개·main 병합 — 2026-09-09
+
+- 사용자 `세팅 작업 마저 진행하고 병합 진행해`를 기존 로컬 세팅 완료 및 `codex/integration-main-review` → `main` 병합·원격 반영 승인으로 적용한다. 이전 작업의 commit/push 금지는 이번 명시적 요청 범위에서 해제한다.
+- M1: 재부팅된 Windows에서 Docker PostgreSQL·Redis healthy, 기존 8개 migration 적용, Backend API health를 확인한다. 생성된 새 PC 로컬 env는 도구 입력으로만 사용하고 값을 출력하거나 stage하지 않는다.
+- M2: Backend/Front 전체 test, build·type·non-fixing lint와 DB 검증을 현재 tree에서 실행한다. 메인 에이전트가 로컬 세팅과 검증을 담당하고 독립 reviewer 1명(런타임 inherited profile)은 병합 이력·충돌·문서 gate를 읽기 전용으로 병렬 검토한다.
+- M3: memory 5파일의 기존 세팅 변경을 보존·동기화하고 commit한다. 원격 main의 고유 변경을 확인해 통합하고, 최종 tree 검증 후 main을 정상 push한다. 강제 push와 기존 branch 삭제는 하지 않는다.
+- Exact writable allowlist: `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, `.ai/memory/README.md`, `.ai/memory/error-resolution-playbook.md`, 병합 후 clone 기준을 맞출 `README.md`, `docs/setup/windows-clone-and-development.md`; ignored `.local/dev.ps1`, `.local/env.ps1`, `.local/setup-resume.ps1`, `.local/DSM-setup.md`와 도구 생성 로그·빌드 산출물. 각 수동 수정은 1~2파일로 제한한다. Reviewer allowlist는 `none`이다.
+- 제품 소스·dependency·schema·migration·audit 변경과 운영 배포는 범위 밖이다. 기존 release-audit의 상태와 외부 gate를 유지하므로 이번 개발 branch 병합은 release-ready 판정이 아니다. 신규 고위험 제품 변경이 없어 별도 change-gate는 적용하지 않는다.
+- 성공 기준: 로컬 DB/Redis healthy, migrations up-to-date, API health 200, 전체 test 통과, 충돌 해결 내역 확인, main/upstream commit 일치, clean tracked tree와 memory hash 일치.
+- 현재 검증: Backend 317/317·E2E 2/2·build·non-fixing lint, Front fresh-cache 229/229·typecheck·lint 0 errors/30 existing warnings, Android assembleDebug 365 tasks 성공. Keychain 기본 cache 실패 7건은 `ER-20260816-002`의 cache-only 재현으로 분리했다.
+- Windows 재부팅은 적용됐다. Docker Desktop 4.90.0은 `sailor-ingest.sock` stale runtime socket rename 오류로 기동하지 못한다. 공식 stop/start·restart로도 지속되고 수동 단일 파일 삭제는 사용자 추가 승인 뒤에도 실행 정책에서 차단됐다. Docker를 종료해 두고 사용자에게 해당 파일 직접 삭제를 요청했다. DB/Redis·migration·API는 아직 미검증이며 전체 로컬 세팅 완료로 주장하지 않는다.
+- 병합은 개발 통합 작업으로 독립 진행한다. Reviewer가 main 고유 제품 변경 없음과 memory 충돌 처리 방향을 확인했다. main 고유 Round 11/12/13 조건, F-083/F-005/F-039 외부 검증 한계를 보존했다. CLI GitHub 인증 부재로 연결된 GitHub API를 사용하며 main protection=false를 확인했다.
+
+## 현재 PC D드라이브 개발 환경 준비 — 2026-09-09
+
+- 사용자 요청: GitHub `LeeHYn/DSM`을 D드라이브에 내려받고 세팅한다. 이 요청을 clone·로컬 의존성·환경 구성·검증의 실행 승인으로 적용한다.
+- 최초 clone checkpoint: `D:\DSM`, `codex/integration-main-review@32dec29`. 당시 main의 Expo 초기 코드와 memory가 불일치해 integration branch를 선택했다. 현재 병합 계획·상태는 위 세팅 재개 절을 따른다.
+- 최초 clone 작업에서는 제품 소스·dependency·lockfile·schema·migration·audit과 commit/push를 제외했다. 이번 명시적 병합 요청의 승인 경계는 위 세팅 재개 절을 따른다.
+- 수정 경계: `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, hash ledger `.ai/memory/README.md`, 설치 중 검증한 오류 해결 기록 `.ai/memory/error-resolution-playbook.md`; 새 PC 전용 ignored `.local` 도구·로그·실행 도우미, `DSM_Back/.env`, `DSM_Front/.env.local`, `DSM_Front/android/local.properties`, `.git/info/exclude`. 기존 타 PC 환경 파일은 접근하지 않는다.
+- M1: D드라이브 clone과 Node 22/npm 준비, 양쪽 `npm ci` 성공.
+- M2: JDK 17·Android SDK 36·Build Tools 36.0.0·NDK 준비와 Front test/type/lint/debug build 검증.
+- M3: Docker 기반 PostgreSQL·Redis, 안전한 로컬 env, Prisma generate/validate·migration·Backend test/build/lint·health 검증. Windows 관리자 권한·재부팅이 필요하면 필요한 설치물을 준비하고 의존하지 않는 검증을 먼저 완료한다.
+- M4: 실제 결과와 미완료 외부 조건을 memory와 사용자 실행 안내에 기록한다. Google OAuth·실기기·release signing은 준비 여부를 구분해 보고한다.
+
+### 재부팅 전 검증 checkpoint
+
+- M1/M2 완료: dependency install, Backend 317·E2E 2·Front 229 tests, type/lint/build, Android 365 tasks/4 ABI APK와 API 36 로그인 화면을 확인했다. Windows Metro watcher 설정을 로컬 도우미에 보강했다.
+- M3의 도구·env·Compose config·Prisma generate/validate는 완료했다. Windows가 WSL 기능 적용에 재부팅을 요구하므로 DB·Redis startup, migration deploy, backend runtime health는 미완료다.
+- M4 기록을 동기화했다. Docker Desktop과 테스트용 Metro·AVD는 종료했다. 재부팅 후 `D:\DSM\.local\dev.cmd backend`로 서비스를 준비하고 실제 health를 검증한다. 아직 전체 세팅 완료로 판단하지 않는다.
+
 ## 목표·경계
 
 - 제품 범위는 Android 전용 DSM v1.3이다.

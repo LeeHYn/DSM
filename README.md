@@ -4,7 +4,7 @@ Android 전용 DSM v1.3 프로젝트입니다. Backend는 NestJS·Prisma·Postgr
 
 ## 다른 Windows PC에서 시작하기
 
-현재 작업용 branch는 `codex/integration-main-review`입니다. 새 PC에서 clone, local 환경 구성, Docker 서비스 기동, Prisma migration, Android 실행과 Windows 문제 해결은 [Windows clone·개발 가이드](docs/setup/windows-clone-and-development.md)를 따르세요.
+현재 개발 기준 branch는 `main`입니다. `codex/integration-main-review`의 작업 통합본을 병합했으며, 새 PC에서 clone, local 환경 구성, Docker 서비스 기동, Prisma migration, Android 실행과 Windows 문제 해결은 [Windows clone·개발 가이드](docs/setup/windows-clone-and-development.md)를 따르세요.
 
 이 branch의 감사는 아직 release-ready가 아닙니다. local 개발과 검증은 가능하지만 production secret, release signing, Play Console 작업은 별도 승인과 절차가 필요합니다.
 
