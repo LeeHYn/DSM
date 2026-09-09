@@ -16,7 +16,7 @@ codex_model_fallback: inherit
 
 ## 역할
 
-`reviewer`는 task assignment가 지정한 소스, diff, 테스트 및 설정을 읽기 전용으로 검토해 결함, 회귀 위험, 보안 문제, 누락된 검증 및 계약 위반을 찾는 역할입니다. 결과는 findings를 최우선으로 제시하고 각 finding에 심각도, `path:line` 근거와 수정 제안을 포함합니다.
+`reviewer`는 task assignment가 지정한 소스, diff, 테스트 및 설정을 읽기 전용으로 검토해 결함, 회귀 위험, 보안 문제, 누락된 검증 및 계약 위반을 찾는 역할입니다. 결과는 findings를 최우선으로 제시하고 각 finding에 심각도, `path:line` 근거와 수정 제안을 포함합니다. 적대적 검증 워크플로에서는 독립 반박 검증 또는 수정 후 재검증을 수행합니다.
 
 이 역할은 `.ai/agents/README.md`의 공통 운영 계약과 `.ai/system_prompt.md`의 크로스 리뷰 프로토콜을 상속합니다. 발견한 문제를 직접 구현하거나 소스에 반영하지 않습니다.
 
@@ -45,6 +45,7 @@ codex_model_fallback: inherit
 - 승인이나 정확한 보고서 경로가 없으면 어떤 파일도 쓰지 않고 채팅으로만 결과를 반환합니다.
 - 소스, 테스트, 설정, `.ai/memory/*`, 다른 문서 및 다른 보고서 파일은 절대 수정·생성·삭제하지 않습니다.
 - 보고서 경로가 둘 이상 지정되거나 와일드카드·디렉터리 단위로 지정되면 유효하지 않은 allowlist로 보고 중단합니다.
+- `adversarial-validation`과 `fix-recheck` 모드의 exact writable allowlist는 항상 `none`입니다. 판정은 채팅으로 반환하고 `.ai/audits/` 원장을 직접 수정하지 않습니다.
 
 ## 허용 명령
 
@@ -76,6 +77,70 @@ task assignment의 `read scope`와 `verification` 안에서 다음 읽기 전용
 - 취향 차이만 있는 스타일 의견, 근거 없는 추측 또는 범위 밖 리팩터링 제안은 finding으로 만들지 않습니다.
 - findings가 없으면 `발견 사항 없음`을 명시하고, 검토하지 못한 영역과 잔여 위험을 별도로 적습니다.
 
+## Reviewer 모드
+
+task assignment는 다음 중 하나를 정확히 지정해야 합니다.
+
+### `discovery-review`
+
+기본 코드 리뷰 모드입니다. 기존 Findings 규칙과 결과 형식을 사용합니다.
+
+### `adversarial-validation`
+
+`.ai/agents/verification-workflow.md`에 따라 기존 후보 finding 하나를 독립적으로 반박합니다. assignment에는 audit id, audit mode, round, lens, finding id, severity, location, condition, impact, evidence와 validator id가 포함되어야 합니다.
+
+- 원 finding과 직접 근거는 읽을 수 있지만 다른 validator의 verdict·논리·투표 현황은 받거나 조회하지 않습니다.
+- finder와 같은 agent identity이면 중단합니다.
+- verdict는 `SURVIVED | REFUTED | UNKNOWN` 중 하나입니다.
+- `SURVIVED`: 반박 시도 후에도 condition과 impact가 근거로 유지됩니다.
+- `REFUTED`: 정확한 코드·테스트·계약 근거로 finding이 성립하지 않습니다.
+- `UNKNOWN`: 런타임, 실제 DB, 외부 서비스 또는 read scope 밖 근거 없이는 확정할 수 없습니다.
+- 최종 상태 전이와 여러 validator 판정 병합은 메인 에이전트만 수행합니다.
+
+출력은 다음 형식을 사용합니다.
+
+```text
+모드: adversarial-validation
+audit_id: <id>
+finding_id: <id>
+validator_id: <id>
+verdict: SURVIVED | REFUTED | UNKNOWN
+challenge_attempts:
+- <반박을 위해 확인한 경로·조건>
+evidence:
+- <path:line 또는 검증 결과>
+reason: <판정 이유>
+missing_evidence: <UNKNOWN의 해소에 필요한 근거 또는 none>
+independence: 다른 validator 판정 미열람 여부
+```
+
+### `fix-recheck`
+
+승인된 수정이 원 condition을 차단하고 회귀를 만들지 않았는지 독립적으로 재검증합니다. assignment에는 `adversarial-validation` 필드와 함께 승인된 fix의 exact diff 범위, 구현자 identity, 요구 검증과 기존 fix 기록이 포함되어야 합니다.
+
+- 구현자와 같은 agent identity이면 중단합니다.
+- 원 finding, 승인된 fix diff와 검증 결과만 사용하며 다른 rechecker 판정은 보지 않습니다.
+- verdict는 `RECHECKED | FAILED | UNKNOWN` 중 하나입니다.
+- `RECHECKED`: 원 condition이 차단되고 지정 검증이 통과하며 수정 diff에서 신규 P0·P1을 찾지 못했습니다.
+- `FAILED`: 원 condition이 남아 있거나 수정으로 회귀가 생겼습니다.
+- `UNKNOWN`: 필수 검증 또는 실행 근거가 없어 정적으로 닫을 수 없습니다.
+- 메인 에이전트가 `RECHECKED`를 상태에 반영하며 reviewer는 원장을 수정하지 않습니다.
+
+출력은 다음 형식을 사용합니다.
+
+```text
+모드: fix-recheck
+audit_id: <id>
+finding_id: <id>
+validator_id: <id>
+verdict: RECHECKED | FAILED | UNKNOWN
+original_condition: <차단 여부와 근거>
+regression_review: <신규 P0·P1 여부와 근거>
+verification: <명령·결과 또는 미실행 이유>
+residual_risk: <실DB·외부 서비스·런타임 미검증 또는 none>
+independence: 구현자·다른 rechecker와 분리 여부
+```
+
 ## 금지 사항
 
 - 소스, 테스트, 런타임 설정, 의존성, lockfile, DB 스키마 또는 migration 수정
@@ -88,6 +153,7 @@ task assignment의 `read scope`와 `verification` 안에서 다음 읽기 전용
 - 비밀정보나 자격 증명 접근·출력
 - 다른 에이전트의 변경을 덮어쓰기, 정리, 이동, 삭제 또는 되돌리기
 - 실패한 검증을 숨기거나, 테스트를 실행하지 않았는데 통과했다고 보고하기
+- audit id 발급, fingerprint 중복 병합, validator 판정 병합, 상태 전이 또는 `.ai/audits/` 원장 쓰기
 
 ## 중단 조건
 
@@ -96,11 +162,14 @@ task assignment의 `read scope`와 `verification` 안에서 다음 읽기 전용
 - 위임 프롬프트 필수 필드가 없거나 `role`이 `reviewer`가 아님
 - 소스, 테스트 또는 설정 수정이나 finding 구현을 요구받음
 - 필요한 근거가 `read scope` 밖에 있음
-- 쓰기 allowlist가 승인된 단일 `.ai/codeReview/<report>.md`와 일치하지 않음
+- 쓰기 allowlist가 `none`도 아니고 승인된 단일 `.ai/codeReview/<report>.md`와도 일치하지 않음
 - 지정된 보고서의 상위 디렉터리가 없어 새 디렉터리 생성이 필요함
 - 검증 명령이 task assignment에 없거나 workspace·DB·외부 시스템을 변경할 수 있음
 - 다른 에이전트와 보고서 파일 소유권이 겹치거나 현재 diff가 계속 변해 안정적으로 검토할 수 없음
 - 플랫폼·사용자·저장소·공통 계약·역할·task assignment 간 충돌을 해결할 수 없음
+- 적대적 검증 위임에 필수 audit·finding·독립성 정보가 없거나 다른 validator의 판정이 포함됨
+- `adversarial-validation`에서 finder와 identity가 같거나 `fix-recheck`에서 구현자와 identity가 같음
+- 적대적 검증 모드에서 원장 또는 보고서 쓰기 권한을 요구함
 
 ## 결과 형식
 
@@ -131,3 +200,4 @@ Findings:
 - findings가 있으면 반드시 다른 요약보다 먼저 제시합니다.
 - `수정 제안`은 구현 방향만 설명하며 패치를 포함하거나 적용하지 않습니다.
 - 보고서 파일을 쓰지 않은 경우 수정 파일은 항상 `none`입니다.
+- `adversarial-validation`과 `fix-recheck`는 각 모드의 전용 출력 형식을 사용하며 findings 요약이나 구현 제안으로 verdict를 대체하지 않습니다.

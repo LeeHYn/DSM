@@ -1,3 +1,3 @@
-# Expo HAS CHANGED
+# React Native Android project
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v55.0.0/ before writing any code.
+Use the React Native 0.83 documentation and the Android project under `android/` as the source of truth. Run and debug the app with Android Studio or the React Native Community CLI; do not add Expo or EAS dependencies.

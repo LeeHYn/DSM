@@ -1,0 +1,52 @@
+// Pure input validation, shared by Gradle and release-config.test.groovy.
+return { Map input ->
+    def errors = []
+    def properties = input.properties ?: [:]
+    ['DAILYUP_UPLOAD_STORE_FILE', 'DAILYUP_UPLOAD_STORE_PASSWORD',
+     'DAILYUP_UPLOAD_KEY_ALIAS', 'DAILYUP_UPLOAD_KEY_PASSWORD'].each { key ->
+        if (!properties[key]?.toString()?.trim()) errors << "Missing ${key}"
+    }
+    def path = properties.DAILYUP_UPLOAD_STORE_FILE?.toString()
+    if (path && (!new File(path).absolute || !new File(path).isFile())) {
+        errors << 'DAILYUP_UPLOAD_STORE_FILE must be an absolute regular file'
+    }
+    if (!(input.envFile instanceof File) || !input.envFile.isFile()) {
+        errors << 'Missing canonical .env.release.local'
+    }
+    if (input.override) errors << 'ENVFILE overrides are forbidden for release'
+    def tasks = input.tasks ?: []
+    def firstVariant = tasks.collect { task ->
+        def match = task =~ /(?:.*:)*[a-z]+([A-Z][A-Za-z0-9]+)/
+        match.find() ? match.group(1).toLowerCase() : null
+    }.find { it != null }
+    if (!firstVariant?.startsWith('release') || tasks.any {
+        it.toLowerCase().contains('debug') || it.tokenize(':').last() in ['build', 'assemble', 'bundle']
+    }) errors << 'Use an explicit release task without mixed variants or aggregate tasks'
+    def url = input.env?.API_BASE_URL?.toString()
+    try {
+        def uri = new URI(url ?: '')
+        if (uri.scheme != 'https' || !uri.host || uri.userInfo != null ||
+            uri.rawQuery != null || uri.rawFragment != null) throw new IllegalArgumentException()
+    } catch (Exception ignored) {
+        errors << 'API_BASE_URL must be HTTPS with a host, without credentials, query or fragment'
+    }
+    if (!input.env?.GOOGLE_WEB_CLIENT_ID?.toString()?.trim()) errors << 'Missing GOOGLE_WEB_CLIENT_ID'
+    ['PRIVACY_POLICY_URL', 'ACCOUNT_DELETION_URL'].each { key ->
+        def legalUrl = input.env?.get(key)?.toString()?.trim()
+        if (!legalUrl) {
+            errors << "Missing ${key}"
+        } else {
+            try {
+                def uri = new URI(legalUrl)
+                def host = uri.host?.toLowerCase()
+                if (uri.scheme != 'https' || !host || uri.userInfo != null ||
+                    host == 'invalid' || host.endsWith('.invalid')) {
+                    throw new IllegalArgumentException()
+                }
+            } catch (Exception ignored) {
+                errors << "${key} must be public HTTPS with a host and without credentials"
+            }
+        }
+    }
+    errors
+}

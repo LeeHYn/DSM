@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ScoresController } from './scores.controller';
 import { ScoresService } from './scores.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 const MOCK_SCORE = { id: 'ds-1', cappedScore: 117 };
 
@@ -12,9 +13,8 @@ const makeScoresServiceMock = () => ({
   getSummary: jest.fn().mockResolvedValue({ totalScore: 3500, tier: 'GOLD' }),
   recompute: jest.fn(),
 });
-
 const makeAuthRequest = (userId = 'user-uuid-1') =>
-  ({ user: { sub: userId, type: 'access' } }) as never;
+  ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
 describe('ScoresController', () => {
   let controller: ScoresController;
@@ -32,6 +32,10 @@ describe('ScoresController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();

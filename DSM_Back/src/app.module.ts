@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RankingsModule } from './rankings/rankings.module';
 import { ScoresModule } from './scores/scores.module';
@@ -17,6 +19,7 @@ import { TasksModule } from './tasks/tasks.module';
       isGlobal: true,
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     HealthModule,
     AuthModule,
@@ -24,6 +27,7 @@ import { TasksModule } from './tasks/tasks.module';
     CategoriesModule,
     ScoresModule,
     RankingsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

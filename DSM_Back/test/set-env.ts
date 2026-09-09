@@ -7,3 +7,4 @@ process.env.DATABASE_URL ??=
 process.env.JWT_ACCESS_SECRET ??= 'test-access-secret-for-dsm-backend';
 process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret-for-dsm-backend';
 process.env.GOOGLE_CLIENT_ID ??= 'test-google-client-id';
+process.env.CORS_ORIGINS ??= '';

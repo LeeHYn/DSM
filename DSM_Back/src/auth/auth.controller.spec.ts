@@ -5,16 +5,25 @@ import { SocialProvider } from '@prisma/client';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 const TOKEN_RESPONSE = {
   accessToken: 'access-token',
   refreshToken: 'refresh-token',
 };
 
+const CURRENT_USER = {
+  userId: 'user-uuid-1',
+  onboardingCompletedAt: new Date('2026-07-25T00:00:00.000Z'),
+};
+
 const makeAuthServiceMock = () => ({
   socialLogin: jest.fn().mockResolvedValue(TOKEN_RESPONSE),
   refreshTokens: jest.fn().mockResolvedValue(TOKEN_RESPONSE),
   logout: jest.fn().mockResolvedValue(undefined),
+  deleteAccount: jest.fn().mockResolvedValue(undefined),
+  getCurrentUser: jest.fn().mockResolvedValue(CURRENT_USER),
+  completeOnboarding: jest.fn().mockResolvedValue(CURRENT_USER),
 });
 
 describe('AuthController', () => {
@@ -33,6 +42,10 @@ describe('AuthController', () => {
           useValue: { verify: jest.fn(), sign: jest.fn() },
         },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: PrismaService,
+          useValue: { refreshToken: { findFirst: jest.fn() } },
+        },
         JwtAuthGuard,
       ],
     }).compile();
@@ -60,8 +73,42 @@ describe('AuthController', () => {
     expect(result).toEqual(TOKEN_RESPONSE);
   });
 
-  it('me returns userId from jwt payload', () => {
-    const req = { user: { sub: 'user-uuid-1', type: 'access' } } as never;
-    expect(controller.me(req)).toEqual({ userId: 'user-uuid-1' });
+  it('logout delegates with the refresh token without access-token identity', async () => {
+    await expect(
+      controller.logout({ refreshToken: 'record.secret' }),
+    ).resolves.toBeUndefined();
+
+    expect(authServiceMock.logout).toHaveBeenCalledWith('record.secret');
+  });
+
+  it('me returns the canonical current-user projection', async () => {
+    const req = {
+      user: { sub: 'user-uuid-1', sid: 'session-1', type: 'access' },
+    } as never;
+
+    await expect(controller.me(req)).resolves.toEqual(CURRENT_USER);
+    expect(authServiceMock.getCurrentUser).toHaveBeenCalledWith('user-uuid-1');
+  });
+
+  it('completeOnboarding delegates with the authenticated user', async () => {
+    const req = {
+      user: { sub: 'user-uuid-1', sid: 'session-1', type: 'access' },
+    } as never;
+
+    await expect(controller.completeOnboarding(req)).resolves.toEqual(
+      CURRENT_USER,
+    );
+    expect(authServiceMock.completeOnboarding).toHaveBeenCalledWith(
+      'user-uuid-1',
+    );
+  });
+
+  it('deleteAccount delegates with the authenticated user', async () => {
+    const req = {
+      user: { sub: 'user-uuid-1', sid: 'session-1', type: 'access' },
+    } as never;
+
+    await expect(controller.deleteAccount(req)).resolves.toBeUndefined();
+    expect(authServiceMock.deleteAccount).toHaveBeenCalledWith('user-uuid-1');
   });
 });

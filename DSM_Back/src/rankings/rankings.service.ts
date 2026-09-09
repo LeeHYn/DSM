@@ -1,74 +1,139 @@
 import { Injectable } from '@nestjs/common';
-import { type RankingSnapshot, RankingPeriod, Tier } from '@prisma/client';
+import { type RankingSnapshot, RankingPeriod } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RankingCacheService } from './ranking-cache.service';
+import { RankingProjectionService } from './ranking-projection.service';
 import { computeRanking, startOfUtcDay, weeklyRange } from './rankings.policy';
+import type { LeaderboardEntry, MyRanking } from './rankings.types';
 
-export interface MyRanking {
-  period: RankingPeriod;
-  score: number;
-  rank: number;
-  percentile: number;
-  totalUsers: number;
-}
-
-export interface LeaderboardEntry {
-  rank: number;
-  userId: string;
-  nickname: string;
-  tier: Tier;
-  profileImageUrl: string | null;
-  score: number;
-}
+export type { LeaderboardEntry, MyRanking } from './rankings.types';
 
 @Injectable()
 export class RankingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: RankingCacheService,
+    private readonly projection: RankingProjectionService,
+  ) {}
 
   async getMyRanking(
     userId: string,
     period: RankingPeriod,
   ): Promise<MyRanking> {
-    const score = await this.scoreForUser(userId, period);
-    const higherCount = await this.countHigher(period, score);
-    const totalUsers = await this.prisma.user.count();
-    const { rank, percentile } = computeRanking(higherCount, totalUsers);
-    return { period, score, rank, percentile, totalUsers };
+    return this.getMyRankingAt(userId, period, new Date());
   }
 
-  getLeaderboard(
+  private async getMyRankingAt(
+    userId: string,
+    period: RankingPeriod,
+    reference: Date,
+  ): Promise<MyRanking> {
+    if (this.cache.isConfigured()) {
+      const cached = await this.cache.readMyRanking(userId, period, reference);
+      if (cached) {
+        return cached;
+      }
+
+      await this.projection.refreshPeriod(period, reference);
+      const refreshed = await this.cache.readMyRanking(
+        userId,
+        period,
+        reference,
+      );
+      if (refreshed) {
+        return refreshed;
+      }
+    }
+
+    return this.getMyRankingFromDatabase(userId, period, reference);
+  }
+
+  async getLeaderboard(
     period: RankingPeriod,
     limit: number,
   ): Promise<LeaderboardEntry[]> {
-    switch (period) {
-      case RankingPeriod.TOTAL:
-        return this.totalLeaderboard(limit);
-      case RankingPeriod.DAILY:
-        return this.dailyLeaderboard(limit);
-      case RankingPeriod.WEEKLY:
-        return this.weeklyLeaderboard(limit);
+    const reference = new Date();
+    if (this.cache.isConfigured()) {
+      const cached = await this.cache.readLeaderboard(period, limit, reference);
+      if (cached) {
+        return cached;
+      }
+
+      await this.projection.refreshPeriod(period, reference);
+      const refreshed = await this.cache.readLeaderboard(
+        period,
+        limit,
+        reference,
+      );
+      if (refreshed) {
+        return refreshed;
+      }
     }
+
+    return this.getLeaderboardFromDatabase(period, limit, reference);
   }
 
   async createSnapshot(
     userId: string,
     period: RankingPeriod,
   ): Promise<RankingSnapshot> {
-    const ranking = await this.getMyRanking(userId, period);
-    return this.prisma.rankingSnapshot.create({
-      data: {
-        userId,
-        period,
-        rank: ranking.rank,
-        percentile: ranking.percentile,
-        score: ranking.score,
-        snapshotAt: new Date(),
-      },
+    const reference = new Date();
+    const snapshotDate = startOfUtcDay(reference);
+    const where = { userId, period, snapshotDate };
+    const existing = await this.prisma.rankingSnapshot.findFirst({ where });
+    if (existing) {
+      return existing;
+    }
+
+    const ranking = await this.getMyRankingAt(userId, period, reference);
+    await this.prisma.rankingSnapshot.createMany({
+      data: [
+        {
+          userId,
+          period,
+          rank: ranking.rank,
+          percentile: ranking.percentile,
+          score: ranking.score,
+          snapshotDate,
+          snapshotAt: reference,
+        },
+      ],
+      skipDuplicates: true,
     });
+
+    return this.prisma.rankingSnapshot.findFirstOrThrow({
+      where,
+    });
+  }
+
+  private async getMyRankingFromDatabase(
+    userId: string,
+    period: RankingPeriod,
+    reference: Date,
+  ): Promise<MyRanking> {
+    const score = await this.scoreForUser(userId, period, reference);
+    const higherCount = await this.countHigher(period, score, reference);
+    const totalUsers = await this.prisma.user.count();
+    const { rank, percentile } = computeRanking(higherCount, totalUsers);
+    return { period, score, rank, percentile, totalUsers };
+  }
+
+  private getLeaderboardFromDatabase(
+    period: RankingPeriod,
+    limit: number,
+    reference: Date,
+  ): Promise<LeaderboardEntry[]> {
+    return this.projection.readLeaderboardFromDatabase(
+      period,
+      limit,
+      reference,
+    );
   }
 
   private async scoreForUser(
     userId: string,
     period: RankingPeriod,
+    reference: Date,
   ): Promise<number> {
     if (period === RankingPeriod.TOTAL) {
       const user = await this.prisma.user.findUniqueOrThrow({
@@ -81,14 +146,14 @@ export class RankingsService {
     if (period === RankingPeriod.DAILY) {
       const row = await this.prisma.dailyScore.findUnique({
         where: {
-          userId_scoreDate: { userId, scoreDate: startOfUtcDay(new Date()) },
+          userId_scoreDate: { userId, scoreDate: startOfUtcDay(reference) },
         },
         select: { cappedScore: true },
       });
       return row?.cappedScore ?? 0;
     }
 
-    const { gte, lt } = weeklyRange(new Date());
+    const { gte, lt } = weeklyRange(reference);
     const aggregate = await this.prisma.dailyScore.aggregate({
       where: { userId, scoreDate: { gte, lt } },
       _sum: { cappedScore: true },
@@ -99,6 +164,7 @@ export class RankingsService {
   private async countHigher(
     period: RankingPeriod,
     score: number,
+    reference: Date,
   ): Promise<number> {
     if (period === RankingPeriod.TOTAL) {
       return this.prisma.user.count({ where: { totalScore: { gt: score } } });
@@ -107,13 +173,13 @@ export class RankingsService {
     if (period === RankingPeriod.DAILY) {
       return this.prisma.dailyScore.count({
         where: {
-          scoreDate: startOfUtcDay(new Date()),
+          scoreDate: startOfUtcDay(reference),
           cappedScore: { gt: score },
         },
       });
     }
 
-    const { gte, lt } = weeklyRange(new Date());
+    const { gte, lt } = weeklyRange(reference);
     const groups = await this.prisma.dailyScore.groupBy({
       by: ['userId'],
       where: { scoreDate: { gte, lt } },
@@ -121,82 +187,5 @@ export class RankingsService {
       having: { cappedScore: { _sum: { gt: score } } },
     });
     return groups.length;
-  }
-
-  private async totalLeaderboard(limit: number): Promise<LeaderboardEntry[]> {
-    const users = await this.prisma.user.findMany({
-      orderBy: { totalScore: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        nickname: true,
-        tier: true,
-        profileImageUrl: true,
-        totalScore: true,
-      },
-    });
-    return users.map((user, index) => ({
-      rank: index + 1,
-      userId: user.id,
-      nickname: user.nickname,
-      tier: user.tier,
-      profileImageUrl: user.profileImageUrl,
-      score: user.totalScore,
-    }));
-  }
-
-  private async dailyLeaderboard(limit: number): Promise<LeaderboardEntry[]> {
-    const rows = await this.prisma.dailyScore.findMany({
-      where: { scoreDate: startOfUtcDay(new Date()) },
-      orderBy: { cappedScore: 'desc' },
-      take: limit,
-      select: {
-        cappedScore: true,
-        user: {
-          select: {
-            id: true,
-            nickname: true,
-            tier: true,
-            profileImageUrl: true,
-          },
-        },
-      },
-    });
-    return rows.map((row, index) => ({
-      rank: index + 1,
-      userId: row.user.id,
-      nickname: row.user.nickname,
-      tier: row.user.tier,
-      profileImageUrl: row.user.profileImageUrl,
-      score: row.cappedScore,
-    }));
-  }
-
-  private async weeklyLeaderboard(limit: number): Promise<LeaderboardEntry[]> {
-    const { gte, lt } = weeklyRange(new Date());
-    const groups = await this.prisma.dailyScore.groupBy({
-      by: ['userId'],
-      where: { scoreDate: { gte, lt } },
-      _sum: { cappedScore: true },
-      orderBy: { _sum: { cappedScore: 'desc' } },
-      take: limit,
-    });
-    const users = await this.prisma.user.findMany({
-      where: { id: { in: groups.map((group) => group.userId) } },
-      select: { id: true, nickname: true, tier: true, profileImageUrl: true },
-    });
-    const userMap = new Map(users.map((user) => [user.id, user]));
-
-    return groups.map((group, index) => {
-      const user = userMap.get(group.userId);
-      return {
-        rank: index + 1,
-        userId: group.userId,
-        nickname: user?.nickname ?? '',
-        tier: user?.tier ?? Tier.BRONZE,
-        profileImageUrl: user?.profileImageUrl ?? null,
-        score: group._sum.cappedScore ?? 0,
-      };
-    });
   }
 }

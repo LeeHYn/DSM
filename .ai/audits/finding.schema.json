@@ -1,0 +1,569 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:dsm:ai:audit:finding:1.0.0",
+  "title": "DSM adversarial verification finding",
+  "description": "One finding record stored as a single line in an audit findings.jsonl ledger.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "auditId",
+    "findingId",
+    "round",
+    "lens",
+    "severity",
+    "title",
+    "location",
+    "condition",
+    "impact",
+    "evidence",
+    "fingerprint",
+    "aliases",
+    "status",
+    "statusHistory",
+    "validations",
+    "fix",
+    "recheck",
+    "riskAcceptance",
+    "residualRisk",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "auditId": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-(change-gate|release-audit)-[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "findingId": {
+      "type": "string",
+      "pattern": "^F-[0-9]{3,}$"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lens": {
+      "type": "string",
+      "minLength": 1
+    },
+    "severity": {
+      "enum": ["P0", "P1", "P2", "P3"]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "location": {
+      "$ref": "#/$defs/location"
+    },
+    "condition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "impact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "fingerprint": {
+      "$ref": "#/$defs/fingerprint"
+    },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "status": {
+      "$ref": "#/$defs/status"
+    },
+    "statusHistory": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/statusTransition"
+      }
+    },
+    "validations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/validation"
+      }
+    },
+    "fix": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/fixRecord" }
+      ]
+    },
+    "recheck": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/recheckRecord" }
+      ]
+    },
+    "riskAcceptance": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/riskAcceptance" }
+      ]
+    },
+    "residualRisk": {
+      "type": ["string", "null"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "CONFIRMED",
+                  "REFUTED",
+                  "UNKNOWN",
+                  "FIXING",
+                  "FIXED",
+                  "RECHECKING",
+                  "RECHECKED",
+                  "ACCEPTED_RISK"
+                ]
+              }
+            },
+            "required": ["status"]
+          },
+          {
+            "properties": {
+              "severity": {
+                "enum": ["P0", "P1"]
+              }
+            },
+            "required": ["severity"]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "validations": {
+            "minItems": 2
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "CONFIRMED",
+                  "REFUTED",
+                  "UNKNOWN",
+                  "FIXING",
+                  "FIXED",
+                  "RECHECKING",
+                  "RECHECKED",
+                  "ACCEPTED_RISK"
+                ]
+              }
+            },
+            "required": ["status"]
+          },
+          {
+            "properties": {
+              "severity": {
+                "const": "P2"
+              }
+            },
+            "required": ["severity"]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "validations": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["FIXED", "RECHECKING", "RECHECKED"]
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "fix": {
+            "$ref": "#/$defs/fixRecord"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "RECHECKED"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "recheck": {
+            "allOf": [
+              { "$ref": "#/$defs/recheckRecord" },
+              {
+                "properties": {
+                  "verdict": {
+                    "const": "RECHECKED"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED_RISK"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "riskAcceptance": {
+            "$ref": "#/$defs/riskAcceptance"
+          },
+          "residualRisk": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "status": {
+      "enum": [
+        "NEW",
+        "VALIDATING",
+        "CONFIRMED",
+        "REFUTED",
+        "UNKNOWN",
+        "FIXING",
+        "FIXED",
+        "RECHECKING",
+        "RECHECKED",
+        "ACCEPTED_RISK"
+      ]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "startLine"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "symbol": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference", "detail"],
+      "properties": {
+        "kind": {
+          "enum": ["code", "diff", "test", "document", "runtime", "database", "external"]
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value", "basis"],
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "statusTransition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "actor", "reason", "at"],
+      "properties": {
+        "from": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/status" }
+          ]
+        },
+        "to": {
+          "$ref": "#/$defs/status"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validatorId",
+        "mode",
+        "verdict",
+        "challengeAttempts",
+        "evidence",
+        "reason",
+        "missingEvidence",
+        "independent",
+        "at"
+      ],
+      "properties": {
+        "validatorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "const": "adversarial-validation"
+        },
+        "verdict": {
+          "enum": ["SURVIVED", "REFUTED", "UNKNOWN"]
+        },
+        "challengeAttempts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missingEvidence": {
+          "type": ["string", "null"]
+        },
+        "independent": {
+          "const": true
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "verificationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "outcome", "evidence"],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": ["PASS", "FAIL", "NOT_RUN"]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "fixRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approvalRef",
+        "implementerId",
+        "files",
+        "summary",
+        "verification",
+        "completedAt"
+      ],
+      "properties": {
+        "approvalRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/verificationResult"
+          }
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "recheckRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewerId",
+        "verdict",
+        "originalCondition",
+        "regressionReview",
+        "verification",
+        "residualRisk",
+        "independent",
+        "at"
+      ],
+      "properties": {
+        "reviewerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict": {
+          "enum": ["RECHECKED", "FAILED", "UNKNOWN"]
+        },
+        "originalCondition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regressionReview": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/verificationResult"
+          }
+        },
+        "residualRisk": {
+          "type": ["string", "null"]
+        },
+        "independent": {
+          "const": true
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "riskAcceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvedBy", "approvalRef", "rationale", "at"],
+      "properties": {
+        "approvedBy": {
+          "const": "user"
+        },
+        "approvalRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

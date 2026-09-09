@@ -19,7 +19,15 @@ import type { TokenResponseDto } from './dto/token-response.dto';
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const BCRYPT_ROUNDS = 10;
-type RefreshTokenClient = Pick<Prisma.TransactionClient, 'refreshToken'>;
+type RefreshTokenClient = Pick<
+  Prisma.TransactionClient,
+  'refreshToken' | '$queryRaw'
+>;
+
+export type CurrentUser = {
+  userId: string;
+  onboardingCompletedAt: Date | null;
+};
 
 @Injectable()
 export class AuthService {
@@ -31,9 +39,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.googleClientId = this.configService.getOrThrow<string>(
-      'GOOGLE_CLIENT_ID',
-    );
+    this.googleClientId =
+      this.configService.getOrThrow<string>('GOOGLE_CLIENT_ID');
     this.googleClient = new OAuth2Client(this.googleClientId);
   }
 
@@ -61,6 +68,7 @@ export class AuthService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockUserForSessionMutation(tx, record.userId);
       const revokedAt = new Date();
       const revoked = await tx.refreshToken.updateMany({
         where: {
@@ -75,11 +83,11 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
 
-      return this.issueTokens(record.userId, tx);
+      return this.issueTokens(record.userId, tx, record.sessionId);
     });
   }
 
-  async logout(userId: string, rawRefreshToken: string): Promise<void> {
+  async logout(rawRefreshToken: string): Promise<void> {
     let parsed: { id: string; secret: string };
     try {
       parsed = this.parseRefreshToken(rawRefreshToken);
@@ -90,19 +98,67 @@ export class AuthService {
     const record = await this.prisma.refreshToken.findUnique({
       where: { id: parsed.id },
     });
-    if (
-      !record ||
-      record.userId !== userId ||
-      record.revokedAt !== null ||
-      !(await bcrypt.compare(parsed.secret, record.tokenHash))
-    ) {
+    if (!record || !(await bcrypt.compare(parsed.secret, record.tokenHash))) {
       return;
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: record.id },
-      data: { revokedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUserForSessionMutation(tx, record.userId);
+      await tx.refreshToken.updateMany({
+        where: {
+          userId: record.userId,
+          sessionId: record.sessionId,
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
     });
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUserForSessionMutation(tx, userId);
+      await tx.notificationDelivery.deleteMany({
+        where: {
+          OR: [{ schedule: { userId } }, { fcmToken: { userId } }],
+        },
+      });
+      await tx.user.deleteMany({ where: { id: userId } });
+    });
+  }
+
+  async getCurrentUser(userId: string): Promise<CurrentUser> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        onboardingCompletedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Authenticated user no longer exists');
+    }
+
+    return {
+      userId: user.id,
+      onboardingCompletedAt: user.onboardingCompletedAt,
+    };
+  }
+
+  async completeOnboarding(
+    userId: string,
+    completedAt = new Date(),
+  ): Promise<CurrentUser> {
+    await this.prisma.user.updateMany({
+      where: {
+        id: userId,
+        onboardingCompletedAt: null,
+      },
+      data: { onboardingCompletedAt: completedAt },
+    });
+
+    return this.getCurrentUser(userId);
   }
 
   private parseRefreshToken(token: string): { id: string; secret: string } {
@@ -116,8 +172,14 @@ export class AuthService {
   private async issueTokens(
     userId: string,
     client: RefreshTokenClient = this.prisma,
+    sessionId?: string,
   ): Promise<TokenResponseDto> {
-    const payload: JwtPayload = { sub: userId, type: 'access' };
+    const resolvedSessionId = sessionId ?? crypto.randomUUID();
+    const payload: JwtPayload = {
+      sub: userId,
+      sid: resolvedSessionId,
+      type: 'access',
+    };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       expiresIn: ACCESS_TOKEN_TTL,
@@ -130,10 +192,20 @@ export class AuthService {
         userId,
         tokenHash,
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        sessionId: resolvedSessionId,
       },
     });
 
     return { accessToken, refreshToken: `${record.id}.${secret}` };
+  }
+
+  private async lockUserForSessionMutation(
+    client: RefreshTokenClient,
+    userId: string,
+  ): Promise<void> {
+    await client.$queryRaw`
+      SELECT 1 FROM "User" WHERE id = ${userId} FOR UPDATE
+    `;
   }
 
   private async findOrCreateUser(

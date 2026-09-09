@@ -50,6 +50,7 @@ model User {
   notificationEnabled   Boolean                @default(true)
   createdAt             DateTime               @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime               @updatedAt @db.Timestamptz(6)
+  onboardingCompletedAt DateTime?              @db.Timestamptz(6)
   socialAccounts        SocialAccount[]
   refreshTokens         RefreshToken[]
   fcmTokens             FcmToken[]
@@ -81,23 +82,26 @@ model RefreshToken {
   expiresAt DateTime  @db.Timestamptz(6)
   revokedAt DateTime? @db.Timestamptz(6)
   userId    String
+  sessionId String    @default(uuid())
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([userId, sessionId])
 }
 
 model FcmToken {
-  id         String    @id @default(uuid())
-  token      String    @unique
-  platform   String
-  deviceId   String?
-  userId     String
-  lastSeenAt DateTime  @default(now()) @db.Timestamptz(6)
-  revokedAt  DateTime? @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime  @updatedAt @db.Timestamptz(6)
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String                 @id @default(uuid())
+  token                  String                 @unique
+  platform               String
+  deviceId               String?
+  userId                 String
+  lastSeenAt             DateTime               @default(now()) @db.Timestamptz(6)
+  revokedAt              DateTime?              @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationDeliveries NotificationDelivery[]
 
   @@index([userId, revokedAt])
 }
@@ -167,6 +171,7 @@ model RankingSnapshot {
   percentile Decimal       @db.Decimal(5, 2)
   score      Int
   snapshotAt DateTime      @db.Timestamptz(6)
+  snapshotDate DateTime?   @db.Date
   createdAt  DateTime      @default(now()) @db.Timestamptz(6)
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -175,18 +180,42 @@ model RankingSnapshot {
 }
 
 model NotificationSchedule {
-  id            String    @id @default(uuid())
+  id            String                 @id @default(uuid())
   taskId        String
   userId        String
-  scheduledAt   DateTime  @db.Timestamptz(6)
-  sentAt        DateTime? @db.Timestamptz(6)
-  status        String    @default("PENDING")
+  scheduledAt   DateTime               @db.Timestamptz(6)
+  sentAt        DateTime?              @db.Timestamptz(6)
+  status        String                 @default("PENDING")
   failureReason String?
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
-  task          Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime               @updatedAt @db.Timestamptz(6)
+  task          Task                   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries    NotificationDelivery[]
 
   @@index([scheduledAt, status])
   @@index([userId, scheduledAt])
+}
+
+model NotificationDelivery {
+  id                  String               @id @default(uuid())
+  scheduleId          String
+  fcmTokenId          String
+  tokenUpdatedAt      DateTime             @db.Timestamptz(6)
+  status              String               @default("PENDING")
+  attemptCount        Int                  @default(0)
+  nextAttemptAt       DateTime?            @db.Timestamptz(6)
+  processingStartedAt DateTime?            @db.Timestamptz(6)
+  sendStartedAt       DateTime?            @db.Timestamptz(6)
+  claimId             String?
+  sentAt              DateTime?            @db.Timestamptz(6)
+  failureReason       String?
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @db.Timestamptz(6)
+  schedule            NotificationSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  fcmToken            FcmToken             @relation(fields: [fcmTokenId], references: [id], onDelete: NoAction)
+
+  @@unique([scheduleId, fcmTokenId])
+  @@index([status, nextAttemptAt], map: "NotificationDelivery_retry_due_idx")
+  @@index([status, processingStartedAt], map: "NotificationDelivery_stale_lease_idx")
 }

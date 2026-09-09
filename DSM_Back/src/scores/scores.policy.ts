@@ -45,7 +45,10 @@ export function computeDailyScore(input: ScoreInput): ScoreResult {
     registeredTaskCount > 0 ? completedTaskCount / registeredTaskCount : 0;
   const adjustedScore = Math.round(rawScore * achievementMultiplier(rate));
   const cappedScore = Math.min(adjustedScore, DAILY_SCORE_CAP);
-  const achievementRate = Math.round(rate * 100 * 100) / 100;
+  const achievementRate =
+    registeredTaskCount > 0
+      ? Math.round((completedTaskCount * 10000) / registeredTaskCount) / 100
+      : 0;
 
   return {
     registeredTaskCount,

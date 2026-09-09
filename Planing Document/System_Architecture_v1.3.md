@@ -1,5 +1,11 @@
 # DSM (Daily Schedule Managements) 시스템 아키텍처 명세서 (v1.3)
 
+> [!warning] 문서 상태 — 목표·기획 기준
+> 이 문서는 DSM v1.3의 목표 시스템 아키텍처이며 현재 구현 완료 상태를 의미하지 않습니다. 구현 여부와 실제 런타임 경계는 [[AiProject/DSM/Current/2026-07-15-current-project-architecture|현재 프로젝트 아키텍처]]를 우선합니다.
+
+> [!important] 2026-09-08 출시 범위 확정
+> DSM v1.3 배포 대상은 Android 전용입니다. 아래의 iOS·양대 OS 표현은 이전 기획 기록이며 이번 출시 승인 범위에서는 제외합니다.
+
 > **v1.2 → v1.3 주요 변경 사항**
 > - **프레임워크 전면 개편**: Next.js (서버리스) → **NestJS (Node.js VPS/PaaS)**
 > - **인증 플로우 개편**: NextAuth.js → **자체 커스텀 JWT Auth (Passport.js 등 활용)**

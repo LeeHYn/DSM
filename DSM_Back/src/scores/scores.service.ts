@@ -31,12 +31,23 @@ export class ScoresService {
         deletedAt: null,
         startAt: { gte: dayStart, lt: nextDay },
       },
+      select: {
+        status: true,
+        difficulty: true,
+        completedAt: true,
+      },
     });
 
     const result = computeDailyScore({
       registeredTaskCount: tasks.length,
       completedDifficulties: tasks
-        .filter((task) => task.status === TaskStatus.COMPLETED)
+        .filter(
+          (task) =>
+            task.status === TaskStatus.COMPLETED &&
+            task.completedAt !== null &&
+            task.completedAt >= dayStart &&
+            task.completedAt < nextDay,
+        )
         .map((task) => task.difficulty),
     });
 

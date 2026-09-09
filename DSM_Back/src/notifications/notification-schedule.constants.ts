@@ -1,0 +1,30 @@
+export const NOTIFICATION_SCHEDULE_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+} as const);
+
+export type NotificationScheduleStatus =
+  (typeof NOTIFICATION_SCHEDULE_STATUS)[keyof typeof NOTIFICATION_SCHEDULE_STATUS];
+
+export const NOTIFICATION_DELIVERY_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  UNKNOWN: 'UNKNOWN',
+} as const);
+
+export type NotificationDeliveryStatus =
+  (typeof NOTIFICATION_DELIVERY_STATUS)[keyof typeof NOTIFICATION_DELIVERY_STATUS];
+
+export const NOTIFICATION_NONTERMINAL_STATUSES = Object.freeze([
+  NOTIFICATION_SCHEDULE_STATUS.PENDING,
+  NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+] as const);
+
+export type NotificationNonterminalStatus =
+  (typeof NOTIFICATION_NONTERMINAL_STATUSES)[number];
