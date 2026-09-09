@@ -3,7 +3,7 @@
 ## Checkout·책임 경계
 
 - 조정 checkout은 `C:\DEV`의 `main`, 제품·감사 checkout은 `C:\dsm-integration-review`의 `codex/integration-main-review`다.
-- F-012 제품·감사 checkpoint `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`까지 원격 upstream에 있다. 이 memory snapshot이 해당 기준을 후속 기록한다.
+- F-012 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`와 외부 PC 문서 `af2ff2640b1fa27111302766baa61aada15b304d`까지 원격 upstream에 있다.
 - 제품 범위는 Android 전용 DSM v1.3이다. Backend는 NestJS·Prisma 6·PostgreSQL, 클라이언트는 React Native Community CLI 기반 Android다.
 - Canonical audit는 `.ai/audits/20260817-release-audit-full-project/findings.jsonl`이다. Root 완료와 release-ready 판정은 구분한다.
 
@@ -26,6 +26,7 @@
 - F-001/F-002는 Backend 304·Front 229·Android 456·PostgreSQL 1/1, F-007/F-008/F-009는 Backend 314·PostgreSQL fresh 3/3·legacy upgrade를 통과했다.
 - F-011/F-029/F-030은 Backend 297·PostgreSQL/Redis 2/2, F-069는 Backend 293·통합 2/2와 50,000-user 합성 benchmark, F-065는 manifest·build·lint·API 36 smoke를 통과했다. 합성 수치는 production SLO 증거가 아니다.
 - F-012는 focused 18, Backend 317, e2e 2와 모든 정적 gate를 통과했다. PostgreSQL fresh·legacy 3/3, legacy row 2개 보존, 20개 동시 호출 1 ID를 확인했다.
+- 외부 PC 문서는 tracked scripts·ignore·Android/compose 설정과 대조했고 `docker compose --env-file .env.example config --quiet`이 통과했다. 이는 문서·template 검증이며 제품 test·build·runtime을 새로 실행한 결과는 아니다.
 - 모든 task-owned service·container·임시 prefix를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다.
 
 ## F-012 종결

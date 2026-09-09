@@ -37,6 +37,7 @@
 - [x] Focused 18, Backend 317·e2e 2·build/type/lint/format·Prisma 검증.
 - [x] PostgreSQL fresh·legacy 3/3, legacy 2행 보존과 20개 동시 호출 1 ID 검증.
 - [x] F-012 audit FIXED 전이와 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213` commit·push.
+- [x] 외부 PC Windows guide·root/Backend 진입점·역사 handoff 경고·compose-safe example, 정적 검증과 `af2ff2640b1fa27111302766baa61aada15b304d` commit·push.
 
 ## 열린 gate
 

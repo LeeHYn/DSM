@@ -10,20 +10,20 @@
 
 - 위 3개만 active memory다. 이 README는 routing과 byte/hash ledger다.
 - 조정 범위는 root `main`, 제품·감사는 `codex/integration-main-review`이다.
-- F-012 제품·감사 checkpoint `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`까지 원격에 있다. 이 memory snapshot이 해당 기준을 후속 기록한다.
+- F-012 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`와 외부 PC 문서 `af2ff2640b1fa27111302766baa61aada15b304d`까지 원격에 있다.
 - Canonical audit는 83건: `58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`. Release-ready가 아니다.
 
 ## Current active snapshot — 2026-09-09
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `plan.md` | 5,641 | `659E91FD5AF709C5630A04C49A521ECB27F90E252E8F9A45F1BF4A701C338E14` |
-| `context.md` | 6,072 | `27443618CDE9B7D5ECB060C94CDF40050EF40E9D932B04766FBA7A55B2488079` |
-| `checklist.md` | 4,436 | `3726BEC35AA7BDD0DA430C47B82ED018654DB8FC55F6C137BB9E7B14914C95BB` |
+| `plan.md` | 5,906 | `EDE381F2D05411A37C3BBE1DCD78967CBC9C3BCD8A89BFCAAAE2234D2A217260` |
+| `context.md` | 6,328 | `E65DB2A8E40AB65EAA44C8FC7C44B2F31379514AD0E9D752A9829DD58DF77932` |
+| `checklist.md` | 4,610 | `3F56C153EF80C671ADD6FFEE4BB9C14C0A2729714E7B631F57D61566E79CB424` |
 
-- Active 3 합계: 16,149 bytes.
-- 2026-09-08 압축 전 기준 16,922 bytes보다 773 bytes 작다.
-- 승인 전 진단 반복을 F-012 종결 계약으로 압축하고 현재 checkpoint, 검증 결과, 열린 legacy·독립 recheck gate와 안전 경계를 보존했다.
+- Active 3 합계: 16,844 bytes.
+- 2026-09-08 압축 전 기준 16,922 bytes보다 78 bytes 작다.
+- F-012 종결 계약과 외부 PC 문서 checkpoint·검증·열린 gate만 보존하고, 상세 실행 절차는 tracked setup guide에 둔다.
 
 ## Recovery 정책
 

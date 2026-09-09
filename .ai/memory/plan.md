@@ -29,23 +29,24 @@
 - F-069는 PostgreSQL window projection과 fenced Redis generation을 cache-first로 제공하고, F-011/F-029/F-030 DB fallback도 같은 rank·population·UTC 계약으로 통일했다.
 - F-065는 minSdk 24와 exported `singleTask` launcher를 유지하면서 MainActivity의 `taskAffinity`를 비우고 task reparenting을 비활성화했다.
 
-## 최근 완료 증거
-
-- F-012는 unit RED 4건을 거쳐 focused 18, Backend 317, e2e 2, build·type·lint·format·Prisma를 통과했다. PostgreSQL 17 fresh·legacy가 각각 3/3을 통과했고 20개 동시 최초 호출은 1개 ID로 합쳐졌다. 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`은 원격에 있다.
-
 ## F-012 종결 계약
 
 - 2026-09-09 사용자 `ㄱ` 승인에 따라 공개 API를 보존하고 사용자·period·UTC 날짜당 최초 snapshot 하나만 생성한다. 같은 날 반복 호출은 기존 immutable row를 반환해 ranking 재계산과 durable write를 생략한다.
 - `snapshotDate DATE`와 non-null `NOT VALID` CHECK, non-null row 대상 partial unique index가 신규·수정 write를 제한한다. `createMany(skipDuplicates)` 뒤 winner를 읽어 동시 최초 호출도 한 row로 합친다.
 - Legacy row 두 개가 같은 날짜에 있어도 null bucket으로 보존한 채 7→8 migration upgrade가 성공했다. 신규 null·중복은 거부됐고 fresh·legacy DB 모두 committed 3/3 spec을 통과했다.
 - F-012는 canonical audit에서 `FIXED`다. 구현자 독립 recheck가 없으므로 `RECHECKED`가 아니며, production legacy 분류·backfill·중복 해소·CHECK validation은 별도 gate다.
-- 해결 패턴은 기존 playbook 항목과 중복되지 않아 `ER-20260909-003`으로 기록한다.
 
 ## 후속 실행
 
 1. 열한 개 FIXED finding의 구현자 독립 fix-recheck, F-008/F-009/F-012 legacy-state scan·정리와 staged CHECK validation을 수행한다.
 2. F-069 운영 cardinality·capacity·latency·failover 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보하고 남은 P2→P3를 진행한다.
+
+## 외부 PC clone·개발 문서 — 종결
+
+- 사용자 승인 결과는 `af2ff2640b1fa27111302766baa61aada15b304d`이다. 기준 문서는 `docs/setup/windows-clone-and-development.md`이며 Root·Backend README가 연결하고, 2026-08-08 handoff 문서는 역사 기록으로 표시했다.
+- 가이드는 integration clone, Node 22+, JDK 17, Android SDK 36, safe local env, Docker·Prisma, Android·OAuth, Git hygiene와 Windows 문제를 다룬다. compose가 요구하는 non-secret PostgreSQL 기본값도 `.env.example`에 추가했다.
+- compose config·ignore·tracked script·Markdown link·diff 검증을 통과했다. 제품 코드·dependency·migration·audit은 변경하지 않았다.
 
 ## 불변 조건
 
