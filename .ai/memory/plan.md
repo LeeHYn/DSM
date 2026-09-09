@@ -32,8 +32,9 @@
 
 - F-007/F-008/F-009는 focused 91, Backend 314, e2e 2, build·type·lint·format·Prisma와 PostgreSQL 17 fresh 3/3·legacy upgrade를 통과했다. 제품·감사 `317253cff1fd938b847017697f049582720261f9`와 직전 closure memory는 원격에 있고 당시 작업 트리는 깨끗했다.
 
-## F-012 실행 계약 — 승인 대기
+## F-012 실행 계약 — 승인됨
 
+- 사용자는 2026-09-09 `ㄱ`으로 공개 API 보존형 일일 멱등화, exact writable allowlist와 검증 계약을 승인했다.
 - 재현 조건은 인증 사용자의 `POST /rankings/snapshot` 반복 호출이다. 현재 service는 매번 `RankingSnapshot.create`를 실행하며 uniqueness·retention·time bucket이 없다. Front와 다른 Backend source에는 이 POST의 소비자가 없지만, 승인된 Milestone 11 API 계약에는 endpoint가 명시돼 있다.
 - 오류 해결 playbook의 기존 F-012는 NotificationDelivery index 문제로 root cause가 다르며 현재 문제에 적용할 VERIFIED record는 없다. 현재 ranking controller/service focused baseline은 2 suites/15 tests가 통과한다.
 - 추천안은 공개 API를 보존하고 사용자·period·UTC 날짜당 최초 snapshot 하나만 만드는 것이다. 같은 날짜의 반복 호출은 기존 row를 반환해 durable write와 ranking 재계산을 생략하고, 세 period를 합쳐 사용자당 하루 최대 3개로 row 증가를 제한한다.
@@ -45,7 +46,7 @@
 
 ## 후속 실행
 
-1. F-012의 시간 버킷 멱등화 또는 공개 API 제거 선택을 승인받고 선택된 exact allowlist만 실행한다.
+1. F-012의 승인된 일일 멱등화 regression·service·schema/migration·PostgreSQL 검증을 순서대로 실행한다.
 2. 열 개 FIXED finding의 구현자 독립 fix-recheck, F-008/F-009 legacy-state scan·CHECK validation과 F-069 운영 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보하고 남은 P2→P3를 진행한다.
 

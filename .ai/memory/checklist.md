@@ -32,7 +32,8 @@
 - [x] F-007/F-008/F-009 audit FIXED 전이와 제품·감사 commit·push.
 - [x] F-012 공개 POST·service·schema·소비자·요구사항과 과거 deferred branch 진단.
 - [x] Focused ranking baseline 2 suites/15 tests와 반복 호출당 신규 durable row 생성 확인.
-- [/] 공개 API 보존형 일일 멱등화 또는 API 제거 선택과 exact allowlist 승인.
+- [x] 사용자 `ㄱ`으로 공개 API 보존형 일일 멱등화와 exact allowlist 승인.
+- [/] F-012 unit RED와 service·schema/migration 구현.
 
 ## 열린 gate
 

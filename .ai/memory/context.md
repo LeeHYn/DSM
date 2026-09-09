@@ -30,7 +30,7 @@
 
 - 인증된 `POST /rankings/snapshot`은 호출마다 새 row를 만들며 schema에 uniqueness·retention·bucket이 없다. Front와 다른 Backend source에는 호출자가 없지만 Milestone 11의 승인된 API 계약에는 endpoint가 포함된다. 현재 focused baseline은 2 suites/15 tests다.
 - 추천안은 API를 보존하면서 nullable `snapshotDate` DATE와 staged non-null·unique DB 계약으로 사용자·period·UTC 날짜당 최초 row 하나만 허용하는 것이다. Legacy row를 비파괴적으로 보존하고 production 정리·validation은 별도 gate로 둔다. API 제거는 migration이 없지만 기존 계약과 미확인 외부 client를 깨뜨린다.
-- 현재 product·audit은 미변경이며 추천안과 대안의 사용자 승인을 기다린다. 과거 playbook의 F-012는 NotificationDelivery index라 적용 대상이 아니다.
+- 사용자는 2026-09-09 `ㄱ`으로 추천안을 승인했다. 현재 product·audit은 아직 미변경이며 과거 playbook의 F-012는 NotificationDelivery index라 적용 대상이 아니다.
 
 ## 잔여 위험·외부 gate
 
@@ -40,7 +40,7 @@
 - F-001/F-002는 offline에서 명시적 logout을 완료할 수 없고 보호 REST 요청마다 indexed family 조회가 추가된다. Commit 전 승인된 in-flight 요청, production latency·availability와 독립 fix-recheck가 남았다.
 - F-007/F-008/F-009는 독립 fix-recheck가 남았다. F-008의 역사적 contradictory row와 same-value COMPLETED의 legacy null은 자동 보정하지 않으며, F-009는 production invalid-row scan·정정 또는 soft-delete 뒤 CHECK validation이 필요하다.
 - 실제 upload/Play signer, production OAuth, signed-device cold start·link open, readiness mapping과 운영 DB·Firebase 증거가 미완료다.
-- 현재 CONFIRMED P1은 0건이다. 다음 로컬 P2 F-012는 진단과 계획을 마쳤고 구현 승인 대기다.
+- 현재 CONFIRMED P1은 0건이다. 다음 로컬 P2 F-012는 진단·계획·승인을 마치고 구현 중이다.
 
 ## 안전·복구 규칙
 
