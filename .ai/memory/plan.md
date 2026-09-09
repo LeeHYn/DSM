@@ -10,9 +10,14 @@
 - 제품 소스·dependency·schema·migration·audit 변경과 운영 배포는 범위 밖이다. 기존 release-audit의 상태와 외부 gate를 유지하므로 이번 개발 branch 병합은 release-ready 판정이 아니다. 신규 고위험 제품 변경이 없어 별도 change-gate는 적용하지 않는다.
 - 성공 기준: 로컬 DB/Redis healthy, migrations up-to-date, API health 200, 전체 test 통과, 충돌 해결 내역 확인, main/upstream commit 일치, clean tracked tree와 memory hash 일치.
 - 현재 검증: Backend 317/317·E2E 2/2·build·non-fixing lint, Front fresh-cache 229/229·typecheck·lint 0 errors/30 existing warnings, Android assembleDebug 365 tasks 성공. Keychain 기본 cache 실패 7건은 `ER-20260816-002`의 cache-only 재현으로 분리했다.
-- Windows 재부팅은 적용됐다. Docker Desktop 4.90.0은 `sailor-ingest.sock` stale runtime socket rename 오류로 기동하지 못한다. 공식 stop/start·restart로도 지속되고 수동 단일 파일 삭제는 사용자 추가 승인 뒤에도 실행 정책에서 차단됐다. Docker를 종료해 두고 사용자에게 해당 파일 직접 삭제를 요청했다. DB/Redis·migration·API는 아직 미검증이며 전체 로컬 세팅 완료로 주장하지 않는다.
+- Windows 재부팅 후 발생한 Docker MSIX 경로 문제를 복구했다. 공식 installer를 Explorer에서 per-user 모드로 실행했고 현재 CLI는 정상 Windows 사용자 설치본을 우선한다. 엔진 29.7.2, PostgreSQL·Redis healthy, migration 8개 적용/up-to-date, Redis PONG, Backend `/health` HTTP 200을 검증했다.
 - 병합은 개발 통합 작업으로 독립 진행한다. Reviewer가 main 고유 제품 변경 없음과 memory 충돌 처리 방향을 확인했다. main 고유 Round 11/12/13 조건, F-083/F-005/F-039 외부 검증 한계를 보존했다. CLI GitHub 인증 부재로 연결된 GitHub API를 사용하며 main protection=false를 확인했다.
-- 병합 완료: `9e330314d100644886a4104d07c7197f12616ee5`가 원격 main에 게시됐고 `D:\DSM`도 main으로 fast-forward했다. 부모는 기존 main `bc1ae45`와 integration `32dec29`이며 tree `fceb133ec72f67c87254893b589ad60efe1ad526`는 로컬 충돌 해결 결과와 동일하다. 제품·audit tree는 검증한 integration과 동일하며 변경은 세팅·memory 문서에 한정된다. Docker 복구·DB/API 검증은 별도 미완료 항목으로 유지한다.
+- 병합 완료: `9e330314d100644886a4104d07c7197f12616ee5`가 원격 main에 게시됐고 `D:\DSM`도 main으로 fast-forward했다. 부모는 기존 main `bc1ae45`와 integration `32dec29`이며 tree `fceb133ec72f67c87254893b589ad60efe1ad526`는 로컬 충돌 해결 결과와 동일하다. 제품·audit tree는 검증한 integration과 동일하며 변경은 세팅·memory 문서에 한정된다. Docker 복구·DB/API 검증도 아래 checkpoint에서 완료했다.
+- 소켓 재시도 승인: 사용자 `소켓 삭제 진행해` 및 Computer Use 재개 요청에 따라 원래의 `sailor-ingest.sock` 하나만 Explorer에서 삭제했다. 일반 경로 Remove-Item·.NET·OPEN_REPARSE_POINT의 오류 1920과 physical 경로의 성공을 구분하고 다른 3개 파일은 수동 삭제하지 않았다.
+- 소켓 삭제 완료: Computer Use로 MSIX physical `LocalCache\Local\Docker\run` 폴더를 열어 승인된 `sailor-ingest.sock` 1개를 삭제했고 목록 4→3과 파일 부재를 검증했다. 가상/physical run의 File ID 일치로 같은 대상임을 확인했다. 나머지 3개 소켓은 유지했다.
+- 복구 결과: 앱 실행 도구 재시작은 `dockerInference` 오류를 내고 sailor 소켓을 23:22에 새로 생성해 단일 파일 삭제만으로는 복구되지 않았다. 일반 Explorer에서 공식 installer 설치·앱 실행 후 Docker 엔진과 DB/API 검증이 통과했다. MSIX cache의 새 소켓과 기존 3개 파일은 남겨 두었으며 추가 정리는 하지 않는다. `.local/env.ps1`은 `%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin`을 우선하고 기존 D드라이브 설치본은 보존한다. 실제 WSL distro BasePath는 C드라이브 `%LOCALAPPDATA%\Docker\wsl\main`; Docker data의 D드라이브 이전은 수행하지 않았다.
+
+- 현재 실행 상태: Compose DB/Redis와 검증용 Backend(PID 17104)가 실행 중이다. 로그는 `.local/logs/resume-docker-db.log`, `resume-backend-health.log`; 안내는 `.local/DSM-setup.md`다. Desktop 약관 창 클릭은 Computer Use의 target/coordinate 불일치로 수락 결과를 확인하지 못했지만 엔진·CLI 런타임 검증은 성공했다. OAuth·실기기·release gate는 유지한다.
 
 ## 현재 PC D드라이브 개발 환경 준비 — 2026-09-09
 

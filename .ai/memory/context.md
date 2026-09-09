@@ -3,16 +3,20 @@
 ## 현재 PC D드라이브 환경 구성
 
 - 현재 작업 경로·branch는 `D:\DSM`, `main`이다. `codex/integration-main-review@32dec29`의 검증된 제품 tree가 merge commit `9e330314d100644886a4104d07c7197f12616ee5`로 원격 main에 반영됐고 로컬 main도 같은 상태다. 아래의 `C:\DEV` 등은 이전 PC checkpoint다.
-- 사용자 clone·세팅 요청에 따라 Git 2.53.0.windows.3, Node 22.23.2/npm 10.9.8, Microsoft JDK 17.0.20.1+1, Docker Desktop을 `D:\DSM\.local`에 준비했다. npm·Gradle·Android 캐시와 Docker data root도 D드라이브로 구성했다.
+- Git 2.53.0.windows.3, Node 22.23.2/npm 10.9.8, Microsoft JDK 17.0.20.1+1, Android 도구·캐시는 `D:\DSM\.local`에 있다. Docker 4.90.0은 Explorer에서 정상 per-user 설치한 `%LOCALAPPDATA%\Programs\DockerDesktop`이 현재 사용본이며 기존 D드라이브 설치본은 보존했다. 실제 WSL distro BasePath는 C드라이브 `%LOCALAPPDATA%\Docker\wsl\main`; data의 D드라이브 이전은 하지 않았다.
 - Backend `.env`와 Front `.env.local`을 이 PC에서 새로 생성했다. DB/JWT는 난수이며 OAuth는 placeholder/빈 설정, FCM dispatch는 false다. Git ignore 상태를 확인했고 기존 타 PC secret은 접근하지 않았다.
 - DB는 프로젝트 지침대로 Docker Compose의 PostgreSQL 17/Redis 8을 사용한다. Portable PostgreSQL은 설치하지 않았고 사전 다운로드 archive는 제거했다.
-- WSL 2.7.13.0 설치와 VirtualMachinePlatform 적용 후 2026-09-09 22:39 KST에 Windows가 재부팅됐다. Docker Desktop 4.90.0은 `%LOCALAPPDATA%\Docker\run\sailor-ingest.sock` rename/access 오류로 기동하지 못한다. 공식 restart와 force stop/start 후에도 동일했다. 사용자의 단일 소켓 삭제 승인 뒤에도 도구 정책이 차단해 직접 삭제를 요청했으며 Docker는 종료해 두었다. DB migration·실서버 health는 아직 검증하지 않았다.
+- WSL 2.7.13.0과 VirtualMachinePlatform 적용 후 재부팅됐다. Docker의 최초 installer/runtime이 Codex MSIX AppData 가상화 영향을 받아 일반 Explorer와 경로·설치 registry view가 달랐다. 공식 installer를 Explorer GUI에서 per-user 설치하고 앱을 직접 실행한 뒤 엔진 29.7.2가 정상 응답했다.
 - 재개 후 현재 검증: Backend 317/317, E2E 2/2, build·non-fixing lint·Prisma validate 성공. Front 기본 cache에서 Keychain 7건 실패 후 새 isolated cache만 지정하자 24 suites/229 tests가 통과했고 typecheck·lint 0 errors/30 existing warnings도 확인했다. `ER-20260816-002` 재검증이며 제품 수정은 없었다. Prisma generate와 Android Metro bundle·24 assets는 최초 설치 때 통과했다.
-- `D:\DSM\.local\env.ps1`은 도구 경로를 현재 PowerShell 세션에 설정한다. `dev.cmd backend|metro|emulator|android|build|db|stop`은 해당 실행을 돕는다. `setup-resume.ps1 -Action db|health`는 Docker 복구 후 migration·runtime health 확인용이다. 제품 코드·lockfile·schema·migration·audit은 변경하지 않았다.
+- `D:\DSM\.local\env.ps1`은 도구 경로를 현재 PowerShell 세션에 설정한다. `dev.cmd backend|metro|emulator|android|build|db|stop`은 해당 실행을 돕는다. `setup-resume.ps1 -Action db|health`로 DB/migration과 API를 검증했다. CLI 경로는 정상 per-user Docker 설치본을 우선한다. 제품 코드·lockfile·schema·migration·audit은 변경하지 않았다.
 - Android SDK 36, Build Tools 36.0.0, NDK 27.1.12297006, CMake 3.22.1, API 36 AVD `DSM_API_36`을 설치했다. 재개 후 JDK 17/Gradle 9.0.0 `assembleDebug`도 3분 10초, 365 tasks(42 executed/323 up-to-date)로 성공했다. APK는 `DSM_Front/android/app/build/outputs/apk/debug/app-debug.apk`에 있다.
 - 첫 Metro는 동시 native build의 `.cxx/CMakeTmp` 삭제로 `ENOENT` 종료됐다. 기존 Metro config를 상속하는 ignored `.local/metro.config.cjs`에서 native build 폴더만 blockList에 추가했다. 실제 bundle HTTP 200, native 임시 폴더 20개 생성·삭제 후 health 유지와 API 36 앱 로그인 화면을 확인했다. 처음 번들 로드 실패 후 reload만으로는 빈 화면이 남아 AVD를 정상 종료·재시작하고 cold launch로 재검증했다.
-- Google OAuth 인증, 실제 backend 연결, signed device, 운영·release 조건은 미검증이다. 안내와 로그인 화면은 현재 Codex 작업의 `outputs/DSM-setup.md`, `outputs/DSM-android.png`다.
+- Google OAuth 인증, Android 앱→Backend 연결, signed device, 운영·release 조건은 미검증이다. 현재 안내는 `.local/DSM-setup.md`이며 최초 로그인 화면은 이전 setup 작업의 `outputs/DSM-android.png`에 기록했다.
 - 설치 중 JDK checksum 주소 오류는 공식 `.sha256sum.txt`로 확인해 해결했다. 기존 오류 기록과 중복을 검색한 뒤 `ER-20260909-004`와 Metro watcher `ER-20260909-005`를 기록했다.
+- 소켓 삭제: virtual/physical run 디렉터리 File ID가 일치했고 Explorer에서 원래의 `sailor-ingest.sock`만 삭제해 목록 4→3과 Test-Path false를 검증했다. 이후 앱 실행 도구로 시작한 Docker가 23:22에 같은 이름의 새 소켓을 만들고 `dockerInference`에서 실패하여 Quit했다. MSIX cache의 새 소켓과 원래 다른 3개 파일은 남아 있다. 정상 사용자 설치본은 별도 실제 AppData를 사용한다. native helper 삭제는 실행하지 않았다.
+
+- 현재 런타임: Compose PostgreSQL 17·Redis 8이 각각 127.0.0.1:5432/6379에서 healthy, migration 8개 적용·schema up-to-date, Redis PONG, Backend `/health` HTTP 200/status ok를 확인했다. `/health`의 configured 값은 DB readiness를 대신하지 않으므로 실제 migration·Prisma 기동·Compose 결과와 함께 판단했다. Backend PID 17104와 두 container는 실행 중이다.
+- Docker Desktop 약관 창의 수락 결과는 Computer Use 좌표/target 불일치로 확인하지 못했다. 엔진·CLI와 프로젝트 런타임은 위 검증을 통과했다. 로컬 안내 `.local/DSM-setup.md`에 현재 시작 방법과 미검증 OAuth·release gate를 기록한다.
 
 ## Checkout·책임 경계
 
@@ -44,7 +48,7 @@
 - F-011/F-029/F-030은 Backend 297·PostgreSQL/Redis 2/2, F-069는 Backend 293·통합 2/2와 50,000-user 합성 benchmark, F-065는 manifest·build·lint·API 36 smoke를 통과했다. 합성 수치는 production SLO 증거가 아니다.
 - F-012는 focused 18, Backend 317, e2e 2와 모든 정적 gate를 통과했다. PostgreSQL fresh·legacy 3/3, legacy row 2개 보존, 20개 동시 호출 1 ID를 확인했다.
 - 외부 PC 문서는 tracked scripts·ignore·Android/compose 설정과 대조했고 `docker compose --env-file .env.example config --quiet`이 통과했다. 이는 문서·template 검증이며 제품 test·build·runtime을 새로 실행한 결과는 아니다.
-- 모든 task-owned service·container·임시 prefix를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다.
+- 이전 PC 검증 종료 이력: 당시 task-owned service·container·임시 prefix를 제거하고 Docker Desktop을 원래의 정지 상태로 복구했다. 현재 PC의 실행 상태는 위 현재 런타임 항목을 따른다.
 
 ## F-012 종결
 

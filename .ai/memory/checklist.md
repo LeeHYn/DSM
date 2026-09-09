@@ -5,7 +5,10 @@
 ## 세팅 재개·main 병합 — 2026-09-09
 
 - [x] 사용자 세팅 재개·병합 승인, 기존 memory와 실제 Git 상태 대조.
-- [ ] Docker PostgreSQL·Redis 기동, migration·API health 검증: 재부팅 완료, stale socket 삭제 사용자 조치 대기.
+- [x] MSIX 가상/실제 run 디렉터리 File ID 일치 확인, Computer Use에서 승인된 sailor-ingest.sock 1개 삭제 및 다른 3개 보존 검증.
+- [x] Explorer에서 공식 per-user 설치 복구, Docker engine 29.7.2와 CLI 정상 연결.
+- [x] PostgreSQL·Redis healthy/localhost 바인딩, migration 8개 적용·up-to-date, Redis PONG, Backend health HTTP 200.
+- [ ] Docker Desktop 약관 창 수락 결과 확인: Computer Use 클릭은 target/coordinate 불일치로 실패. 엔진·CLI 런타임 검증과 구분한다.
 - [x] Backend/Front 전체 548 tests·정적 gate·Android debug 365 tasks. 로컬 DB 검증은 위 별도 항목으로 남김.
 - [x] 독립 reviewer의 main 고유 변경·충돌·병합 gate 검토 및 기존 single-branch clone 문서 수정.
 - [x] 기존 세팅 변경과 새 검증 결과 memory 동기화·commit, root README·clone 가이드 main 전환.
@@ -24,8 +27,8 @@
 - [x] Windows Metro native build watcher 오류를 `.local/metro.config.cjs`로 회피, 폴더 생성·삭제 후 health 유지 및 bundle HTTP 200 검증.
 - [x] 에뮬레이터 재시작 후 cold launch, 데일리업 로그인 화면과 native runtime 오류 없음 확인.
 - [x] Docker Desktop·WSL 2.7.13.0 설치 및 Compose 구성 검증.
-- [ ] WSL 기능 활성화를 위한 Windows 재부팅 후 PostgreSQL·Redis healthy, migration·API health 확인.
-- [x] 실제 검증 결과·미완료 조건·실행 방법을 `outputs/DSM-setup.md`와 memory에 기록. Windows 재부팅 전 checkpoint이며 DB 포함 전체 세팅 완료는 아님.
+- [x] WSL 기능 활성화 재부팅 및 MSIX 경로 문제 복구 후 PostgreSQL·Redis healthy, migration·API health 확인.
+- [x] 현재 검증 결과·미완료 외부 조건·실행 방법을 `.local/DSM-setup.md`와 memory에 기록. DB·API 검증은 완료했고 Desktop 약관 확인·OAuth/실기기/release gate는 구분했다.
 
 ## 완료
 
@@ -81,5 +84,5 @@
 
 - [x] 실제 .env, key·keystore·private Gradle property와 recovery 파일 미접근·미변경.
 - [x] F-012에서 controller/API response·Front·Android·dependency·기존 migration을 보존.
-- [x] 제품·감사는 integration branch에 게시했고 root checkout은 미변경.
+- [x] 이전 PC에서 제품·감사는 integration branch에 게시했고 당시 root checkout은 미변경. 현재 PC는 위 main 병합 상태를 따른다.
 - [x] stage 시 git add -A 없이 exact path만 사용.
