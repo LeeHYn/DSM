@@ -1432,11 +1432,11 @@
 - 적용 조건: MSIX 패키지 앱에서 설치·실행한 Docker와 일반 Explorer의 AppData/설치 view가 다르고, 패키지의 `LocalCache\Local\Docker\run`에서 같은 파일을 찾는 경우. 모든 AF_UNIX/1920 오류에 일반화하지 않는다.
 - root cause: 패키지 프로세스의 AppData 가상화가 일반 Windows 사용자 경로와 다른 실제 저장소를 사용했다. 이 PC의 가상/physical run 디렉터리 File ID가 동일했고 physical socket 조회는 성공했으며, 일반 사용자 view에는 설치 등록이 없었다.
 - 해결 절차: Docker 종료 후 virtual/physical 경로의 동일성과 승인된 대상을 확인해 해당 임시 소켓만 Explorer에서 삭제한다. 단일 삭제 뒤 재실행이 다른 socket에서 실패하면 삭제 범위를 늘리지 않는다. 공식 서명이 Valid인 Docker installer를 일반 Explorer에서 실행해 per-user 설치하고 앱도 Explorer/시작 메뉴에서 연다. CLI는 정상 설치본을 우선한다.
-- 검증: 원래 소켓 삭제 직후 목록 4→3과 파일 부재, 다른 3개 보존을 확인했다. 기존 실행 경로는 소켓을 새로 만들고 실패했지만 Explorer의 공식 설치는 Installation succeeded였다. 정상 앱 실행 후 Engine 29.7.2, Compose PostgreSQL 17·Redis 8 healthy/localhost 바인딩, migration 8개 deploy/up-to-date, Redis PONG, Nest 기동과 health HTTP 200을 확인했다.
+- 검증: 원래 소켓 삭제 직후 목록 4→3과 파일 부재, 다른 3개 보존을 확인했다. 기존 실행 경로는 소켓을 새로 만들고 실패했지만 Explorer의 공식 설치는 Installation succeeded였다. 2026-09-10 정상 설치본을 Explorer에서 다시 실행해 약관·온보딩 차단 없는 Containers 대시보드와 Engine running을 Computer Use로 확인했다. Engine 29.7.2, Compose PostgreSQL 17·Redis 8 healthy/localhost 바인딩, migration 8개 up-to-date, Redis PONG, Nest 기동과 health HTTP 200도 재검증했다.
 - 재발 방지/금지: 앱 실행 도구도 패키지 context를 상속할 수 있으므로 GUI 앱을 정상 Explorer에서 연다. `%LOCALAPPDATA%` 문자열만으로 두 프로세스의 실제 저장 위치가 같다고 가정하지 않는다. Factory reset, volume 삭제, 다른 소켓 일괄 삭제, 드라이버·보안 설정 변경을 해결책으로 사용하지 않는다.
-- 적용 불가 또는 잔여 위험: 다른 PC에서는 경로와 파일 ID를 다시 확인한다. 기존 패키지 cache의 자동 재생성 소켓과 다른 파일은 보존했다. 현재 정상 설치는 C드라이브에 있으며 data D드라이브 이전은 미실행이다. Desktop 약관 창 클릭은 Computer Use target/coordinate 오류로 수락 결과를 확인하지 못했으며, 이번 VERIFIED 범위는 엔진·프로젝트 CLI 런타임 복구다.
-- 근거: [Microsoft MSIX AppData 가상화](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes), [Docker Windows 설치](https://docs.docker.com/desktop/setup/install/windows-install/), 현재 PC File ID·Explorer·installer 출력, `.local/logs/resume-docker-db.log`, `.local/logs/resume-backend-health.log`.
-- `lastVerifiedAt`: `2026-09-09`
+- 적용 불가 또는 잔여 위험: 다른 PC에서는 경로와 파일 ID를 다시 확인한다. 기존 패키지 cache의 자동 재생성 소켓과 다른 파일은 보존했다. 현재 정상 설치는 C드라이브에 있으며 data D드라이브 이전은 미실행이다. 이전 약관 창 클릭의 target/coordinate 오류는 당시 이력이며 현재 GUI·엔진·프로젝트 CLI 런타임 확인은 완료했다.
+- 근거: [Microsoft MSIX AppData 가상화](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes), [Docker Windows 설치](https://docs.docker.com/desktop/setup/install/windows-install/), 현재 PC File ID·Explorer·installer·Docker 대시보드 출력, `.local/logs/resume-docker-db-20260910.log`, `.local/logs/resume-backend-health-20260910.log`.
+- `lastVerifiedAt`: `2026-09-10`
 
 ## 새 record 템플릿
 

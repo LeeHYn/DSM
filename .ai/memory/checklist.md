@@ -1,4 +1,4 @@
-# DSM 공정표 — 2026-09-09
+# DSM 공정표 — 2026-09-10
 
 표기: [x] 완료, [/] 진행 중, [ ] 미완료·외부 gate.
 
@@ -8,7 +8,8 @@
 - [x] MSIX 가상/실제 run 디렉터리 File ID 일치 확인, Computer Use에서 승인된 sailor-ingest.sock 1개 삭제 및 다른 3개 보존 검증.
 - [x] Explorer에서 공식 per-user 설치 복구, Docker engine 29.7.2와 CLI 정상 연결.
 - [x] PostgreSQL·Redis healthy/localhost 바인딩, migration 8개 적용·up-to-date, Redis PONG, Backend health HTTP 200.
-- [ ] Docker Desktop 약관 창 수락 결과 확인: Computer Use 클릭은 target/coordinate 불일치로 실패. 엔진·CLI 런타임 검증과 구분한다.
+- [x] 2026-09-10 Computer Use에서 정상 설치본을 Explorer로 실행, 약관·온보딩 차단 없는 Containers 대시보드와 Engine running 확인.
+- [x] 2026-09-10 DB·Redis healthy/localhost·migration 8개 up-to-date·PONG 재검증, Backend PID 22108 재기동·health HTTP 200 확인.
 - [x] Backend/Front 전체 548 tests·정적 gate·Android debug 365 tasks. 로컬 DB 검증은 위 별도 항목으로 남김.
 - [x] 독립 reviewer의 main 고유 변경·충돌·병합 gate 검토 및 기존 single-branch clone 문서 수정.
 - [x] 기존 세팅 변경과 새 검증 결과 memory 동기화·commit, root README·clone 가이드 main 전환.
@@ -28,7 +29,7 @@
 - [x] 에뮬레이터 재시작 후 cold launch, 데일리업 로그인 화면과 native runtime 오류 없음 확인.
 - [x] Docker Desktop·WSL 2.7.13.0 설치 및 Compose 구성 검증.
 - [x] WSL 기능 활성화 재부팅 및 MSIX 경로 문제 복구 후 PostgreSQL·Redis healthy, migration·API health 확인.
-- [x] 현재 검증 결과·미완료 외부 조건·실행 방법을 `.local/DSM-setup.md`와 memory에 기록. DB·API 검증은 완료했고 Desktop 약관 확인·OAuth/실기기/release gate는 구분했다.
+- [x] 현재 검증 결과·미완료 외부 조건·실행 방법을 `.local/DSM-setup.md`와 memory에 기록. DB·API·Desktop GUI 확인은 완료했고 OAuth/실기기/release gate는 유지한다.
 
 ## 완료
 

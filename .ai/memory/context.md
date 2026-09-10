@@ -1,4 +1,4 @@
-# DSM 현재 맥락 — 2026-09-09
+# DSM 현재 맥락 — 2026-09-10
 
 ## 현재 PC D드라이브 환경 구성
 
@@ -15,8 +15,8 @@
 - 설치 중 JDK checksum 주소 오류는 공식 `.sha256sum.txt`로 확인해 해결했다. 기존 오류 기록과 중복을 검색한 뒤 `ER-20260909-004`와 Metro watcher `ER-20260909-005`를 기록했다.
 - 소켓 삭제: virtual/physical run 디렉터리 File ID가 일치했고 Explorer에서 원래의 `sailor-ingest.sock`만 삭제해 목록 4→3과 Test-Path false를 검증했다. 이후 앱 실행 도구로 시작한 Docker가 23:22에 같은 이름의 새 소켓을 만들고 `dockerInference`에서 실패하여 Quit했다. MSIX cache의 새 소켓과 원래 다른 3개 파일은 남아 있다. 정상 사용자 설치본은 별도 실제 AppData를 사용한다. native helper 삭제는 실행하지 않았다.
 
-- 현재 런타임: Compose PostgreSQL 17·Redis 8이 각각 127.0.0.1:5432/6379에서 healthy, migration 8개 적용·schema up-to-date, Redis PONG, Backend `/health` HTTP 200/status ok를 확인했다. `/health`의 configured 값은 DB readiness를 대신하지 않으므로 실제 migration·Prisma 기동·Compose 결과와 함께 판단했다. Backend PID 17104와 두 container는 실행 중이다.
-- Docker Desktop 약관 창의 수락 결과는 Computer Use 좌표/target 불일치로 확인하지 못했다. 엔진·CLI와 프로젝트 런타임은 위 검증을 통과했다. 로컬 안내 `.local/DSM-setup.md`에 현재 시작 방법과 미검증 OAuth·release gate를 기록한다.
+- 현재 런타임(2026-09-10 19:53 KST 검증): 정지 상태였던 Docker와 Backend를 다시 실행했다. Compose PostgreSQL 17·Redis 8은 각각 127.0.0.1:5432/6379에서 healthy, migration 8개 schema up-to-date, Redis PONG, Backend `/health` HTTP 200/status ok다. `/health`의 configured 값은 DB readiness를 대신하지 않으므로 실제 migration·Prisma 기동·Compose 결과와 함께 판단했다. Backend PID 22108과 두 container는 실행 중이다. 이번 로그는 `.local/logs/resume-docker-db-20260910.log`, `resume-backend-health-20260910.log`다.
+- Docker GUI 확인 완료: Computer Use로 정상 C드라이브 설치본을 Explorer에서 실행해 `Containers - Docker Desktop`, `Engine running`, 실행 중인 `dsm-back-dev`를 화면과 접근성 트리에서 확인했다. 약관·온보딩 차단 창이 없어 이전 확인 대기를 닫았다. 로컬 안내 `.local/DSM-setup.md`에 시작 방법과 미검증 OAuth·release gate를 유지한다. 제품·audit tree는 기존 검증한 integration `32dec29`와 동일하며 전체 test/build는 재실행하지 않았다.
 
 ## Checkout·책임 경계
 

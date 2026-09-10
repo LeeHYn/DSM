@@ -1,4 +1,4 @@
-# DSM 실행 계획 — 2026-09-09
+# DSM 실행 계획 — 2026-09-10
 
 ## 세팅 재개·main 병합 — 2026-09-09
 
@@ -17,7 +17,8 @@
 - 소켓 삭제 완료: Computer Use로 MSIX physical `LocalCache\Local\Docker\run` 폴더를 열어 승인된 `sailor-ingest.sock` 1개를 삭제했고 목록 4→3과 파일 부재를 검증했다. 가상/physical run의 File ID 일치로 같은 대상임을 확인했다. 나머지 3개 소켓은 유지했다.
 - 복구 결과: 앱 실행 도구 재시작은 `dockerInference` 오류를 내고 sailor 소켓을 23:22에 새로 생성해 단일 파일 삭제만으로는 복구되지 않았다. 일반 Explorer에서 공식 installer 설치·앱 실행 후 Docker 엔진과 DB/API 검증이 통과했다. MSIX cache의 새 소켓과 기존 3개 파일은 남겨 두었으며 추가 정리는 하지 않는다. `.local/env.ps1`은 `%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin`을 우선하고 기존 D드라이브 설치본은 보존한다. 실제 WSL distro BasePath는 C드라이브 `%LOCALAPPDATA%\Docker\wsl\main`; Docker data의 D드라이브 이전은 수행하지 않았다.
 
-- 현재 실행 상태: Compose DB/Redis와 검증용 Backend(PID 17104)가 실행 중이다. 로그는 `.local/logs/resume-docker-db.log`, `resume-backend-health.log`; 안내는 `.local/DSM-setup.md`다. Desktop 약관 창 클릭은 Computer Use의 target/coordinate 불일치로 수락 결과를 확인하지 못했지만 엔진·CLI 런타임 검증은 성공했다. OAuth·실기기·release gate는 유지한다.
+- 2026-09-10 재개·종결: 사용자 `작업 마저 진행해`에 따라 현재 정지된 Docker를 Computer Use의 Explorer에서 정상 C드라이브 설치본으로 실행했다. `Containers - Docker Desktop` 화면에 약관·온보딩 차단 없이 진입했고 `Engine running`과 `dsm-back-dev`를 확인했다. 이전 약관 확인 대기는 해소됐다.
+- 현재 실행 상태(2026-09-10 19:53 KST 검증): Engine 29.7.2, Compose DB/Redis healthy·localhost 바인딩, migration 8개 up-to-date·Redis PONG, 검증용 Backend PID 22108·`/health` HTTP 200/status ok다. 로그는 `.local/logs/resume-docker-db-20260910.log`, `resume-backend-health-20260910.log`; 안내는 `.local/DSM-setup.md`다. 제품 tree가 기존 검증본과 같으므로 548 tests·정적 gate·Android debug의 2026-09-09 결과를 유지하며 이번에는 GUI·DB·API를 재검증했다. OAuth·실기기·release gate는 유지한다.
 
 ## 현재 PC D드라이브 개발 환경 준비 — 2026-09-09
 
