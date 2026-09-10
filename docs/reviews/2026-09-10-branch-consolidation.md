@@ -115,4 +115,18 @@ Foundation의 Expo frontend·구형 refresh-token/notification 구현을 현행 
 - E2E 최초 실행은 로컬 `.env`의 Redis와 fixture DB credential이 섞여 bootstrap 인증 실패·timeout이 발생했다. 제품 변경 없이 test process의 `NODE_ENV=test`, `REDIS_URL=''`로 선택적 Redis를 분리하자 2/2 통과했다. 실제 DB/Redis/API 검증과 이 격리된 HTTP smoke를 구분한다.
 - 원본 commit의 123개 tracked source만 ignored export로 추출했고 실제 env·키는 포함하지 않았다. 사이트 metadata의 SHA-256와 일치하는 110-byte/3-line Expo 선언(끝 개행 없음)을 추가해 124파일/13,168줄을 재현했다. 전용 Node tests 66/66, 복원한 main 사이트에 대한 28개 source page full verifier PASS.
 - Backend/Front/audit tree는 통합 전 `af0f415`와 동일하다. Node/Jest 로그·verifier report는 ignored `.local/logs/branch-consolidation-*`에 있다. Android build는 이번에 재실행하지 않았으며 제품 tree가 동일한 2026-09-09 검증 결과를 유지한다.
-- 게시·branch 삭제는 통합 commit과 모든 tip ancestry를 확인한 뒤 수행한다. 최종 상태는 이 절에 후속 기록한다.
+- 자료 보존 commit `e0cf6447d8d43595aaa424d1dcc375a40fdc6bab`, 통합 merge `35b39446a6735858e39e983f6f7865273f32711f`를 원격 main에 정상 push했다. merge는 보존한 현재 tree를 유지하는 `ours` 전략이며 나머지 부모는 `61f6fd8`, `2a6ba73`, `362aabe`, `396fc0a`다. 위 6개 비교 tip 모두 main에서 도달 가능함을 `git merge-base --is-ancestor`로 확인했다.
+- 원격 5개 tip과 게시된 main을 다시 대조한 뒤 expected-tip lease를 지정한 atomic deletion으로 codex branch 5개를 삭제했다. main의 비 fast-forward 갱신은 하지 않았다. prune 후 로컬 integration도 `git branch -d`로 삭제했다. 원격 `refs/heads/main` 하나, 로컬 `main` 하나, `origin/HEAD -> origin/main`과 clean tracked tree를 확인했다.
+
+## CCTV 기록·셀프 체크
+
+- 수정·추가: 자료 보존 commit은 91파일이다. 위 원본 83파일과 `learning-site/README.md`, root `README.md`, 이 보고서, `.ai/memory/plan.md`, `context.md`, `checklist.md`, `README.md`, `error-resolution-playbook.md`를 포함한다. index는 원본 83파일 중 한 파일이며 역사 안내와 EOF 개행만 달라졌다.
+- 삭제: 비교표의 원격 codex 5개와 로컬 integration branch ref. 작업 파일·DB 데이터·기존 commit은 삭제하지 않았다. 원래 내용은 main의 merge ancestry로 보존한다.
+- 로컬 산출물: ignored `.local/branch-consolidation.ps1`, historical corpus export·zip, 테스트 cache·로그·verifier report. 실제 환경 파일과 key는 export·stage하지 않았다.
+- Memory 동기화: Yes. Active 3과 byte/SHA-256 ledger 갱신, strict UTF-8/LF·diff·tree·ancestry 검증.
+- 요청 외 변경: No. 기존 제품·dependency·schema·migration·audit 내용을 보존했다.
+- [x] 고유 작업 보존·중복/구형 구현 회귀 방지·원래 이력 유지.
+- [x] 새 기능·추상화·리팩터링 없이 비교 결과에 따른 통합.
+- [x] 실제 검증과 historical 검증, 미실행 Android/OAuth·실기기 검증 구분.
+- [x] 사용자 요청 범위의 branch만 제거, main 정상 push·원격/로컬 일치 확인.
+- 잔여 gate: 본문의 보류 기능과 기존 release audit·OAuth·signed-device·production/Play 검증. 다음 작업 후보는 기존 FIXED finding의 독립 fix-recheck 또는 OAuth·실기기 검증이며 이번 통합에서 시작하지 않았다.

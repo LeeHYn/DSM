@@ -11,6 +11,8 @@
 - 성공 기준: 모든 비교 대상 tip의 main ancestry 보존, 검증 통과, 로컬/원격 main 일치·tracked clean, 원격/로컬 branch 각각 main 하나, 활성 memory/ledger 동기화. 기존 release gate는 유지한다.
 - 비교 결과에 따른 추가 경계: `docs/reviews/2026-09-10-branch-consolidation.md`에 열거한 exact 83파일을 `43145b6`에서 원본 그대로 복원한다. 수동 안내 수정은 `learning-site/README.md`, root `README.md`; `.ai/memory/error-resolution-playbook.md`에는 해당 자료의 기존 ER-20260809-001/002/003만 보존한다. ignored historical corpus export·테스트 로그도 `.local`에서 생성하며 실제 env는 복사하지 않는다. 현재 제품 코드·schema·dependency·audit은 그대로 유지한다. Backend와 offline 독립 reviewer 2명이 내용 보존과 호환성을 분담한다.
 - 독립 검토 반영: 복원 후 `learning-site/index.html`에 과거 snapshot 안내 한 줄을 추가해 진입 화면에서도 현재 제품과 구분한다. 이 파일만 원본 blob과 달라지고 나머지 82파일은 원본을 유지한다. historical export의 124 source corpus와 SHA-256가 일치하는 ignored 3줄 Expo 선언으로 전용 테스트를 검증한다.
+- 완료: 자료 보존 `e0cf6447d8d43595aaa424d1dcc375a40fdc6bab` 후 `35b39446a6735858e39e983f6f7865273f32711f`에서 로컬 integration·foundation·M12A·prototype tip을 merge parent로 연결했다. 기존 secure-session·remote integration tip도 조상이며 비교한 6개 tip 모두 main에 보존됐다. 최신 제품 tree를 유지하는 history merge를 정상 push했다.
+- 정리 검증: 삭제 직전 원격 5개 tip을 비교값과 대조하고 expected-tip lease를 건 atomic ref 삭제를 수행했다. main history는 강제 갱신하지 않았다. 원격 codex 5개·로컬 integration 1개 삭제 완료, 로컬/원격 branch는 main 하나이며 origin/HEAD는 main을 가리킨다. Backend 317/Front 229/E2E 2·historical 66 tests, source 28 verifier·독립 검토·제품/audit 무변경을 확인했다. 상세 기록은 비교 보고서를 따른다.
 
 ## 세팅 재개·main 병합 — 2026-09-09
 

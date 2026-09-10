@@ -2,7 +2,7 @@
 
 ## 전체 브랜치 통합
 
-- 사용자 요청으로 유지 branch는 `main` 하나로 통합한다. 비교 기준 `af0f415`, 원격 codex 5개와 로컬 integration 1개다. 최신 Android·session family·알림·랭킹 구현을 유지하고 대체/보류된 구형 구현의 commit 이력도 main에 연결한다.
+- 사용자 요청으로 branch를 `main` 하나로 통합했다. 비교 기준 `af0f415`, 원격 codex 5개와 로컬 integration 1개다. 자료 보존 `e0cf644`와 merge `35b3944`를 원격 게시했고 6개 tip 모두 main의 조상으로 남겼다. 최신 Android·session family·알림·랭킹 구현을 유지하며 대체/보류된 구현도 원래 commit으로 조회할 수 있다. 원격 codex 5개·로컬 integration 삭제 후 main 하나·로컬/원격 일치를 확인했다.
 - Prototype 고유 offline 자료 `43145b6`의 83파일과 `fb54b5d`의 ER-20260809-001/002/003을 보존했다. `learning-site/README.md`·진입 화면에 과거 snapshot 경계를 명시했으며 현행 제품 명세가 아니다. 사이트 생성기는 현재 main이 아닌 원본 124-source corpus를 요구한다.
 - 현재 검증: Backend 317/Front 229/E2E 2와 historical Node 66 tests, 보존 source page 28개 verifier PASS. E2E는 fixture DB와 로컬 Redis 혼입 실패 후 test process의 선택적 Redis를 분리해 통과했다. 제품·audit tree는 `af0f415`와 동일하다. 상세 비교·보류 기능·최종 게시 상태는 `docs/reviews/2026-09-10-branch-consolidation.md`를 따른다.
 

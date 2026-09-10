@@ -6,10 +6,10 @@
 
 - [x] 사용자 전체 branch 비교·통합·잔여 branch 삭제 승인 확인.
 - [x] 원격 codex 5개·로컬 integration의 고유 commit·patch·파일 비교 및 독립 검토.
-- [/] main 유지 방향 보고, 오프라인 자료 83파일·3개 ER 보존; 모든 tip 이력 통합 준비.
+- [x] main 유지 방향 보고, 오프라인 자료 83파일·3개 ER 보존, merge `35b3944`에 모든 tip 이력 통합.
 - [x] Backend 317/Front 229/E2E 2·historical 66 tests·28 source verifier 통과. 제품·audit tree 보존 확인.
-- [ ] 통합 main 원격 게시 후 codex 원격 5개·로컬 1개 삭제.
-- [ ] main 하나·로컬/원격 일치·clean tree 확인 및 memory/hash·비교 보고서 동기화.
+- [x] 통합 main 원격 게시 후 expected-tip 대조·보존 검증, codex 원격 5개·로컬 1개 삭제.
+- [x] main 하나·로컬/원격 일치·clean tree 확인 및 memory/hash·비교 보고서 동기화.
 
 ## 세팅 재개·main 병합 — 2026-09-09
 
