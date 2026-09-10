@@ -10,7 +10,7 @@
 
 - 위 3개만 active memory다. 이 README는 routing과 byte/hash ledger다.
 - 현재 PC는 `D:\DSM/main`이며 merge `9e33031`이 원격 main에 반영돼 있다. 548 tests·정적 gate·Android debug와 Docker·DB·API 검증을 마쳤다. 2026-09-10 Computer Use에서 정상 설치본의 약관·온보딩 차단 없는 대시보드를 확인하고 PostgreSQL/Redis healthy·migration 8개 up-to-date·API HTTP 200을 재검증해 세팅 확인을 마쳤다. 소켓 원본 삭제와 공식 per-user 설치 복구 이력, 현재 실행 상태는 active 3을 따른다.
-- 현재 개발·제품·감사는 `main` 기준이며 기존 integration branch와 로컬 이력은 보존했다.
+- 현재 개발·제품·감사는 `main` 기준이다. 사용자 승인으로 codex branch들을 main에 통합한 뒤 정리하며, 고유 offline 자료와 모든 비교 tip의 commit 이력을 보존한다. 진행 상태는 active 3과 `docs/reviews/2026-09-10-branch-consolidation.md`를 따른다.
 - F-012 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`와 외부 PC 문서 `af2ff2640b1fa27111302766baa61aada15b304d`까지 원격에 있다.
 - Canonical audit는 83건: `58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`. Release-ready가 아니다.
 
@@ -18,11 +18,11 @@
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `plan.md` | 14,254 | `38541D5E25A5B5FAE28556D1483AE38772F059581311044C6B713051557E08C3` |
-| `context.md` | 12,360 | `7F32E543A00BA1BF30FE95E383946BC12FA12646B064BD6B8C5E5ABDB11D2C88` |
-| `checklist.md` | 7,442 | `A83B8BEFF8CB4333DB02FC95A266BE7F75E325999E6A6D54FED4EE938EA8EFBF` |
+| `plan.md` | 17,586 | `F4A509D5F1A000686E2E019949A321EDD2E256E846C931798FC8ABF526C6653C` |
+| `context.md` | 13,392 | `94E0E6C4EEE826E7799878DB69908B52ECEDE97C1194A4054A852423CC9C7BAA` |
+| `checklist.md` | 8,086 | `691F1DBD4CBB4F9D2D5D1AC1A4C1C7793F735CDD35E495B6EEFFD19C20034478` |
 
-- Active 3 합계: 34,056 bytes.
+- Active 3 합계: 39,064 bytes.
 - 원격의 압축 snapshot은 16,844 bytes였으며, 현재 PC 설치·재검증·main 병합과 Docker 복구 검증을 추가했다. 해시는 strict UTF-8/LF 파일 bytes 기준이며 repository-local core.autocrlf=input으로 보존한다.
 - F-012와 이전 PC checkpoint를 보존했다. 현재 PC 실행 도우미는 `D:\DSM\.local`, 상세 일반 절차는 tracked setup guide에 있다.
 

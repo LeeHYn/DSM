@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM_Back/test/app.e2e-spec.ts 원본과 학습 설명">
+  <title>app.e2e-spec.ts · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../../../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../../../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../../../index.html">프로젝트 지도</a><a class="nav-link" href="../../../architecture.html">아키텍처</a><a class="nav-link" href="../../../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../../../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../../../index.html#files" aria-current="page">파일</a><a class="nav-link" href="../../../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="file-page" data-file-page data-source-path="DSM_Back/test/app.e2e-spec.ts">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><a href="../../../index.html#files">파일</a><span aria-hidden="true">/</span></li><li><span aria-current="page">DSM_Back/test/app.e2e-spec.ts</span></li></ol></nav>
+  <header class="file-heading">
+    <div><p class="eyebrow">SOURCE STUDY</p><h1>app.e2e-spec.ts</h1><p class="file-path">DSM_Back/test/app.e2e-spec.ts</p></div>
+    <div class="file-heading__actions"><p class="file-meta">TypeScript · 59줄 · 보조 파일</p><button class="icon-button desktop-read-toggle" type="button" data-read-toggle>읽음</button></div>
+  </header>
+  <nav class="file-tabs" aria-label="파일 학습 탭"><button type="button" data-file-tab="child">12세 설명</button><button type="button" data-file-tab="junior" aria-selected="true">주니어 설명</button><button type="button" data-file-tab="source">원본 코드</button><button type="button" data-file-tab="risk">위험·확인</button><button type="button" data-file-tab="exercise">연습</button></nav>
+  <div class="mobile-mode" aria-label="모바일 학습 화면"><button type="button" data-mobile-mode="code" aria-pressed="true">코드</button><button type="button" data-mobile-mode="explanation" aria-pressed="false">설명</button><button type="button" data-contents-open>이 파일에서 볼 것</button></div>
+  <aside class="contents-sheet" data-contents-sheet hidden><button type="button" data-contents-close>접기</button><h2>이 파일에서 볼 것</h2><ul><li>TestingModule AppModule import</li><li>configureApp</li><li>GET /health</li><li>404 normalization</li></ul></aside>
+  <section class="file-overview" aria-labelledby="position-role"><h2 id="position-role">A. 위치와 역할</h2><p>AppModule bootstrapping 뒤 health 응답과 404 error envelope를 HTTP 경계에서 확인한다.</p><dl><div><dt>SHA-256</dt><dd><code>40e0dd34bece7c17633901099f7317af99b9abe3844cbe6469c096c71a00149f</code></dd></div><div><dt>bytes</dt><dd>1699</dd></div><div><dt>line ending</dt><dd>LF</dd></div></dl></section>
+  <section class="focus-card" aria-labelledby="focus-title"><h2 id="focus-title">B. 먼저 볼 것</h2><ul><li>TestingModule AppModule import</li><li>configureApp</li><li>GET /health</li><li>404 normalization</li></ul><div class="symbol-index"><h3>심볼</h3><ul><li><a href="#source-title">test · AppController (e2e) <span>line 8</span></a></li><li><a href="#source-title">test · /health (GET) <span>line 21</span></a></li><li><a href="#source-title">test · normalizes not found responses <span>line 39</span></a></li></ul></div></section>
+  <div class="file-study">
+    <div class="file-study__code" data-mobile-panel="code"><h2 class="visually-hidden">C. 원본 코드</h2><section class="source-panel" aria-labelledby="source-title">
+  <div class="source-panel__head">
+    <h2 id="source-title">원본 코드 · 변경 없음</h2>
+    <button type="button" data-copy-source>원본 코드 복사</button>
+  </div>
+  <div class="source-grid">
+    <span class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59</span>
+    <pre><code data-source-code data-path="DSM_Back/test/app.e2e-spec.ts" data-sha256="40e0dd34bece7c17633901099f7317af99b9abe3844cbe6469c096c71a00149f" data-bytes="1699" data-lines="59" data-line-ending="LF"><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { INestApplication } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/common&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { Test, TestingModule } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/testing&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> request </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;supertest&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { App } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;supertest/types&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { configureApp } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./../src/app.bootstrap&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { AppModule } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./../src/app.module&#39;</span><span class="tok tok--plain">;
+
+describe(</span><span class="tok tok--string">&#39;AppController (e2e)&#39;</span><span class="tok tok--plain">, () =&gt; {
+  </span><span class="tok tok--keyword">let</span><span class="tok tok--plain"> app: INestApplication&lt;App&gt;;
+
+  beforeEach(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> moduleFixture: TestingModule = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    configureApp(app);
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> app.init();
+  });
+
+  it(</span><span class="tok tok--string">&#39;/health (GET)&#39;</span><span class="tok tok--plain">, () =&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> request(app.getHttpServer())
+      .get(</span><span class="tok tok--string">&#39;/health&#39;</span><span class="tok tok--plain">)
+      .expect(</span><span class="tok tok--number">200</span><span class="tok tok--plain">)
+      .expect(({ body }) =&gt; {
+        expect(body).toEqual({
+          status: </span><span class="tok tok--string">&#39;ok&#39;</span><span class="tok tok--plain">,
+          </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment</span><span class="tok tok--plain">
+          timestamp: expect.any(String),
+          </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment</span><span class="tok tok--plain">
+          uptime: expect.any(Number),
+          database: {
+            configured: </span><span class="tok tok--keyword">true</span><span class="tok tok--plain">,
+          },
+        });
+      });
+  });
+
+  it(</span><span class="tok tok--string">&#39;normalizes not found responses&#39;</span><span class="tok tok--plain">, () =&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> request(app.getHttpServer())
+      .get(</span><span class="tok tok--string">&#39;/missing-route&#39;</span><span class="tok tok--plain">)
+      .expect(</span><span class="tok tok--number">404</span><span class="tok tok--plain">)
+      .expect(({ body }) =&gt; {
+        expect(body).toEqual({
+          statusCode: </span><span class="tok tok--number">404</span><span class="tok tok--plain">,
+          </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment</span><span class="tok tok--plain">
+          timestamp: expect.any(String),
+          path: </span><span class="tok tok--string">&#39;/missing-route&#39;</span><span class="tok tok--plain">,
+          method: </span><span class="tok tok--string">&#39;GET&#39;</span><span class="tok tok--plain">,
+          error: </span><span class="tok tok--string">&#39;Not Found&#39;</span><span class="tok tok--plain">,
+          message: </span><span class="tok tok--string">&#39;Cannot GET /missing-route&#39;</span><span class="tok tok--plain">,
+        });
+      });
+  });
+
+  afterEach(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> app.close();
+  });
+});
+</span></code></pre>
+  </div>
+</section></div>
+    <aside class="explanation-panel" data-mobile-panel="explanation" aria-labelledby="explanation-title">
+      <div class="panel-label">AI 설명 · 원본 밖</div>
+      <h2 id="explanation-title">D. 설명</h2>
+      <section data-explanation="child"><h3>12세 설명</h3><p>건물 문이 열리고 안내 데스크가 기본 질문과 없는 방 요청에 답하는지 확인하는 점검이다.</p></section>
+      <section data-explanation="junior"><h3>주니어 설명</h3><p>현재 e2e suite는 health와 missing route만 호출한다. Task PATCH, score recompute, schedule sync의 end-to-end 성공을 증명하지 않는다.</p></section>
+      <section><h2>E. 관계와 근거</h2><ul class="evidence-list"><li><a href="./app.e2e-spec.ts.html#source-title">DSM_Back/test/app.e2e-spec.ts · AppController (e2e)</a><span>HTTP smoke evidence</span></li></ul></section>
+      <section><h2>F. 위험·확인</h2><ul><li>현재 e2e test를 Pilot 전체 흐름의 통합 검증으로 표시하지 않는다.</li></ul></section>
+      <section><h2>G. 연습과 다음 단계</h2><details><summary>unit test와 현재 e2e test가 각각 보장하는 범위를 구분하세요.</summary><p>service spec은 transaction·조건 분기를 검증하지만 e2e spec은 health와 404 envelope만 검증하므로 Task 전체 흐름의 e2e 증거는 아니다.</p></details><h3>관련 파일</h3><ul><li><a href="../src/app.module.ts.html">DSM_Back/src/app.module.ts</a></li><li><a href="../src/tasks/tasks.service.spec.ts.html">DSM_Back/src/tasks/tasks.service.spec.ts</a></li></ul></section>
+    </aside>
+  </div>
+  <nav class="mobile-progress" aria-label="파일 진행"><a href="../src/notifications/notifications.service.spec.ts.html">이전</a><button type="button" data-read-toggle>읽음</button><a href="../src/main.ts.html">다음</a></nav>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../../../index.html">프로젝트 지도</a></footer>
+  <script src="../../../assets/site-data.js" defer></script>
+  <script src="../../../assets/site.js" defer></script>
+</body>
+</html>

@@ -93,6 +93,9 @@
 | `ER-20260909-004` | `VERIFIED` | Windows setup, Microsoft OpenJDK, SHA-256 | 추정한 checksum URL suffix 때문에 배포본 hash 검증이 실패함 |
 | `ER-20260909-005` | `VERIFIED` | Windows Metro, FallbackWatcher, ENOENT, CMakeTmp | native build의 임시 폴더 삭제로 Metro가 종료됨 |
 | `ER-20260909-006` | `VERIFIED` | Windows MSIX, Docker Desktop, AppData virtualization, AF_UNIX, 1920 | 명령 환경에만 보이는 Docker 소켓과 설치 정보 때문에 엔진이 시작되지 않음 |
+| `ER-20260809-001` | `VERIFIED` | historical learning site, source exposure | exact path·reason 집합으로 검토 범위를 제한 |
+| `ER-20260809-002` | `VERIFIED` | historical learning site, fixture scanner | visible fixture token과 파일명 오탐 분리 |
+| `ER-20260809-003` | `VERIFIED` | historical learning site, CSS overflow | 긴 path/hash의 반응형 줄바꿈 |
 
 ## 해결 record
 
@@ -1437,6 +1440,65 @@
 - 적용 불가 또는 잔여 위험: 다른 PC에서는 경로와 파일 ID를 다시 확인한다. 기존 패키지 cache의 자동 재생성 소켓과 다른 파일은 보존했다. 현재 정상 설치는 C드라이브에 있으며 data D드라이브 이전은 미실행이다. 이전 약관 창 클릭의 target/coordinate 오류는 당시 이력이며 현재 GUI·엔진·프로젝트 CLI 런타임 확인은 완료했다.
 - 근거: [Microsoft MSIX AppData 가상화](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes), [Docker Windows 설치](https://docs.docker.com/desktop/setup/install/windows-install/), 현재 PC File ID·Explorer·installer·Docker 대시보드 출력, `.local/logs/resume-docker-db-20260910.log`, `.local/logs/resume-backend-health-20260910.log`.
 - `lastVerifiedAt`: `2026-09-10`
+
+## 오프라인 학습 자료의 과거 검증 기록
+
+다음 3개 record는 `fb54b5d`의 원문을 보존했다. 적용 대상은 `43145b6`의 교육용 snapshot이며 현재 제품 전체에 일반화하지 않는다. 2026-09-10 원본 corpus에서 Node 66 tests와 main에 복원한 28개 source page verifier를 재검증했다. 아래의 과거 브라우저 측정값은 당시 증거이며 이번에 재측정한 값이 아니다.
+
+### ER-20260809-001 — source exposure의 exact path·reason 승인
+
+- `resolutionId`: `ER-20260809-001`
+- `status`: `VERIFIED`
+- 증상/signature: 보존 대상 application source나 unit fixture의 정상적인 credential-shaped assignment가 `credential-assignment`로 탐지돼 오프라인 학습 배치 생성이 fail-closed된다.
+- 적용 조건: 원본 소스를 그대로 보존하는 정적 학습 사이트가 reason 기반 exposure scanner와 수동 검토 gate를 함께 사용하는 경우.
+- root cause: reason 하나만으로 승인 범위를 표현하면 동일 reason의 다른 경로·추가 탐지까지 함께 허용할 수 있어, legitimate reviewed occurrence를 안전하게 구분할 수 없었다.
+- 해결 절차:
+  1. scanner와 `reviewRequired` 기록을 그대로 유지한다.
+  2. 승인 대상을 exact source path와 exact reason 집합의 조합으로 제한한다.
+  3. 추가 reason이 붙거나 다른 경로에서 같은 reason이 나오면 다시 차단한다.
+  4. 검토된 record도 `reviewRequired: true`와 빈 symbol 목록을 유지한다.
+  5. 정확한 조합만 허용되고 다른 경로·추가 reason은 거부되는 회귀 테스트를 둔다.
+- 검증: `batches.test.mjs`, clean Pilot A·Batch B 생성 검증, 전체 66개 Node 테스트와 Batch B full verifier를 통과했다.
+- 재발 방지/금지: reason 전체 wildcard, directory wildcard, scanner 비활성화, `reviewRequired` 제거 또는 matched value 기록으로 우회하지 않는다.
+- 적용 불가 또는 잔여 위험: source 내용이 바뀌어 새 탐지 reason이 생기면 기존 승인을 재사용하지 말고 별도 검토한다.
+- 근거: [Batch manifest](../../tools/learning-site/manifest.mjs), [Batch tests](../../tools/learning-site/tests/batches.test.mjs), [Batch B 계획](../../docs/superpowers/plans/2026-08-09-offline-learning-site-batch-b.md)
+- `lastVerifiedAt`: `2026-08-09`
+
+### ER-20260809-002 — visible fixture token과 파일명 분리
+
+- `resolutionId`: `ER-20260809-002`
+- `status`: `VERIFIED`
+- 증상/signature: fixture token 노출 검사가 안전한 DTO 파일명의 일부 문자열까지 token으로 해석해 verifier를 실패시킨다.
+- 적용 조건: 정적 학습 사이트가 source path·filename metadata와 사용자에게 보이는 설명 text를 같은 HTML에 렌더링하고, 알려진 test fixture literal 노출을 차단하는 경우.
+- root cause: 단어 경계 정규식을 전체 visible text에 적용해 token 자체가 아닌 파일명 substring까지 같은 위험으로 분류했다.
+- 해결 절차:
+  1. preserved source 영역, visible UI text, runtime search data를 분리해 검사한다.
+  2. visible UI와 runtime data는 정규화한 exact fixture literal만 거부한다.
+  3. filename은 허용하되, 같은 literal을 독립된 문단이나 runtime 값으로 주입한 fixture는 거부하는 음성 테스트를 둔다.
+  4. 실제 fixture literal이나 matched value는 보고서·playbook에 복제하지 않는다.
+- 검증: 안전한 Batch B 산출물은 통과하고 visible 문단 주입은 실패하는 `batch-b-verify.test.mjs`, 전체 66개 Node 테스트와 full verifier를 통과했다.
+- 재발 방지/금지: 전체 페이지 검사를 제거하거나 preserved source 밖의 실제 token literal을 filename 오탐으로 간주해 허용하지 않는다.
+- 적용 불가 또는 잔여 위험: 새로운 fixture 형식이나 인코딩이 추가되면 exact normalization 계약을 별도로 확장해야 한다.
+- 근거: [Verifier](../../tools/learning-site/verify.mjs), [Batch B verifier tests](../../tools/learning-site/tests/batch-b-verify.test.mjs), [Batch B 계획](../../docs/superpowers/plans/2026-08-09-offline-learning-site-batch-b.md)
+- `lastVerifiedAt`: `2026-08-09`
+
+### ER-20260809-003 — 공백 없는 학습 메타데이터의 반응형 줄바꿈
+
+- `resolutionId`: `ER-20260809-003`
+- `status`: `VERIFIED`
+- 증상/signature: 긴 source path 링크 또는 SHA-256처럼 공백 없는 문자열이 카드 경계를 넘어가고 모바일 문서 전체에 가로 스크롤을 만든다.
+- 적용 조건: CSS grid 카드나 metadata 정의 목록 안에 source path, digest처럼 자연 줄바꿈 지점이 없는 문자열을 표시하는 정적 문서.
+- root cause: exercise source link 묶음에 독립된 layout·wrap 규칙이 없었고 file overview의 inline `code`에도 unbroken text 줄바꿈 계약이 없었다.
+- 해결 절차:
+  1. 브라우저에서 `documentElement.scrollWidth`와 `innerWidth`를 같은 viewport에서 비교해 실제 document overflow를 재현한다.
+  2. `.exercise-sources`를 gap이 있는 grid로 만들고 link에 `min-width: 0`과 `overflow-wrap: anywhere`를 적용한다.
+  3. `.file-overview code`에 `overflow-wrap: anywhere`와 `word-break: break-all`을 적용한다.
+  4. CSS contract 회귀 테스트를 RED→GREEN으로 실행하고 실제 1440×900·390×844 브라우저에서 다시 측정한다.
+- 검증: exercise 문서는 1440px viewport에서 1501px→1425px, source 문서는 390px viewport에서 587px→375px로 줄어 document overflow가 사라졌다. 전체 66개 Node 테스트, full verifier와 인앱 Chromium QA를 통과했다.
+- 재발 방지/금지: `body { overflow-x: hidden }`으로 잘린 내용을 숨기거나, 보존 값에 임의 soft break 문자를 삽입하지 않는다.
+- 적용 불가 또는 잔여 위험: source code pane처럼 내부 가로 스크롤이 의도된 영역은 document overflow와 구분해 별도 scroll container로 유지한다.
+- 근거: [Site CSS](../../tools/learning-site/assets/site.css), [Style tests](../../tools/learning-site/tests/style.test.mjs), [QA report](../../learning-site/qa-report.md)
+- `lastVerifiedAt`: `2026-08-09`
 
 ## 새 record 템플릿
 

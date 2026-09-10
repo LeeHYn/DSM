@@ -1,5 +1,17 @@
 # DSM 실행 계획 — 2026-09-10
 
+## 전체 브랜치 통합·정리 — 2026-09-10
+
+- 사용자 `다른 브랜치들과 비교해서 병합 방향 제시하고 브랜치 하나에 통합해서 병합하고 나머지 제거해`를 비교·통합·검증·원격 게시 및 통합된 나머지 로컬/원격 branch 삭제 승인으로 적용한다. 이전 branch 보존 조건은 이번 범위에서 해제한다.
+- 통합 기준은 현재 기본 branch `main@af0f415`다. 원격 5개 codex branch와 로컬 `codex/integration-main-review@61f6fd8`의 ancestry·patch·파일 차이를 비교한다. 이미 반영되거나 후속 구현으로 대체된 변경은 현재 구현을 유지하고 이력을 연결하며, 실제 누락된 고유 변경은 개별 검토 후 통합한다.
+- M1: 각 branch의 고유 commit·내용·의존 PR/worktree를 확인하고 병합 방향을 보고한다. 메인이 prototype/local history와 실행을 담당하고 독립 reviewer(inherited profile)는 backend branch의 고유 변경을 읽기 전용으로 검토한다.
+- M2: 비교 근거대로 통합 결과를 만들고 전체 Backend/Front tests, 제품 tree·문서·ancestry 검증을 실행한다. 원격 main에 결과가 게시된 후 삭제 대상 tip이 main에서 도달 가능한지 재확인한다.
+- M3: 검증된 원격 codex branch 5개와 로컬 codex branch를 삭제하고 main 하나만 남는지 확인한다. 강제 push·작업 파일 삭제·secret 접근·audit 상태 변경·운영 배포는 수행하지 않는다.
+- Exact writable allowlist: `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, `.ai/memory/README.md`, 비교 보고서 `docs/reviews/2026-09-10-branch-consolidation.md`; ignored `.local/branch-consolidation.ps1`, `.local/logs/branch-consolidation-backend.log`, `.local/logs/branch-consolidation-frontend.log`, `.local/logs/branch-consolidation-e2e.log` 및 필요 테스트 cache. 제품 파일의 수동 수정이 필요하면 정확한 파일과 이유를 이 계획에 먼저 확정한다. 각 수동 수정은 1~2파일, reviewer allowlist는 `none`이다.
+- 성공 기준: 모든 비교 대상 tip의 main ancestry 보존, 검증 통과, 로컬/원격 main 일치·tracked clean, 원격/로컬 branch 각각 main 하나, 활성 memory/ledger 동기화. 기존 release gate는 유지한다.
+- 비교 결과에 따른 추가 경계: `docs/reviews/2026-09-10-branch-consolidation.md`에 열거한 exact 83파일을 `43145b6`에서 원본 그대로 복원한다. 수동 안내 수정은 `learning-site/README.md`, root `README.md`; `.ai/memory/error-resolution-playbook.md`에는 해당 자료의 기존 ER-20260809-001/002/003만 보존한다. ignored historical corpus export·테스트 로그도 `.local`에서 생성하며 실제 env는 복사하지 않는다. 현재 제품 코드·schema·dependency·audit은 그대로 유지한다. Backend와 offline 독립 reviewer 2명이 내용 보존과 호환성을 분담한다.
+- 독립 검토 반영: 복원 후 `learning-site/index.html`에 과거 snapshot 안내 한 줄을 추가해 진입 화면에서도 현재 제품과 구분한다. 이 파일만 원본 blob과 달라지고 나머지 82파일은 원본을 유지한다. historical export의 124 source corpus와 SHA-256가 일치하는 ignored 3줄 Expo 선언으로 전용 테스트를 검증한다.
+
 ## 세팅 재개·main 병합 — 2026-09-09
 
 - 사용자 `세팅 작업 마저 진행하고 병합 진행해`를 기존 로컬 세팅 완료 및 `codex/integration-main-review` → `main` 병합·원격 반영 승인으로 적용한다. 이전 작업의 commit/push 금지는 이번 명시적 요청 범위에서 해제한다.

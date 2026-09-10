@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM_Back/prisma/schema.prisma 원본과 학습 설명">
+  <title>schema.prisma · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../../../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../../../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../../../index.html">프로젝트 지도</a><a class="nav-link" href="../../../architecture.html">아키텍처</a><a class="nav-link" href="../../../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../../../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../../../index.html#files" aria-current="page">파일</a><a class="nav-link" href="../../../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="file-page" data-file-page data-source-path="DSM_Back/prisma/schema.prisma">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><a href="../../../index.html#files">파일</a><span aria-hidden="true">/</span></li><li><span aria-current="page">DSM_Back/prisma/schema.prisma</span></li></ol></nav>
+  <header class="file-heading">
+    <div><p class="eyebrow">SOURCE STUDY</p><h1>schema.prisma</h1><p class="file-path">DSM_Back/prisma/schema.prisma</p></div>
+    <div class="file-heading__actions"><p class="file-meta">Prisma · 217줄 · 핵심 파일</p><button class="icon-button desktop-read-toggle" type="button" data-read-toggle>읽음</button></div>
+  </header>
+  <nav class="file-tabs" aria-label="파일 학습 탭"><button type="button" data-file-tab="child">12세 설명</button><button type="button" data-file-tab="junior" aria-selected="true">주니어 설명</button><button type="button" data-file-tab="source">원본 코드</button><button type="button" data-file-tab="risk">위험·확인</button><button type="button" data-file-tab="exercise">연습</button></nav>
+  <div class="mobile-mode" aria-label="모바일 학습 화면"><button type="button" data-mobile-mode="code" aria-pressed="true">코드</button><button type="button" data-mobile-mode="explanation" aria-pressed="false">설명</button><button type="button" data-contents-open>이 파일에서 볼 것</button></div>
+  <aside class="contents-sheet" data-contents-sheet hidden><button type="button" data-contents-close>접기</button><h2>이 파일에서 볼 것</h2><ul><li>Task 관계와 status</li><li>DailyScore 복합 고유키</li><li>NotificationSchedule·NotificationDelivery 연결</li><li>User aggregate fields</li></ul></aside>
+  <section class="file-overview" aria-labelledby="position-role"><h2 id="position-role">A. 위치와 역할</h2><p>Task, 점수, 알림 예약·전달과 User 관계를 정의하는 persistence 계약이다.</p><dl><div><dt>SHA-256</dt><dd><code>ed3f2f92debd1b66d2594d6e1499c2bc1c55fa45d1f46716d966cfbe4eebd585</code></dd></div><div><dt>bytes</dt><dd>7642</dd></div><div><dt>line ending</dt><dd>LF</dd></div></dl></section>
+  <section class="focus-card" aria-labelledby="focus-title"><h2 id="focus-title">B. 먼저 볼 것</h2><ul><li>Task 관계와 status</li><li>DailyScore 복합 고유키</li><li>NotificationSchedule·NotificationDelivery 연결</li><li>User aggregate fields</li></ul><div class="symbol-index"><h3>심볼</h3><ul><li><a href="#source-title">enum · SocialProvider <span>line 10</span></a></li><li><a href="#source-title">enum · TaskDifficulty <span>line 16</span></a></li><li><a href="#source-title">enum · TaskStatus <span>line 22</span></a></li><li><a href="#source-title">enum · RankingPeriod <span>line 28</span></a></li><li><a href="#source-title">enum · Tier <span>line 34</span></a></li><li><a href="#source-title">model · User <span>line 43</span></a></li><li><a href="#source-title">model · SocialAccount <span>line 65</span></a></li><li><a href="#source-title">model · RefreshToken <span>line 78</span></a></li><li><a href="#source-title">model · FcmToken <span>line 90</span></a></li><li><a href="#source-title">model · Category <span>line 106</span></a></li><li><a href="#source-title">model · Task <span>line 121</span></a></li><li><a href="#source-title">model · DailyScore <span>line 145</span></a></li><li><a href="#source-title">model · RankingSnapshot <span>line 163</span></a></li><li><a href="#source-title">model · NotificationSchedule <span>line 178</span></a></li><li><a href="#source-title">model · NotificationDelivery <span>line 196</span></a></li></ul></div></section>
+  <div class="file-study">
+    <div class="file-study__code" data-mobile-panel="code"><h2 class="visually-hidden">C. 원본 코드</h2><section class="source-panel" aria-labelledby="source-title">
+  <div class="source-panel__head">
+    <h2 id="source-title">원본 코드 · 변경 없음</h2>
+    <button type="button" data-copy-source>원본 코드 복사</button>
+  </div>
+  <div class="source-grid">
+    <span class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217</span>
+    <pre><code data-source-code data-path="DSM_Back/prisma/schema.prisma" data-sha256="ed3f2f92debd1b66d2594d6e1499c2bc1c55fa45d1f46716d966cfbe4eebd585" data-bytes="7642" data-lines="217" data-line-ending="LF"><span class="tok tok--plain">generator client {
+  provider = </span><span class="tok tok--string">&quot;prisma-client-js&quot;</span><span class="tok tok--plain">
+}
+
+datasource db {
+  provider = </span><span class="tok tok--string">&quot;postgresql&quot;</span><span class="tok tok--plain">
+  url      = env(</span><span class="tok tok--string">&quot;DATABASE_URL&quot;</span><span class="tok tok--plain">)
+}
+
+</span><span class="tok tok--keyword">enum</span><span class="tok tok--plain"> SocialProvider {
+  GOOGLE
+  KAKAO
+  APPLE
+}
+
+</span><span class="tok tok--keyword">enum</span><span class="tok tok--plain"> TaskDifficulty {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+</span><span class="tok tok--keyword">enum</span><span class="tok tok--plain"> TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+</span><span class="tok tok--keyword">enum</span><span class="tok tok--plain"> RankingPeriod {
+  DAILY
+  WEEKLY
+  TOTAL
+}
+
+</span><span class="tok tok--keyword">enum</span><span class="tok tok--plain"> Tier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+  MASTER
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> User {
+  id                    String                 </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  email                 String?                </span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">
+  nickname              String                 </span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">
+  profileImageUrl       String?
+  totalScore            Int                    </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  tier                  Tier                   </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(BRONZE)
+  notificationEnabled   Boolean                </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--keyword">true</span><span class="tok tok--plain">)
+  createdAt             DateTime               </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt             DateTime               </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  socialAccounts        SocialAccount[]
+  refreshTokens         RefreshToken[]
+  fcmTokens             FcmToken[]
+  categories            Category[]
+  tasks                 Task[]
+  dailyScores           DailyScore[]
+  rankingSnapshots      RankingSnapshot[]
+  notificationSchedules NotificationSchedule[]
+
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([tier])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> SocialAccount {
+  id             String         </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  provider       SocialProvider
+  providerUserId String
+  userId         String
+  createdAt      DateTime       </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt      DateTime       </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user           User           </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+
+  @</span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">([provider, providerUserId])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> RefreshToken {
+  id        String    </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  tokenHash String    </span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">
+  expiresAt DateTime  </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  revokedAt DateTime? </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  userId    String
+  createdAt DateTime  </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user      User      </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId, expiresAt])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> FcmToken {
+  id                     String                 </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  token                  String                 </span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">
+  platform               String
+  deviceId               String?
+  userId                 String
+  lastSeenAt             DateTime               </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  revokedAt              DateTime?              </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  createdAt              DateTime               </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt              DateTime               </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user                   User                   </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+  notificationDeliveries NotificationDelivery[]
+
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId, revokedAt])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> Category {
+  id        String   </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  name      String
+  color     String
+  isDefault Boolean  </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--keyword">false</span><span class="tok tok--plain">)
+  userId    String?
+  createdAt DateTime </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt DateTime </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user      User?    </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  @</span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">([userId, name])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> Task {
+  id                    String                 </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  title                 String
+  description           String?
+  startAt               DateTime               </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  endAt                 DateTime               </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  completedAt           DateTime?              </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  difficulty            TaskDifficulty
+  status                TaskStatus             </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(PENDING)
+  notificationEnabled   Boolean                </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--keyword">true</span><span class="tok tok--plain">)
+  userId                String
+  categoryId            String?
+  createdAt             DateTime               </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt             DateTime               </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  deletedAt             DateTime?              </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user                  User                   </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+  category              Category?              </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [categoryId], references: [id], onDelete: SetNull)
+  notificationSchedules NotificationSchedule[]
+
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId, startAt])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId, updatedAt])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([categoryId])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> DailyScore {
+  id                  String   </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  userId              String
+  scoreDate           DateTime </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Date
+  registeredTaskCount Int      </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  completedTaskCount  Int      </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  rawScore            Int      </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  adjustedScore       Int      </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  cappedScore         Int      </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  achievementRate     Decimal  </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Decimal(</span><span class="tok tok--number">5</span><span class="tok tok--plain">, </span><span class="tok tok--number">2</span><span class="tok tok--plain">)
+  createdAt           DateTime </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt           DateTime </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user                User     </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+
+  @</span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">([userId, scoreDate])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([scoreDate, cappedScore])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> RankingSnapshot {
+  id         String        </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  userId     String
+  period     RankingPeriod
+  rank       Int
+  percentile Decimal       </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Decimal(</span><span class="tok tok--number">5</span><span class="tok tok--plain">, </span><span class="tok tok--number">2</span><span class="tok tok--plain">)
+  score      Int
+  snapshotAt DateTime      </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  createdAt  DateTime      </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  user       User          </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([period, snapshotAt, rank])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId, period, snapshotAt])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> NotificationSchedule {
+  id            String                 </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  taskId        String
+  userId        String
+  scheduledAt   DateTime               </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  sentAt        DateTime?              </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  status        String                 </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--string">&quot;PENDING&quot;</span><span class="tok tok--plain">)
+  failureReason String?
+  createdAt     DateTime               </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt     DateTime               </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  task          Task                   </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [taskId], references: [id], onDelete: Cascade)
+  user          User                   </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries    NotificationDelivery[]
+
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([scheduledAt, status])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([userId, scheduledAt])
+}
+
+</span><span class="tok tok--keyword">model</span><span class="tok tok--plain"> NotificationDelivery {
+  id                  String               </span><span class="tok tok--decorator">@id</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(uuid())
+  scheduleId          String
+  fcmTokenId          String
+  tokenUpdatedAt      DateTime             </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  status              String               </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--string">&quot;PENDING&quot;</span><span class="tok tok--plain">)
+  attemptCount        Int                  </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(</span><span class="tok tok--number">0</span><span class="tok tok--plain">)
+  nextAttemptAt       DateTime?            </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  processingStartedAt DateTime?            </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  sendStartedAt       DateTime?            </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  claimId             String?
+  sentAt              DateTime?            </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  failureReason       String?
+  createdAt           DateTime             </span><span class="tok tok--decorator">@default</span><span class="tok tok--plain">(now()) </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  updatedAt           DateTime             </span><span class="tok tok--decorator">@updatedAt</span><span class="tok tok--plain"> </span><span class="tok tok--decorator">@db</span><span class="tok tok--plain">.Timestamptz(</span><span class="tok tok--number">6</span><span class="tok tok--plain">)
+  schedule            NotificationSchedule </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [scheduleId], references: [id], onDelete: Cascade)
+  fcmToken            FcmToken             </span><span class="tok tok--decorator">@relation</span><span class="tok tok--plain">(fields: [fcmTokenId], references: [id], onDelete: NoAction)
+
+  @</span><span class="tok tok--decorator">@unique</span><span class="tok tok--plain">([scheduleId, fcmTokenId])
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([status, nextAttemptAt], map: </span><span class="tok tok--string">&quot;NotificationDelivery_retry_due_idx&quot;</span><span class="tok tok--plain">)
+  @</span><span class="tok tok--decorator">@index</span><span class="tok tok--plain">([status, processingStartedAt], map: </span><span class="tok tok--string">&quot;NotificationDelivery_stale_lease_idx&quot;</span><span class="tok tok--plain">)
+}
+</span></code></pre>
+  </div>
+</section></div>
+    <aside class="explanation-panel" data-mobile-panel="explanation" aria-labelledby="explanation-title">
+      <div class="panel-label">AI 설명 · 원본 밖</div>
+      <h2 id="explanation-title">D. 설명</h2>
+      <section data-explanation="child"><h3>12세 설명</h3><p>데이터가 들어갈 서랍의 이름과 서로 연결되는 열쇠를 미리 그린 설계도다.</p></section>
+      <section data-explanation="junior"><h3>주니어 설명</h3><p>service의 Prisma 호출이 어떤 row와 관계를 변경할 수 있는지는 schema model과 relation이 결정한다. schema는 호출 순서를 증명하지 않으므로 service 근거와 함께 읽는다.</p></section>
+      <section><h2>E. 관계와 근거</h2><ul class="evidence-list"><li><a href="./schema.prisma.html#source-title">DSM_Back/prisma/schema.prisma · Task</a><span>persistence model</span></li></ul></section>
+      <section><h2>F. 위험·확인</h2><ul><li>model 관계만 보고 transaction 원자성을 단정할 수 없다.</li></ul></section>
+      <section><h2>G. 연습과 다음 단계</h2><details><summary>Task, 예약 상태, 점수 중 같은 transaction client를 사용하는 작업을 찾으세요.</summary><p>Task write, 조건부 schedule/delivery update, ScoresService.recompute가 같은 Serializable callback 안에서 같은 client를 사용한다.</p></details><h3>관련 파일</h3><ul><li><a href="../src/tasks/tasks.service.ts.html">DSM_Back/src/tasks/tasks.service.ts</a></li><li><a href="../src/scores/scores.service.ts.html">DSM_Back/src/scores/scores.service.ts</a></li></ul></section>
+    </aside>
+  </div>
+  <nav class="mobile-progress" aria-label="파일 진행"><a href="../src/app.module.ts.html">이전</a><button type="button" data-read-toggle>읽음</button><a href="../src/tasks/tasks.controller.ts.html">다음</a></nav>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../../../index.html">프로젝트 지도</a></footer>
+  <script src="../../../assets/site-data.js" defer></script>
+  <script src="../../../assets/site.js" defer></script>
+</body>
+</html>

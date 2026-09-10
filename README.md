@@ -14,5 +14,6 @@ Android 전용 DSM v1.3 프로젝트입니다. Backend는 NestJS·Prisma·Postgr
 - `DSM_Front`: React Native Android 앱
 - `docs/setup`: 현재 개발 환경 설정 안내
 - `.ai`: 작업 계획·감사·에이전트용 기록
+- `learning-site`, `tools/learning-site`: 2026-08-08~09의 오프라인 교육용 snapshot. 현재 제품 계약과 다르며 [학습 자료 안내](learning-site/README.md)에서 기준과 검증 방법을 확인할 수 있습니다.
 
 2026-08-08의 외부 PC handoff 문서는 당시 검토 기록입니다. 현재 clone 절차에는 위 가이드를 사용하세요.

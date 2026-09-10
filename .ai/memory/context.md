@@ -1,5 +1,11 @@
 # DSM 현재 맥락 — 2026-09-10
 
+## 전체 브랜치 통합
+
+- 사용자 요청으로 유지 branch는 `main` 하나로 통합한다. 비교 기준 `af0f415`, 원격 codex 5개와 로컬 integration 1개다. 최신 Android·session family·알림·랭킹 구현을 유지하고 대체/보류된 구형 구현의 commit 이력도 main에 연결한다.
+- Prototype 고유 offline 자료 `43145b6`의 83파일과 `fb54b5d`의 ER-20260809-001/002/003을 보존했다. `learning-site/README.md`·진입 화면에 과거 snapshot 경계를 명시했으며 현행 제품 명세가 아니다. 사이트 생성기는 현재 main이 아닌 원본 124-source corpus를 요구한다.
+- 현재 검증: Backend 317/Front 229/E2E 2와 historical Node 66 tests, 보존 source page 28개 verifier PASS. E2E는 fixture DB와 로컬 Redis 혼입 실패 후 test process의 선택적 Redis를 분리해 통과했다. 제품·audit tree는 `af0f415`와 동일하다. 상세 비교·보류 기능·최종 게시 상태는 `docs/reviews/2026-09-10-branch-consolidation.md`를 따른다.
+
 ## 현재 PC D드라이브 환경 구성
 
 - 현재 작업 경로·branch는 `D:\DSM`, `main`이다. `codex/integration-main-review@32dec29`의 검증된 제품 tree가 merge commit `9e330314d100644886a4104d07c7197f12616ee5`로 원격 main에 반영됐고 로컬 main도 같은 상태다. 아래의 `C:\DEV` 등은 이전 PC checkpoint다.

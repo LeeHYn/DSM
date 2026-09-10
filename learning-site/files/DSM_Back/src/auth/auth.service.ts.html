@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM_Back/src/auth/auth.service.ts 원본과 학습 설명">
+  <title>auth.service.ts · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../../../../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../../../../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../../../../index.html">프로젝트 지도</a><a class="nav-link" href="../../../../architecture.html">아키텍처</a><a class="nav-link" href="../../../../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../../../../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../../../../index.html#files" aria-current="page">파일</a><a class="nav-link" href="../../../../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="file-page" data-file-page data-source-path="DSM_Back/src/auth/auth.service.ts">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><a href="../../../../index.html#files">파일</a><span aria-hidden="true">/</span></li><li><span aria-current="page">DSM_Back/src/auth/auth.service.ts</span></li></ol></nav>
+  <header class="file-heading">
+    <div><p class="eyebrow">SOURCE STUDY</p><h1>auth.service.ts</h1><p class="file-path">DSM_Back/src/auth/auth.service.ts</p></div>
+    <div class="file-heading__actions"><p class="file-meta">TypeScript · 254줄 · 핵심 파일</p><button class="icon-button desktop-read-toggle" type="button" data-read-toggle>읽음</button></div>
+  </header>
+  <nav class="file-tabs" aria-label="파일 학습 탭"><button type="button" data-file-tab="child">12세 설명</button><button type="button" data-file-tab="junior" aria-selected="true">주니어 설명</button><button type="button" data-file-tab="source">원본 코드</button><button type="button" data-file-tab="risk">위험·확인</button><button type="button" data-file-tab="exercise">연습</button></nav>
+  <div class="mobile-mode" aria-label="모바일 학습 화면"><button type="button" data-mobile-mode="code" aria-pressed="true">코드</button><button type="button" data-mobile-mode="explanation" aria-pressed="false">설명</button><button type="button" data-contents-open>이 파일에서 볼 것</button></div>
+  <aside class="contents-sheet" data-contents-sheet hidden><button type="button" data-contents-close>접기</button><h2>이 파일에서 볼 것</h2><ul><li>Google·Kakao·Apple provider branch</li><li>socialAccount lookup과 user 생성</li><li>access 15m과 refresh 30일</li><li>refresh parse·bcrypt·updateMany</li><li>replacement 생성과 logout ownership</li><li>nickname conflict suffix</li></ul></aside>
+  <section class="file-overview" aria-labelledby="position-role"><h2 id="position-role">A. 위치와 역할</h2><p>provider identity 확인, social user 연결, access/refresh 발급, refresh 단일 승자 rotation과 logout revoke를 조율한다.</p><dl><div><dt>SHA-256</dt><dd><code>c812eab98194dfdd07b21d093832d5bdb773944e1b426f8eed1766874e75e17a</code></dd></div><div><dt>bytes</dt><dd>7729</dd></div><div><dt>line ending</dt><dd>LF</dd></div></dl></section>
+  <section class="focus-card" aria-labelledby="focus-title"><h2 id="focus-title">B. 먼저 볼 것</h2><ul><li>Google·Kakao·Apple provider branch</li><li>socialAccount lookup과 user 생성</li><li>access 15m과 refresh 30일</li><li>refresh parse·bcrypt·updateMany</li><li>replacement 생성과 logout ownership</li><li>nickname conflict suffix</li></ul><div class="symbol-index"><h3>심볼</h3><ul><li>추출된 class/function symbol 없음</li></ul></div></section>
+  <div class="file-study">
+    <div class="file-study__code" data-mobile-panel="code"><h2 class="visually-hidden">C. 원본 코드</h2><section class="source-panel" aria-labelledby="source-title">
+  <div class="source-panel__head">
+    <h2 id="source-title">원본 코드 · 변경 없음</h2>
+    <button type="button" data-copy-source>원본 코드 복사</button>
+  </div>
+  <div class="source-grid">
+    <span class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254</span>
+    <pre><code data-source-code data-path="DSM_Back/src/auth/auth.service.ts" data-sha256="c812eab98194dfdd07b21d093832d5bdb773944e1b426f8eed1766874e75e17a" data-bytes="7729" data-lines="254" data-line-ending="LF"><span class="tok tok--keyword">import</span><span class="tok tok--plain"> {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+} </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/common&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { JwtService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/jwt&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { ConfigService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/config&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { OAuth2Client } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;google-auth-library&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> axios </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;axios&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> * as bcrypt </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;bcrypt&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> * as crypto </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;crypto&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { SocialProvider, </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> Prisma } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@prisma/client&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { PrismaService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;../prisma/prisma.service&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { JwtPayload } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./types/jwt-payload.type&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { SocialProfile } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./types/social-profile.type&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { TokenResponseDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/token-response.dto&#39;</span><span class="tok tok--plain">;
+
+</span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> ACCESS_TOKEN_TTL = </span><span class="tok tok--string">&#39;15m&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> REFRESH_TOKEN_TTL_MS = </span><span class="tok tok--number">30</span><span class="tok tok--plain"> * </span><span class="tok tok--number">24</span><span class="tok tok--plain"> * </span><span class="tok tok--number">60</span><span class="tok tok--plain"> * </span><span class="tok tok--number">60</span><span class="tok tok--plain"> * </span><span class="tok tok--number">1000</span><span class="tok tok--plain">; </span><span class="tok tok--comment">// 30 days</span><span class="tok tok--plain">
+</span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> BCRYPT_ROUNDS = </span><span class="tok tok--number">10</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> RefreshTokenClient = Pick&lt;Prisma.TransactionClient, </span><span class="tok tok--string">&#39;refreshToken&#39;</span><span class="tok tok--plain">&gt;;
+
+</span><span class="tok tok--decorator">@Injectable</span><span class="tok tok--plain">()
+</span><span class="tok tok--keyword">export</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">class</span><span class="tok tok--plain"> AuthService {
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> googleClientId: string;
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> googleClient: OAuth2Client;
+
+  constructor(
+    </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> prisma: PrismaService,
+    </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> jwtService: JwtService,
+    </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> configService: ConfigService,
+  ) {
+    this.googleClientId = this.configService.getOrThrow&lt;string&gt;(
+      </span><span class="tok tok--string">&#39;GOOGLE_CLIENT_ID&#39;</span><span class="tok tok--plain">,
+    );
+    this.googleClient = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> OAuth2Client(this.googleClientId);
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> socialLogin(
+    provider: SocialProvider,
+    token: string,
+  ): Promise&lt;TokenResponseDto&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> profile = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.verifyProviderToken(provider, token);
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> user = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.findOrCreateUser(provider, profile);
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.issueTokens(user.id);
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> refreshTokens(rawRefreshToken: string): Promise&lt;TokenResponseDto&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> { id, secret } = this.parseRefreshToken(rawRefreshToken);
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> record = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.prisma.refreshToken.findUnique({ </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id } });
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> checkedAt = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date();
+
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (
+      !record ||
+      record.revokedAt !== </span><span class="tok tok--keyword">null</span><span class="tok tok--plain"> ||
+      record.expiresAt &lt;= checkedAt ||
+      !(</span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> bcrypt.compare(secret, record.tokenHash))
+    ) {
+      </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> UnauthorizedException(</span><span class="tok tok--string">&#39;Invalid or expired refresh token&#39;</span><span class="tok tok--plain">);
+    }
+
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.prisma.$transaction(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> (tx) =&gt; {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> revokedAt = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date();
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> revoked = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> tx.refreshToken.updateMany({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: {
+          id: record.id,
+          revokedAt: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+          expiresAt: { gt: revokedAt },
+        },
+        data: { revokedAt },
+      });
+
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (revoked.count !== </span><span class="tok tok--number">1</span><span class="tok tok--plain">) {
+        </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> UnauthorizedException(</span><span class="tok tok--string">&#39;Invalid or expired refresh token&#39;</span><span class="tok tok--plain">);
+      }
+
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.issueTokens(record.userId, tx);
+    });
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> logout(userId: string, rawRefreshToken: string): Promise&lt;void&gt; {
+    </span><span class="tok tok--keyword">let</span><span class="tok tok--plain"> parsed: { id: string; secret: string };
+    try {
+      parsed = this.parseRefreshToken(rawRefreshToken);
+    } catch {
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain">;
+    }
+
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> record = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.prisma.refreshToken.findUnique({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id: parsed.id },
+    });
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (
+      !record ||
+      record.userId !== userId ||
+      record.revokedAt !== </span><span class="tok tok--keyword">null</span><span class="tok tok--plain"> ||
+      !(</span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> bcrypt.compare(parsed.secret, record.tokenHash))
+    ) {
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain">;
+    }
+
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.prisma.refreshToken.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id: record.id },
+      data: { revokedAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date() },
+    });
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> parseRefreshToken(token: string): { id: string; secret: string } {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> idx = token.indexOf(</span><span class="tok tok--string">&#39;.&#39;</span><span class="tok tok--plain">);
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (idx &lt;= </span><span class="tok tok--number">0</span><span class="tok tok--plain"> || idx === token.length - </span><span class="tok tok--number">1</span><span class="tok tok--plain">) {
+      </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> UnauthorizedException(</span><span class="tok tok--string">&#39;Invalid or expired refresh token&#39;</span><span class="tok tok--plain">);
+    }
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> { id: token.slice(</span><span class="tok tok--number">0</span><span class="tok tok--plain">, idx), secret: token.slice(idx + </span><span class="tok tok--number">1</span><span class="tok tok--plain">) };
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> issueTokens(
+    userId: string,
+    client: RefreshTokenClient = this.prisma,
+  ): Promise&lt;TokenResponseDto&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> payload: JwtPayload = { sub: userId, </span><span class="tok tok--keyword">type</span><span class="tok tok--plain">: </span><span class="tok tok--string">&#39;access&#39;</span><span class="tok tok--plain"> };
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get&lt;string&gt;(</span><span class="tok tok--string">&#39;JWT_ACCESS_SECRET&#39;</span><span class="tok tok--plain">),
+      expiresIn: ACCESS_TOKEN_TTL,
+    });
+
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> secret = crypto.randomBytes(</span><span class="tok tok--number">32</span><span class="tok tok--plain">).toString(</span><span class="tok tok--string">&#39;hex&#39;</span><span class="tok tok--plain">);
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> tokenHash = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> bcrypt.hash(secret, BCRYPT_ROUNDS);
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> record = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.refreshToken.</span><span class="tok tok--keyword">create</span><span class="tok tok--plain">({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+      },
+    });
+
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> { accessToken, refreshToken: </span><span class="tok tok--string">`${record.id}.${secret}`</span><span class="tok tok--plain"> };
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> findOrCreateUser(
+    provider: SocialProvider,
+    profile: SocialProfile,
+  ) {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> existing = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.prisma.socialAccount.findUnique({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: {
+        provider_providerUserId: {
+          provider,
+          providerUserId: profile.providerUserId,
+        },
+      },
+      include: { user: </span><span class="tok tok--keyword">true</span><span class="tok tok--plain"> },
+    });
+
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (existing) {
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> existing.user;
+    }
+
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> nickname = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.resolveNickname(profile.nickname);
+
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.prisma.user.</span><span class="tok tok--keyword">create</span><span class="tok tok--plain">({
+      data: {
+        email: profile.email,
+        nickname,
+        profileImageUrl: profile.profileImageUrl,
+        socialAccounts: {
+          </span><span class="tok tok--keyword">create</span><span class="tok tok--plain">: {
+            provider,
+            providerUserId: profile.providerUserId,
+          },
+        },
+      },
+    });
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> resolveNickname(base: string): Promise&lt;string&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> candidate = base.slice(</span><span class="tok tok--number">0</span><span class="tok tok--plain">, </span><span class="tok tok--number">20</span><span class="tok tok--plain">);
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> exists = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.prisma.user.findUnique({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { nickname: candidate },
+    });
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (!exists) </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> candidate;
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> suffix = crypto.randomBytes(</span><span class="tok tok--number">3</span><span class="tok tok--plain">).toString(</span><span class="tok tok--string">&#39;hex&#39;</span><span class="tok tok--plain">);
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> </span><span class="tok tok--string">`${candidate.slice(0, 14)}_${suffix}`</span><span class="tok tok--plain">;
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> verifyProviderToken(
+    provider: SocialProvider,
+    token: string,
+  ): Promise&lt;SocialProfile&gt; {
+    switch (provider) {
+      case SocialProvider.GOOGLE:
+        </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.verifyGoogleToken(token);
+      case SocialProvider.KAKAO:
+        </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.verifyKakaoToken(token);
+      case SocialProvider.APPLE:
+        </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.verifyAppleToken(token);
+    }
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> verifyGoogleToken(idToken: string): Promise&lt;SocialProfile&gt; {
+    try {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> ticket = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.googleClient.verifyIdToken({
+        idToken,
+        audience: this.googleClientId,
+      });
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> payload = ticket.getPayload();
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (!payload?.sub) {
+        </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> BadRequestException(</span><span class="tok tok--string">&#39;Invalid Google token&#39;</span><span class="tok tok--plain">);
+      }
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> {
+        providerUserId: payload.sub,
+        email: payload.email ?? </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+        nickname: payload.name ?? payload.email?.split(</span><span class="tok tok--string">&#39;@&#39;</span><span class="tok tok--plain">)[</span><span class="tok tok--number">0</span><span class="tok tok--plain">] ?? payload.sub,
+        profileImageUrl: payload.picture ?? </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+      };
+    } catch (err) {
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (err instanceof BadRequestException) </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> err;
+      </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> UnauthorizedException(</span><span class="tok tok--string">&#39;Google token verification failed&#39;</span><span class="tok tok--plain">);
+    }
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> verifyKakaoToken(accessToken: string): Promise&lt;SocialProfile&gt; {
+    try {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> { data } = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> axios.get&lt;{
+        id: number;
+        kakao_account?: {
+          email?: string;
+          profile?: { nickname?: string; profile_image_url?: string };
+        };
+      }&gt;(</span><span class="tok tok--string">&#39;https://kapi.kakao.com/v2/user/me&#39;</span><span class="tok tok--plain">, {
+        headers: { Authorization: </span><span class="tok tok--string">`Bearer ${accessToken}`</span><span class="tok tok--plain"> },
+      });
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> account = data.kakao_account;
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> {
+        providerUserId: String(data.id),
+        email: account?.email ?? </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+        nickname:
+          account?.profile?.nickname ??
+          account?.email?.split(</span><span class="tok tok--string">&#39;@&#39;</span><span class="tok tok--plain">)[</span><span class="tok tok--number">0</span><span class="tok tok--plain">] ??
+          String(data.id),
+        profileImageUrl: account?.profile?.profile_image_url ?? </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+      };
+    } catch {
+      </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> UnauthorizedException(</span><span class="tok tok--string">&#39;Kakao token verification failed&#39;</span><span class="tok tok--plain">);
+    }
+  }
+
+  </span><span class="tok tok--comment">// Apple Sign In: implement when Apple Developer account is available</span><span class="tok tok--plain">
+  </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unused-vars</span><span class="tok tok--plain">
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> verifyAppleToken(_idToken: string): Promise&lt;SocialProfile&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> Promise.reject(
+      </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> ConflictException(</span><span class="tok tok--string">&#39;Apple Sign In is not yet configured&#39;</span><span class="tok tok--plain">),
+    );
+  }
+}
+</span></code></pre>
+  </div>
+</section></div>
+    <aside class="explanation-panel" data-mobile-panel="explanation" aria-labelledby="explanation-title">
+      <div class="panel-label">AI 설명 · 원본 밖</div>
+      <h2 id="explanation-title">D. 설명</h2>
+      <section data-explanation="child"><h3>12세 설명</h3><p>외부 신분증을 확인해 학생 기록을 찾거나 만들고, 짧은 출입증과 한 번씩 바꾸는 갱신 영수증을 발급하는 담당자다.</p></section>
+      <section data-explanation="junior"><h3>주니어 설명</h3><p>Google은 configured audience, Kakao는 user info endpoint로 identity를 확인하고 Apple은 409다. refresh는 id/secret, PK lookup, bcrypt와 conditional updateMany로 한 요청만 replacement를 만들게 하며 logout은 소유권과 secret이 맞을 때만 revoke한다.</p></section>
+      <section><h2>E. 관계와 근거</h2><ul class="evidence-list"><li><a href="./auth.service.ts.html#source-title">DSM_Back/src/auth/auth.service.ts · socialLogin</a><span>provider and user orchestration</span></li><li><a href="./auth.service.ts.html#source-title">DSM_Back/src/auth/auth.service.ts · refreshTokens</a><span>single-winner refresh rotation</span></li><li><a href="./auth.service.spec.ts.html#source-title">DSM_Back/src/auth/auth.service.spec.ts · AuthService</a><span>mock behavior evidence</span></li></ul></section>
+      <section><h2>F. 위험·확인</h2><ul><li>refresh transaction에 명시적 Serializable option이 없다.</li><li>최초 social login과 nickname uniqueness의 동시 경합 가능성은 확인 필요다.</li><li>Google·Kakao live 동작과 실제 PostgreSQL rollback은 unit spec 범위 밖이다.</li></ul></section>
+      <section><h2>G. 연습과 다음 단계</h2><details><summary>login 요청 뒤 token 발급까지 순서를 배열하세요.</summary><p>DTO 검증 → provider 확인 → socialAccount 조회 → 기존/신규 user 분기 → token 발급이다.</p></details><details><summary>같은 refresh token의 동시 요청에서 패자가 생기는 근거를 찾으세요.</summary><p>transaction 안 conditional updateMany의 count가 1인 요청만 replacement를 만들며 나머지는 401이다.</p></details><details><summary>다른 사용자 소유 token으로 logout하면 어떤 DB write가 일어납니까?</summary><p>ownership이 맞지 않아 revoke update 없이 no-op으로 끝난다.</p></details><h3>관련 파일</h3><ul><li><a href="./auth.controller.ts.html">DSM_Back/src/auth/auth.controller.ts</a></li><li><a href="./guards/jwt-auth.guard.ts.html">DSM_Back/src/auth/guards/jwt-auth.guard.ts</a></li><li><a href="./auth.service.spec.ts.html">DSM_Back/src/auth/auth.service.spec.ts</a></li><li><a href="../../prisma/schema.prisma.html">DSM_Back/prisma/schema.prisma</a></li></ul></section>
+    </aside>
+  </div>
+  <nav class="mobile-progress" aria-label="파일 진행"><a href="./auth.controller.ts.html">이전</a><button type="button" data-read-toggle>읽음</button><a href="./guards/jwt-auth.guard.ts.html">다음</a></nav>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../../../../index.html">프로젝트 지도</a></footer>
+  <script src="../../../../assets/site-data.js" defer></script>
+  <script src="../../../../assets/site.js" defer></script>
+</body>
+</html>

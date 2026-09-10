@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM_Back/src/tasks/tasks.service.ts 원본과 학습 설명">
+  <title>tasks.service.ts · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../../../../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../../../../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../../../../index.html">프로젝트 지도</a><a class="nav-link" href="../../../../architecture.html">아키텍처</a><a class="nav-link" href="../../../../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../../../../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../../../../index.html#files" aria-current="page">파일</a><a class="nav-link" href="../../../../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="file-page" data-file-page data-source-path="DSM_Back/src/tasks/tasks.service.ts">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><a href="../../../../index.html#files">파일</a><span aria-hidden="true">/</span></li><li><span aria-current="page">DSM_Back/src/tasks/tasks.service.ts</span></li></ol></nav>
+  <header class="file-heading">
+    <div><p class="eyebrow">SOURCE STUDY</p><h1>tasks.service.ts</h1><p class="file-path">DSM_Back/src/tasks/tasks.service.ts</p></div>
+    <div class="file-heading__actions"><p class="file-meta">TypeScript · 277줄 · 핵심 파일</p><button class="icon-button desktop-read-toggle" type="button" data-read-toggle>읽음</button></div>
+  </header>
+  <nav class="file-tabs" aria-label="파일 학습 탭"><button type="button" data-file-tab="child">12세 설명</button><button type="button" data-file-tab="junior" aria-selected="true">주니어 설명</button><button type="button" data-file-tab="source">원본 코드</button><button type="button" data-file-tab="risk">위험·확인</button><button type="button" data-file-tab="exercise">연습</button></nav>
+  <div class="mobile-mode" aria-label="모바일 학습 화면"><button type="button" data-mobile-mode="code" aria-pressed="true">코드</button><button type="button" data-mobile-mode="explanation" aria-pressed="false">설명</button><button type="button" data-contents-open>이 파일에서 볼 것</button></div>
+  <aside class="contents-sheet" data-contents-sheet hidden><button type="button" data-contents-close>접기</button><h2>이 파일에서 볼 것</h2><ul><li>findOneWithClient 소유권 경계</li><li>Serializable P2034 retry</li><li>scheduleRelevantChange</li><li>nonterminal cancellation</li><li>recomputeDays</li></ul></aside>
+  <section class="file-overview" aria-labelledby="position-role"><h2 id="position-role">A. 위치와 역할</h2><p>소유권 확인과 Task mutation, 조건부 알림 예약 상태, 점수 재계산을 하나의 transaction으로 조율한다.</p><dl><div><dt>SHA-256</dt><dd><code>818c2135c63e0eb4448ac3718b6d237899e765c69323c35cb4660db224880954</code></dd></div><div><dt>bytes</dt><dd>8923</dd></div><div><dt>line ending</dt><dd>LF</dd></div></dl></section>
+  <section class="focus-card" aria-labelledby="focus-title"><h2 id="focus-title">B. 먼저 볼 것</h2><ul><li>findOneWithClient 소유권 경계</li><li>Serializable P2034 retry</li><li>scheduleRelevantChange</li><li>nonterminal cancellation</li><li>recomputeDays</li></ul><div class="symbol-index"><h3>심볼</h3><ul><li><a href="#source-title">class · TasksService <span>line 17</span></a></li><li><a href="#source-title">method · create <span>line 23</span></a></li><li><a href="#source-title">method · findAll <span>line 60</span></a></li><li><a href="#source-title">method · findOne <span>line 76</span></a></li><li><a href="#source-title">method · update <span>line 80</span></a></li><li><a href="#source-title">method · remove <span>line 148</span></a></li><li><a href="#source-title">method · complete <span>line 162</span></a></li><li><a href="#source-title">method · isRetryableTransactionConflict <span>line 201</span></a></li></ul></div></section>
+  <div class="file-study">
+    <div class="file-study__code" data-mobile-panel="code"><h2 class="visually-hidden">C. 원본 코드</h2><section class="source-panel" aria-labelledby="source-title">
+  <div class="source-panel__head">
+    <h2 id="source-title">원본 코드 · 변경 없음</h2>
+    <button type="button" data-copy-source>원본 코드 복사</button>
+  </div>
+  <div class="source-grid">
+    <span class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277</span>
+    <pre><code data-source-code data-path="DSM_Back/src/tasks/tasks.service.ts" data-sha256="818c2135c63e0eb4448ac3718b6d237899e765c69323c35cb4660db224880954" data-bytes="8923" data-lines="277" data-line-ending="LF"><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { Injectable, NotFoundException } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/common&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { Prisma, </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> Task, TaskStatus } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@prisma/client&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> {
+  NOTIFICATION_DELIVERY_STATUS,
+  NOTIFICATION_NONTERMINAL_STATUSES,
+  NOTIFICATION_SCHEDULE_STATUS,
+} </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;../notifications/notification-schedule.constants&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { PrismaService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;../prisma/prisma.service&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { ScoresService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;../scores/scores.service&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { CreateTaskDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/create-task.dto&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { UpdateTaskDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/update-task.dto&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> { TaskQueryDto } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./dto/task-query.dto&#39;</span><span class="tok tok--plain">;
+
+</span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> MAX_SERIALIZABLE_TRANSACTION_RETRIES = </span><span class="tok tok--number">2</span><span class="tok tok--plain">;
+
+</span><span class="tok tok--decorator">@Injectable</span><span class="tok tok--plain">()
+</span><span class="tok tok--keyword">export</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">class</span><span class="tok tok--plain"> TasksService {
+  constructor(
+    </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> prisma: PrismaService,
+    </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">readonly</span><span class="tok tok--plain"> scores: ScoresService,
+  ) {}
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">create</span><span class="tok tok--plain">(userId: string, dto: CreateTaskDto): Promise&lt;Task&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.runSerializableTransaction(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> (client) =&gt; {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> now = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date();
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (dto.categoryId !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain">) {
+        </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.assertCategoryAssignable(userId, dto.categoryId, client);
+      }
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> startAt = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(dto.startAt);
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> notificationEnabled = dto.notificationEnabled ?? </span><span class="tok tok--keyword">true</span><span class="tok tok--plain">;
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> task = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.task.</span><span class="tok tok--keyword">create</span><span class="tok tok--plain">({
+        data: {
+          userId,
+          title: dto.title,
+          description: dto.description,
+          startAt,
+          endAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(dto.endAt),
+          difficulty: dto.difficulty,
+          categoryId: dto.categoryId,
+          notificationEnabled,
+          ...(notificationEnabled &amp;&amp; startAt.getTime() &gt; now.getTime()
+            ? {
+                notificationSchedules: {
+                  </span><span class="tok tok--keyword">create</span><span class="tok tok--plain">: {
+                    userId,
+                    scheduledAt: startAt,
+                    status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+                  },
+                },
+              }
+            : {}),
+        },
+      });
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.scores.recompute(userId, task.startAt, client);
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> task;
+    });
+  }
+
+  findAll(userId: string, query: TaskQueryDto): Promise&lt;Task[]&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: Prisma.TaskWhereInput = { userId, deletedAt: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain"> };
+
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (query.date) {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> day = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(query.date);
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> nextDay = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(day);
+      nextDay.setUTCDate(nextDay.getUTCDate() + </span><span class="tok tok--number">1</span><span class="tok tok--plain">);
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">.startAt = { gte: day, lt: nextDay };
+    }
+
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.prisma.task.findMany({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">,
+      orderBy: { startAt: </span><span class="tok tok--string">&#39;asc&#39;</span><span class="tok tok--plain"> },
+    });
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> findOne(userId: string, id: string): Promise&lt;Task&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.findOneWithClient(userId, id, this.prisma);
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">update</span><span class="tok tok--plain">(userId: string, id: string, dto: UpdateTaskDto): Promise&lt;Task&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.runSerializableTransaction(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> (client) =&gt; {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> now = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date();
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> existing = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.findOneWithClient(userId, id, client);
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (
+        dto.categoryId !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp;
+        dto.categoryId !== existing.categoryId
+      ) {
+        </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.assertCategoryAssignable(userId, dto.categoryId, client);
+      }
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> nextStartAt =
+        dto.startAt !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> ? </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(dto.startAt) : existing.startAt;
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> nextNotificationEnabled =
+        dto.notificationEnabled ?? existing.notificationEnabled;
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> nextStatus = dto.status ?? existing.status;
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> scheduleRelevantChange =
+        (dto.startAt !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp;
+          nextStartAt.getTime() !== existing.startAt.getTime()) ||
+        (dto.notificationEnabled !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp;
+          dto.notificationEnabled !== existing.notificationEnabled) ||
+        (dto.status !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; dto.status !== existing.status);
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> shouldSchedule =
+        nextNotificationEnabled &amp;&amp;
+        nextStatus === TaskStatus.PENDING &amp;&amp;
+        nextStartAt.getTime() &gt; now.getTime();
+
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (scheduleRelevantChange) {
+        </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.cancelNonterminalNotificationsForTask(id, client);
+      }
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> task = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.task.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id },
+        data: {
+          ...(dto.title !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; { title: dto.title }),
+          ...(dto.description !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; {
+            description: dto.description,
+          }),
+          ...(dto.startAt !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; { startAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(dto.startAt) }),
+          ...(dto.endAt !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; { endAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(dto.endAt) }),
+          ...(dto.difficulty !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; { difficulty: dto.difficulty }),
+          ...(dto.status !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; { status: dto.status }),
+          ...(dto.categoryId !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; { categoryId: dto.categoryId }),
+          ...(dto.notificationEnabled !== </span><span class="tok tok--keyword">undefined</span><span class="tok tok--plain"> &amp;&amp; {
+            notificationEnabled: dto.notificationEnabled,
+          }),
+          ...(scheduleRelevantChange &amp;&amp; shouldSchedule
+            ? {
+                notificationSchedules: {
+                  </span><span class="tok tok--keyword">create</span><span class="tok tok--plain">: {
+                    userId,
+                    scheduledAt: nextStartAt,
+                    status: NOTIFICATION_SCHEDULE_STATUS.PENDING,
+                  },
+                },
+              }
+            : {}),
+        },
+      });
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.recomputeDays(
+        userId,
+        [existing.startAt, task.startAt],
+        client,
+      );
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> task;
+    });
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> remove(userId: string, id: string): Promise&lt;void&gt; {
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.runSerializableTransaction(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> (client) =&gt; {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> task = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.findOneWithClient(userId, id, client);
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.cancelNonterminalNotificationsForTask(id, client);
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.task.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id },
+        data: {
+          deletedAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(),
+        },
+      });
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.scores.recompute(userId, task.startAt, client);
+    });
+  }
+
+  </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> complete(userId: string, id: string): Promise&lt;Task&gt; {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> this.runSerializableTransaction(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> (client) =&gt; {
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.findOneWithClient(userId, id, client);
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.cancelNonterminalNotificationsForTask(id, client);
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> task = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.task.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id },
+        data: {
+          status: TaskStatus.COMPLETED,
+          completedAt: </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(),
+        },
+      });
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.scores.recompute(userId, task.startAt, client);
+      </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> task;
+    });
+  }
+
+  </span><span class="tok tok--comment">/**
+   * Runs DB-only mutation callbacks at Serializable isolation. A P2034
+   * conflict reruns the entire callback at most twice (three total attempts).
+   */</span><span class="tok tok--plain">
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> runSerializableTransaction&lt;T&gt;(
+    operation: (client: Prisma.TransactionClient) =&gt; Promise&lt;T&gt;,
+  ): Promise&lt;T&gt; {
+    for (</span><span class="tok tok--keyword">let</span><span class="tok tok--plain"> retry = </span><span class="tok tok--number">0</span><span class="tok tok--plain">; ; retry += </span><span class="tok tok--number">1</span><span class="tok tok--plain">) {
+      try {
+        </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (
+          !this.isRetryableTransactionConflict(error) ||
+          retry &gt;= MAX_SERIALIZABLE_TRANSACTION_RETRIES
+        ) {
+          </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> error;
+        }
+      }
+    }
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> isRetryableTransactionConflict(error: unknown): boolean {
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> (
+      error instanceof Prisma.PrismaClientKnownRequestError &amp;&amp;
+      error.code === </span><span class="tok tok--string">&#39;P2034&#39;</span><span class="tok tok--plain">
+    );
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> cancelNonterminalNotificationsForTask(
+    taskId: string,
+    client: Prisma.TransactionClient,
+  ): Promise&lt;void&gt; {
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.notificationSchedule.updateMany({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: {
+        taskId,
+        status: { in: [...NOTIFICATION_NONTERMINAL_STATUSES] },
+      },
+      data: { status: NOTIFICATION_SCHEDULE_STATUS.CANCELLED },
+    });
+    </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.notificationDelivery.updateMany({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: {
+        schedule: { taskId },
+        status: { in: [...NOTIFICATION_NONTERMINAL_STATUSES] },
+      },
+      data: {
+        status: NOTIFICATION_DELIVERY_STATUS.CANCELLED,
+        claimId: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+        processingStartedAt: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+        nextAttemptAt: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain">,
+      },
+    });
+  }
+
+  </span><span class="tok tok--comment">/** Recompute each distinct UTC day touched by a mutation. */</span><span class="tok tok--plain">
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> recomputeDays(
+    userId: string,
+    dates: Date[],
+    client: Prisma.TransactionClient,
+  ): Promise&lt;void&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> seen = </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Set&lt;string&gt;();
+    for (</span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> date of dates) {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> key = date.toISOString().slice(</span><span class="tok tok--number">0</span><span class="tok tok--plain">, </span><span class="tok tok--number">10</span><span class="tok tok--plain">);
+      </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> this.scores.recompute(userId, date, client);
+    }
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> findOneWithClient(
+    userId: string,
+    id: string,
+    client: Prisma.TransactionClient,
+  ): Promise&lt;Task&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> task = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.task.findFirst({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id, userId, deletedAt: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain"> },
+    });
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (!task) {
+      </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> NotFoundException(</span><span class="tok tok--string">&#39;Task not found&#39;</span><span class="tok tok--plain">);
+    }
+    </span><span class="tok tok--keyword">return</span><span class="tok tok--plain"> task;
+  }
+
+  </span><span class="tok tok--keyword">private</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> assertCategoryAssignable(
+    userId: string,
+    categoryId: string,
+    client: Prisma.TransactionClient,
+  ): Promise&lt;void&gt; {
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> category = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> client.category.findFirst({
+      </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id: categoryId, OR: [{ userId }, { isDefault: </span><span class="tok tok--keyword">true</span><span class="tok tok--plain"> }] },
+      </span><span class="tok tok--keyword">select</span><span class="tok tok--plain">: { id: </span><span class="tok tok--keyword">true</span><span class="tok tok--plain"> },
+    });
+    </span><span class="tok tok--keyword">if</span><span class="tok tok--plain"> (!category) {
+      </span><span class="tok tok--keyword">throw</span><span class="tok tok--plain"> </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> NotFoundException(</span><span class="tok tok--string">&#39;Category not found&#39;</span><span class="tok tok--plain">);
+    }
+  }
+}
+</span></code></pre>
+  </div>
+</section></div>
+    <aside class="explanation-panel" data-mobile-panel="explanation" aria-labelledby="explanation-title">
+      <div class="panel-label">AI 설명 · 원본 밖</div>
+      <h2 id="explanation-title">D. 설명</h2>
+      <section data-explanation="child"><h3>12세 설명</h3><p>한 번의 수정표에 할 일, 알림표, 점수표를 함께 적고 전부 성공해야 도장을 찍는 담당자다.</p></section>
+      <section data-explanation="junior"><h3>주니어 설명</h3><p>create/update/remove/complete는 runSerializableTransaction을 사용한다. update는 기존 날짜와 새 날짜의 서로 다른 UTC day를 재계산하고, 일정 관련 입력이 바뀔 때만 예약·전달 상태를 취소하거나 새 예약을 만든다.</p></section>
+      <section><h2>E. 관계와 근거</h2><ul class="evidence-list"><li><a href="./tasks.service.ts.html#source-title">DSM_Back/src/tasks/tasks.service.ts · update</a><span>mutation orchestration</span></li><li><a href="./tasks.service.spec.ts.html#source-title">DSM_Back/src/tasks/tasks.service.spec.ts · serializable transaction retry</a><span>retry evidence</span></li></ul></section>
+      <section><h2>F. 위험·확인</h2><ul><li>TasksService가 NotificationsService나 FCM send를 직접 호출한다고 그리면 사실과 다르다.</li><li>P2034 재시도는 callback 전체를 다시 실행한다.</li></ul></section>
+      <section><h2>G. 연습과 다음 단계</h2><details><summary>PATCH 요청부터 PostgreSQL 반영까지 확인된 순서를 배열하세요.</summary><p>TasksController.update → TasksService.update → Serializable transaction → Task·조건부 schedule/delivery·score 변경 → Prisma → PostgreSQL 순서다.</p></details><details><summary>Task, 예약 상태, 점수 중 같은 transaction client를 사용하는 작업을 찾으세요.</summary><p>Task write, 조건부 schedule/delivery update, ScoresService.recompute가 같은 Serializable callback 안에서 같은 client를 사용한다.</p></details><details><summary>과거 시각으로 startAt을 바꾸면 새 PENDING schedule이 생기는지 예측하세요.</summary><p>기존 nonterminal 상태는 취소하지만 새 일정이 미래가 아니므로 새 schedule은 만들지 않는다.</p></details><details><summary>TasksService → NotificationsService → FCM send로 그린 선을 어떻게 고쳐야 하나요?</summary><p>그 직접 호출선을 삭제하고 transaction에서 Prisma로 NotificationSchedule/NotificationDelivery를 직접 변경하는 조건부 선을 그린다. FCM send는 범위 밖으로 둔다.</p></details><h3>관련 파일</h3><ul><li><a href="./tasks.controller.ts.html">DSM_Back/src/tasks/tasks.controller.ts</a></li><li><a href="../scores/scores.service.ts.html">DSM_Back/src/scores/scores.service.ts</a></li><li><a href="../notifications/notification-schedule.constants.ts.html">DSM_Back/src/notifications/notification-schedule.constants.ts</a></li></ul></section>
+    </aside>
+  </div>
+  <nav class="mobile-progress" aria-label="파일 진행"><a href="./tasks.controller.ts.html">이전</a><button type="button" data-read-toggle>읽음</button><a href="./dto/create-task.dto.ts.html">다음</a></nav>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../../../../index.html">프로젝트 지도</a></footer>
+  <script src="../../../../assets/site-data.js" defer></script>
+  <script src="../../../../assets/site.js" defer></script>
+</body>
+</html>

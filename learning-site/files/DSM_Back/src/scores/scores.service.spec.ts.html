@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DSM_Back/src/scores/scores.service.spec.ts 원본과 학습 설명">
+  <title>scores.service.spec.ts · DSM 학습 지도</title>
+  <link rel="stylesheet" href="../../../../assets/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <a class="brand" href="../../../../index.html" aria-label="DSM 학습 지도 홈">DSM 학습 지도</a>
+    <nav class="primary-nav" aria-label="주 탐색"><a class="nav-link" href="../../../../index.html">프로젝트 지도</a><a class="nav-link" href="../../../../architecture.html">아키텍처</a><a class="nav-link" href="../../../../concepts/serializable-transaction.html">개념</a><a class="nav-link" href="../../../../features/task-score-schedule.html">기능 흐름</a><a class="nav-link" href="../../../../index.html#files" aria-current="page">파일</a><a class="nav-link" href="../../../../exercises/task-flow.html">연습</a></nav>
+    <div class="header-actions">
+      <button class="icon-button" type="button" data-search-open aria-label="검색 열기">검색</button>
+      <button class="icon-button" type="button" data-theme-toggle aria-label="다크 모드 전환">다크 모드</button>
+    </div>
+  </header>
+  <section class="search-panel" data-search-panel hidden aria-label="사이트 검색">
+    <label for="global-search">파일·클래스·함수 검색</label>
+    <input id="global-search" type="search" placeholder="파일·클래스·함수 검색" autocomplete="off" data-search-input>
+    <div class="search-filters" data-search-filters></div>
+    <div class="search-results" data-search-results aria-live="polite"></div>
+  </section>
+  <div class="runtime-notice" data-runtime-notice aria-live="polite"></div>
+  <main id="main" class="file-page" data-file-page data-source-path="DSM_Back/src/scores/scores.service.spec.ts">
+  <nav class="breadcrumbs" aria-label="현재 위치"><ol><li><a href="../../../../index.html">프로젝트 지도</a><span aria-hidden="true">/</span></li><li><a href="../../../../index.html#files">파일</a><span aria-hidden="true">/</span></li><li><span aria-current="page">DSM_Back/src/scores/scores.service.spec.ts</span></li></ol></nav>
+  <header class="file-heading">
+    <div><p class="eyebrow">SOURCE STUDY</p><h1>scores.service.spec.ts</h1><p class="file-path">DSM_Back/src/scores/scores.service.spec.ts</p></div>
+    <div class="file-heading__actions"><p class="file-meta">TypeScript · 170줄 · 핵심 파일</p><button class="icon-button desktop-read-toggle" type="button" data-read-toggle>읽음</button></div>
+  </header>
+  <nav class="file-tabs" aria-label="파일 학습 탭"><button type="button" data-file-tab="child">12세 설명</button><button type="button" data-file-tab="junior" aria-selected="true">주니어 설명</button><button type="button" data-file-tab="source">원본 코드</button><button type="button" data-file-tab="risk">위험·확인</button><button type="button" data-file-tab="exercise">연습</button></nav>
+  <div class="mobile-mode" aria-label="모바일 학습 화면"><button type="button" data-mobile-mode="code" aria-pressed="true">코드</button><button type="button" data-mobile-mode="explanation" aria-pressed="false">설명</button><button type="button" data-contents-open>이 파일에서 볼 것</button></div>
+  <aside class="contents-sheet" data-contents-sheet hidden><button type="button" data-contents-close>접기</button><h2>이 파일에서 볼 것</h2><ul><li>daily score persistence</li><li>900 cap</li><li>empty day</li><li>supplied client routing</li><li>summary read</li></ul></aside>
+  <section class="file-overview" aria-labelledby="position-role"><h2 id="position-role">A. 위치와 역할</h2><p>점수 계산 저장, cap, 빈 날, transaction client와 조회 동작을 검증한다.</p><dl><div><dt>SHA-256</dt><dd><code>a370e97346acf147b9f378a2ed1eac6013e6858e30b35d6a85b3eda3f45f29d4</code></dd></div><div><dt>bytes</dt><dd>5987</dd></div><div><dt>line ending</dt><dd>LF</dd></div></dl></section>
+  <section class="focus-card" aria-labelledby="focus-title"><h2 id="focus-title">B. 먼저 볼 것</h2><ul><li>daily score persistence</li><li>900 cap</li><li>empty day</li><li>supplied client routing</li><li>summary read</li></ul><div class="symbol-index"><h3>심볼</h3><ul><li><a href="#source-title">function · makePrismaMock <span>line 6</span></a></li><li><a href="#source-title">test · ScoresService <span>line 16</span></a></li><li><a href="#source-title">test · recompute <span>line 33</span></a></li><li><a href="#source-title">test · computes the daily score and refreshes total/tier <span>line 34</span></a></li><li><a href="#source-title">test · caps the stored score at the daily limit <span>line 76</span></a></li><li><a href="#source-title">test · treats an empty day as a zero score <span>line 99</span></a></li><li><a href="#source-title">test · routes every recompute query through the supplied transaction client <span>line 115</span></a></li><li><a href="#source-title">test · getDaily <span>line 147</span></a></li><li><a href="#source-title">test · returns the stored score for the day <span>line 148</span></a></li><li><a href="#source-title">test · getSummary <span>line 158</span></a></li><li><a href="#source-title">test · returns the user total and tier <span>line 159</span></a></li></ul></div></section>
+  <div class="file-study">
+    <div class="file-study__code" data-mobile-panel="code"><h2 class="visually-hidden">C. 원본 코드</h2><section class="source-panel" aria-labelledby="source-title">
+  <div class="source-panel__head">
+    <h2 id="source-title">원본 코드 · 변경 없음</h2>
+    <button type="button" data-copy-source>원본 코드 복사</button>
+  </div>
+  <div class="source-grid">
+    <span class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170</span>
+    <pre><code data-source-code data-path="DSM_Back/src/scores/scores.service.spec.ts" data-sha256="a370e97346acf147b9f378a2ed1eac6013e6858e30b35d6a85b3eda3f45f29d4" data-bytes="5987" data-lines="170" data-line-ending="LF"><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { Test, TestingModule } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@nestjs/testing&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { </span><span class="tok tok--keyword">type</span><span class="tok tok--plain"> Prisma } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;@prisma/client&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { ScoresService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;./scores.service&#39;</span><span class="tok tok--plain">;
+</span><span class="tok tok--keyword">import</span><span class="tok tok--plain"> { PrismaService } </span><span class="tok tok--keyword">from</span><span class="tok tok--plain"> </span><span class="tok tok--string">&#39;../prisma/prisma.service&#39;</span><span class="tok tok--plain">;
+
+</span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> makePrismaMock = () =&gt; ({
+  task: { findMany: jest.fn() },
+  dailyScore: {
+    upsert: jest.fn(),
+    findUnique: jest.fn(),
+    aggregate: jest.fn(),
+  },
+  user: { </span><span class="tok tok--keyword">update</span><span class="tok tok--plain">: jest.fn(), findUniqueOrThrow: jest.fn() },
+});
+
+describe(</span><span class="tok tok--string">&#39;ScoresService&#39;</span><span class="tok tok--plain">, () =&gt; {
+  </span><span class="tok tok--keyword">let</span><span class="tok tok--plain"> service: ScoresService;
+  </span><span class="tok tok--keyword">let</span><span class="tok tok--plain"> prismaMock: ReturnType&lt;typeof makePrismaMock&gt;;
+
+  beforeEach(</span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+    prismaMock = makePrismaMock();
+
+    </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> module: TestingModule = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> Test.createTestingModule({
+      providers: [
+        ScoresService,
+        { provide: PrismaService, useValue: prismaMock },
+      ],
+    }).compile();
+
+    service = module.get&lt;ScoresService&gt;(ScoresService);
+  });
+
+  describe(</span><span class="tok tok--string">&#39;recompute&#39;</span><span class="tok tok--plain">, () =&gt; {
+    it(</span><span class="tok tok--string">&#39;computes the daily score and refreshes total/tier&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+      prismaMock.task.findMany.mockResolvedValue([
+        { status: </span><span class="tok tok--string">&#39;COMPLETED&#39;</span><span class="tok tok--plain">, difficulty: </span><span class="tok tok--string">&#39;MEDIUM&#39;</span><span class="tok tok--plain"> },
+        { status: </span><span class="tok tok--string">&#39;COMPLETED&#39;</span><span class="tok tok--plain">, difficulty: </span><span class="tok tok--string">&#39;MEDIUM&#39;</span><span class="tok tok--plain"> },
+        { status: </span><span class="tok tok--string">&#39;COMPLETED&#39;</span><span class="tok tok--plain">, difficulty: </span><span class="tok tok--string">&#39;MEDIUM&#39;</span><span class="tok tok--plain"> },
+        { status: </span><span class="tok tok--string">&#39;COMPLETED&#39;</span><span class="tok tok--plain">, difficulty: </span><span class="tok tok--string">&#39;HIGH&#39;</span><span class="tok tok--plain"> },
+        { status: </span><span class="tok tok--string">&#39;PENDING&#39;</span><span class="tok tok--plain">, difficulty: </span><span class="tok tok--string">&#39;LOW&#39;</span><span class="tok tok--plain"> },
+      ]);
+      prismaMock.dailyScore.upsert.mockResolvedValue({ id: </span><span class="tok tok--string">&#39;ds-1&#39;</span><span class="tok tok--plain"> });
+      prismaMock.dailyScore.aggregate.mockResolvedValue({
+        _sum: { cappedScore: </span><span class="tok tok--number">3500</span><span class="tok tok--plain"> },
+      });
+      prismaMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">.mockResolvedValue({});
+
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> service.recompute(</span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--string">&#39;2026-06-03&#39;</span><span class="tok tok--plain">);
+
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment</span><span class="tok tok--plain">
+          </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: expect.objectContaining({ userId: </span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">, deletedAt: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain"> }),
+        }),
+      );
+      expect(prismaMock.dailyScore.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment</span><span class="tok tok--plain">
+          </span><span class="tok tok--keyword">create</span><span class="tok tok--plain">: expect.objectContaining({
+            userId: </span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">,
+            registeredTaskCount: </span><span class="tok tok--number">5</span><span class="tok tok--plain">,
+            completedTaskCount: </span><span class="tok tok--number">4</span><span class="tok tok--plain">,
+            rawScore: </span><span class="tok tok--number">90</span><span class="tok tok--plain">,
+            adjustedScore: </span><span class="tok tok--number">117</span><span class="tok tok--plain">,
+            cappedScore: </span><span class="tok tok--number">117</span><span class="tok tok--plain">,
+            achievementRate: </span><span class="tok tok--number">80</span><span class="tok tok--plain">,
+          }),
+        }),
+      );
+      expect(prismaMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">).toHaveBeenCalledWith({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id: </span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain"> },
+        data: { totalScore: </span><span class="tok tok--number">3500</span><span class="tok tok--plain">, tier: </span><span class="tok tok--string">&#39;GOLD&#39;</span><span class="tok tok--plain"> },
+      });
+    });
+
+    it(</span><span class="tok tok--string">&#39;caps the stored score at the daily limit&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+      prismaMock.task.findMany.mockResolvedValue(
+        Array.</span><span class="tok tok--keyword">from</span><span class="tok tok--plain">({ length: </span><span class="tok tok--number">40</span><span class="tok tok--plain"> }, () =&gt; ({
+          status: </span><span class="tok tok--string">&#39;COMPLETED&#39;</span><span class="tok tok--plain">,
+          difficulty: </span><span class="tok tok--string">&#39;HIGH&#39;</span><span class="tok tok--plain">,
+        })),
+      );
+      prismaMock.dailyScore.upsert.mockResolvedValue({ id: </span><span class="tok tok--string">&#39;ds-1&#39;</span><span class="tok tok--plain"> });
+      prismaMock.dailyScore.aggregate.mockResolvedValue({
+        _sum: { cappedScore: </span><span class="tok tok--number">900</span><span class="tok tok--plain"> },
+      });
+      prismaMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">.mockResolvedValue({});
+
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> service.recompute(</span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">new</span><span class="tok tok--plain"> Date(</span><span class="tok tok--string">&#39;2026-06-03T10:00:00Z&#39;</span><span class="tok tok--plain">));
+
+      expect(prismaMock.dailyScore.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          </span><span class="tok tok--comment">// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment</span><span class="tok tok--plain">
+          </span><span class="tok tok--keyword">create</span><span class="tok tok--plain">: expect.objectContaining({ rawScore: </span><span class="tok tok--number">1200</span><span class="tok tok--plain">, cappedScore: </span><span class="tok tok--number">900</span><span class="tok tok--plain"> }),
+        }),
+      );
+    });
+
+    it(</span><span class="tok tok--string">&#39;treats an empty day as a zero score&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+      prismaMock.task.findMany.mockResolvedValue([]);
+      prismaMock.dailyScore.upsert.mockResolvedValue({ id: </span><span class="tok tok--string">&#39;ds-1&#39;</span><span class="tok tok--plain"> });
+      prismaMock.dailyScore.aggregate.mockResolvedValue({
+        _sum: { cappedScore: </span><span class="tok tok--keyword">null</span><span class="tok tok--plain"> },
+      });
+      prismaMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">.mockResolvedValue({});
+
+      </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> service.recompute(</span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--string">&#39;2026-06-03&#39;</span><span class="tok tok--plain">);
+
+      expect(prismaMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">).toHaveBeenCalledWith({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id: </span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain"> },
+        data: { totalScore: </span><span class="tok tok--number">0</span><span class="tok tok--plain">, tier: </span><span class="tok tok--string">&#39;BRONZE&#39;</span><span class="tok tok--plain"> },
+      });
+    });
+
+    it(</span><span class="tok tok--string">&#39;routes every recompute query through the supplied transaction client&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> transactionMock = makePrismaMock();
+      transactionMock.task.findMany.mockResolvedValue([
+        { status: </span><span class="tok tok--string">&#39;COMPLETED&#39;</span><span class="tok tok--plain">, difficulty: </span><span class="tok tok--string">&#39;LOW&#39;</span><span class="tok tok--plain"> },
+      ]);
+      transactionMock.dailyScore.upsert.mockResolvedValue({ id: </span><span class="tok tok--string">&#39;ds-tx&#39;</span><span class="tok tok--plain"> });
+      transactionMock.dailyScore.aggregate.mockResolvedValue({
+        _sum: { cappedScore: </span><span class="tok tok--number">15</span><span class="tok tok--plain"> },
+      });
+      transactionMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">.mockResolvedValue({});
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> result = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> service.recompute(
+        </span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">,
+        </span><span class="tok tok--string">&#39;2026-06-03&#39;</span><span class="tok tok--plain">,
+        transactionMock as unknown as Prisma.TransactionClient,
+      );
+
+      expect(result).toEqual({ id: </span><span class="tok tok--string">&#39;ds-tx&#39;</span><span class="tok tok--plain"> });
+      expect(transactionMock.task.findMany).toHaveBeenCalledTimes(</span><span class="tok tok--number">1</span><span class="tok tok--plain">);
+      expect(transactionMock.dailyScore.upsert).toHaveBeenCalledTimes(</span><span class="tok tok--number">1</span><span class="tok tok--plain">);
+      expect(transactionMock.dailyScore.aggregate).toHaveBeenCalledTimes(</span><span class="tok tok--number">1</span><span class="tok tok--plain">);
+      expect(transactionMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">).toHaveBeenCalledWith({
+        </span><span class="tok tok--keyword">where</span><span class="tok tok--plain">: { id: </span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain"> },
+        data: { totalScore: </span><span class="tok tok--number">15</span><span class="tok tok--plain">, tier: </span><span class="tok tok--string">&#39;BRONZE&#39;</span><span class="tok tok--plain"> },
+      });
+      expect(prismaMock.task.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.dailyScore.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.dailyScore.aggregate).not.toHaveBeenCalled();
+      expect(prismaMock.user.</span><span class="tok tok--keyword">update</span><span class="tok tok--plain">).not.toHaveBeenCalled();
+    });
+  });
+
+  describe(</span><span class="tok tok--string">&#39;getDaily&#39;</span><span class="tok tok--plain">, () =&gt; {
+    it(</span><span class="tok tok--string">&#39;returns the stored score for the day&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+      prismaMock.dailyScore.findUnique.mockResolvedValue({ id: </span><span class="tok tok--string">&#39;ds-1&#39;</span><span class="tok tok--plain"> });
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> result = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> service.getDaily(</span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--string">&#39;2026-06-03&#39;</span><span class="tok tok--plain">);
+
+      expect(result).toEqual({ id: </span><span class="tok tok--string">&#39;ds-1&#39;</span><span class="tok tok--plain"> });
+      expect(prismaMock.dailyScore.findUnique).toHaveBeenCalledTimes(</span><span class="tok tok--number">1</span><span class="tok tok--plain">);
+    });
+  });
+
+  describe(</span><span class="tok tok--string">&#39;getSummary&#39;</span><span class="tok tok--plain">, () =&gt; {
+    it(</span><span class="tok tok--string">&#39;returns the user total and tier&#39;</span><span class="tok tok--plain">, </span><span class="tok tok--keyword">async</span><span class="tok tok--plain"> () =&gt; {
+      prismaMock.user.findUniqueOrThrow.mockResolvedValue({
+        totalScore: </span><span class="tok tok--number">3500</span><span class="tok tok--plain">,
+        tier: </span><span class="tok tok--string">&#39;GOLD&#39;</span><span class="tok tok--plain">,
+      });
+
+      </span><span class="tok tok--keyword">const</span><span class="tok tok--plain"> result = </span><span class="tok tok--keyword">await</span><span class="tok tok--plain"> service.getSummary(</span><span class="tok tok--string">&#39;user-1&#39;</span><span class="tok tok--plain">);
+
+      expect(result).toEqual({ totalScore: </span><span class="tok tok--number">3500</span><span class="tok tok--plain">, tier: </span><span class="tok tok--string">&#39;GOLD&#39;</span><span class="tok tok--plain"> });
+    });
+  });
+});
+</span></code></pre>
+  </div>
+</section></div>
+    <aside class="explanation-panel" data-mobile-panel="explanation" aria-labelledby="explanation-title">
+      <div class="panel-label">AI 설명 · 원본 밖</div>
+      <h2 id="explanation-title">D. 설명</h2>
+      <section data-explanation="child"><h3>12세 설명</h3><p>점수 담당자가 정상 날, 빈 날, 너무 큰 점수에서도 규칙대로 기록하는지 확인한 시험지다.</p></section>
+      <section data-explanation="junior"><h3>주니어 설명</h3><p>recompute가 전달된 client만 사용하고 DailyScore와 User aggregate를 갱신하는지를 검증한다. policy 자체의 경계는 policy spec과 함께 해석해야 한다.</p></section>
+      <section><h2>E. 관계와 근거</h2><ul class="evidence-list"><li><a href="./scores.service.spec.ts.html#source-title">DSM_Back/src/scores/scores.service.spec.ts · ScoresService</a><span>score evidence</span></li></ul></section>
+      <section><h2>F. 위험·확인</h2><ul><li>unit test의 고정 시각과 운영 시간대를 동일시하지 않는다.</li></ul></section>
+      <section><h2>G. 연습과 다음 단계</h2><details><summary>완료율과 난이도가 일일 점수에 반영되는 근거를 찾으세요.</summary><p>DIFFICULTY_SCORE 합계에 achievementMultiplier를 적용하고 DAILY_SCORE_CAP 900으로 제한한다.</p></details><details><summary>unit test와 현재 e2e test가 각각 보장하는 범위를 구분하세요.</summary><p>service spec은 transaction·조건 분기를 검증하지만 e2e spec은 health와 404 envelope만 검증하므로 Task 전체 흐름의 e2e 증거는 아니다.</p></details><h3>관련 파일</h3><ul><li><a href="./scores.service.ts.html">DSM_Back/src/scores/scores.service.ts</a></li><li><a href="./scores.policy.ts.html">DSM_Back/src/scores/scores.policy.ts</a></li></ul></section>
+    </aside>
+  </div>
+  <nav class="mobile-progress" aria-label="파일 진행"><a href="../tasks/tasks.service.spec.ts.html">이전</a><button type="button" data-read-toggle>읽음</button><a href="../notifications/notifications.service.spec.ts.html">다음</a></nav>
+</main>
+  <noscript><p class="noscript-note">JavaScript 없이도 원본 코드와 기본 탐색을 읽을 수 있습니다. 검색과 읽음 상태 저장은 사용할 수 없습니다.</p></noscript>
+  <footer class="site-footer"><p>124개 파일 · 13,168줄 · 오프라인</p><a href="../../../../index.html">프로젝트 지도</a></footer>
+  <script src="../../../../assets/site-data.js" defer></script>
+  <script src="../../../../assets/site.js" defer></script>
+</body>
+</html>
