@@ -2,6 +2,14 @@
 
 표기: [x] 완료, [/] 진행 중, [ ] 미완료·외부 gate.
 
+## 수정 11건 독립 재검증 — 2026-09-10
+
+- [x] 사용자 독립 검증 선택과 main 기준·정확한 쓰기 범위 기록.
+- [x] Round 14: 11건 독립 검토 완료 — 9 RECHECKED, F-069 FAILED/CONFIRMED 복귀, F-065 UNKNOWN.
+- [x] Backend 317/Front 229/E2E 2·격리 DB fresh/legacy·auth 동시 10회·실제 PG 중지 cache read 6건 통과. 원 ranking fixture 실패·부분 캐시 유실 오류와 Android 미검증 증거를 보존.
+- [x] 독립 판정 병합·신규 F-084/P2와 F-085/P3 반박 검증 각 2건 완료. Schema 85행·fingerprint·이력·무관 72행 원문 보존 확인.
+- [x] 검증 서비스 정리·memory/hash·상세 보고 동기화, main 게시용 정확한 7개 tracked 경로 검증.
+
 ## 전체 브랜치 통합·정리 — 2026-09-10
 
 - [x] 사용자 전체 branch 비교·통합·잔여 branch 삭제 승인 확인.
@@ -79,12 +87,12 @@
 
 ## 열린 gate
 
-- [ ] F-065 API 24~29 malicious-app PoC·OEM patch matrix와 독립 fix-recheck.
-- [ ] F-001/F-002 구현자와 독립된 fix-recheck와 production guard latency·availability 관찰.
-- [ ] F-007/F-008/F-009 독립 fix-recheck; F-008/F-009 legacy row scan·정정과 F-009 CHECK validation.
+- [ ] F-065 UNKNOWN: API 24~29 malicious-app PoC·OEM patch matrix와 기기 회귀 증거.
+- [ ] F-001/F-002 RECHECKED 후 production guard latency·availability 관찰.
+- [ ] F-007/F-008/F-009 RECHECKED 후 F-008/F-009 legacy row scan·정정과 F-009 CHECK validation.
 - [ ] F-012 legacy snapshot 분류·backfill·중복 정책과 staged CHECK validation.
-- [ ] F-011/F-029/F-030 구현자와 독립된 fix-recheck.
-- [ ] F-069 구현자와 독립된 fix-recheck.
+- [x] F-011/F-029/F-030 구현자와 독립된 fix-recheck.
+- [ ] F-069 CONFIRMED 복귀: F-084 부분 캐시 유실 회귀를 수정한 뒤 재검증. F-085 날짜 의존 integration도 수정 필요.
 - [ ] F-069 실제 운영 cardinality·capacity·managed Redis failover·latency 증거.
 - [ ] F-067/F-068 공개 privacy/deletion URL·외부 처리·signed-device·Play Console/Data safety 증거.
 - [ ] F-003/F-017 signer·production OAuth·signed artifact/device와 F-013 readiness mapping.

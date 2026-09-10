@@ -1,10 +1,17 @@
 # DSM 현재 맥락 — 2026-09-10
 
+## 수정 11건 독립 검증 — 현재 결과
+
+- 사용자 선택에 따라 targeted Round 14를 main@2da4817에서 수행했다. 두 독립 reviewer의 P2 판정은 모두 9 RECHECKED / F-069 FAILED로 일치했고 Android reviewer는 F-065 UNKNOWN이다. 제품 변경은 없다.
+- Fresh Backend 317·Front 229·E2E 2, Auth PostgreSQL 1, Task fresh/legacy 3씩, Snapshot fresh/legacy 3씩, refresh/logout 동시 호출 10회와 실제 PostgreSQL 정지 상태의 현재 날짜 cache read 6건을 검증했다.
+- 원 ranking integration은 09-08 fixture와 09-10 실행일 불일치로 1/2 실패했다. Runner-only 시계 정렬 후 2/2 통과했으며 committed test는 미수정(F-085)이다. 실제 Redis 목록 key만 유실시키자 marker/hash 3명이 남아도 cache/service []가 재현됐다(F-084). 자연 eviction 빈도와 retirement TTL interleaving은 실행하지 않았다.
+- Task-owned PG/Redis 두 컨테이너는 ownership 확인 후 제거했고 기존 개발 서비스는 유지했다. 재검증·실패 원문·구형 Android/운영 gate·CCTV는 `.ai/audits/20260817-release-audit-full-project/2026-09-10-fix-recheck.md`를 따른다.
+
 ## 전체 브랜치 통합
 
 - 사용자 요청으로 branch를 `main` 하나로 통합했다. 비교 기준 `af0f415`, 원격 codex 5개와 로컬 integration 1개다. 자료 보존 `e0cf644`와 merge `35b3944`를 원격 게시했고 6개 tip 모두 main의 조상으로 남겼다. 최신 Android·session family·알림·랭킹 구현을 유지하며 대체/보류된 구현도 원래 commit으로 조회할 수 있다. 원격 codex 5개·로컬 integration 삭제 후 main 하나·로컬/원격 일치를 확인했다.
 - Prototype 고유 offline 자료 `43145b6`의 83파일과 `fb54b5d`의 ER-20260809-001/002/003을 보존했다. `learning-site/README.md`·진입 화면에 과거 snapshot 경계를 명시했으며 현행 제품 명세가 아니다. 사이트 생성기는 현재 main이 아닌 원본 124-source corpus를 요구한다.
-- 현재 검증: Backend 317/Front 229/E2E 2와 historical Node 66 tests, 보존 source page 28개 verifier PASS. E2E는 fixture DB와 로컬 Redis 혼입 실패 후 test process의 선택적 Redis를 분리해 통과했다. 제품·audit tree는 `af0f415`와 동일하다. 상세 비교·보류 기능·최종 게시 상태는 `docs/reviews/2026-09-10-branch-consolidation.md`를 따른다.
+- 브랜치 통합 당시 검증: Backend 317/Front 229/E2E 2와 historical Node 66 tests, 보존 source page 28개 verifier PASS. E2E는 fixture DB와 로컬 Redis 혼입 실패 후 test process의 선택적 Redis를 분리해 통과했다. 당시 제품·audit tree는 `af0f415`와 동일했다. 이후 Round 14는 audit만 갱신했다. 상세 비교는 `docs/reviews/2026-09-10-branch-consolidation.md`다.
 
 ## 현재 PC D드라이브 환경 구성
 
@@ -35,10 +42,10 @@
 
 ## Canonical audit 상태
 
-- F-001~F-083, 83건: `58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`.
-- Ledger는 352,219 bytes, SHA-256 `CF538F3AD9FBF186F51DDAEB1B7601D9C1B232F2415BC7C11314AE1DF69DA15C`이다. UTF-8/LF, schema, 연속 ID, fingerprint 고유성·basis hash와 status history 검증이 통과했다.
-- `RECHECKED`: F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083. `UNKNOWN`: F-003, F-013, F-017. `REFUTED`: F-066. `FIXING`: F-067, F-068. `FIXED`: F-001, F-002, F-007, F-008, F-009, F-011, F-012, F-029, F-030, F-065, F-069.
-- 열한 개 `FIXED` 항목은 구현자 자체 검증을 마쳤으며 독립 fix-recheck 전에는 `RECHECKED`로 올리지 않는다.
+- F-001~F-085, 85건: `61 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 17 RECHECKED / 4 UNKNOWN / 0 VALIDATING / 0 RECHECKING`.
+- Ledger는 392,514 bytes, SHA-256 `81F794633531E59D263B888F393B3A0D50AB1CE09EFE1E0E7C6800DB403F1273`다. Draft 2020-12 schema 85행·UTF-8/LF·연속 ID·fingerprint 고유성/basis hash·연속 status history 검증을 통과했다. 무관 기존 72행 원문과 재검증 11건의 과거 history/fix/validation/evidence를 보존했다.
+- `RECHECKED`: F-001/F-002/F-005/F-006/F-007/F-008/F-009/F-011/F-012/F-016/F-025/F-029/F-030/F-035/F-039/F-040/F-083. `UNKNOWN`: F-003/F-013/F-017/F-065. `REFUTED`: F-066. `FIXING`: F-067/F-068. `FIXED`: 없음.
+- Round 14 독립 검증에서 9건 종결, F-069 회귀로 CONFIRMED 복귀, F-065 증거 부족 UNKNOWN. 신규 F-084/P2(부분 캐시 유실의 false-empty)와 F-085/P3(고정 날짜 integration)는 finder와 분리된 두 reviewer의 SURVIVED로 CONFIRMED다.
 - main 고유 기록 보존: Round 12·13은 targeted revalidation이므로 자유 탐색 연속 조건에서 제외하며 Round 11만 zero-new-confirmed-P0~P2 1회로 계산한다.
 
 ## 구현 결정
@@ -60,17 +67,17 @@
 
 - 반복 호출마다 row를 생성하던 원인은 service와 schema에 idempotency bucket과 uniqueness가 없었던 것이다. UTC 날짜 bucket, 선행 재사용, conflict-safe insert와 DB 제약으로 신규 증가량을 사용자당 하루 최대 세 period로 제한했다.
 - Nullable bucket과 staged CHECK는 과거 row를 재작성하지 않는다. 실제 7-migration legacy DB의 같은 날짜 row 두 개가 null bucket으로 보존된 채 upgrade됐고 이후 신규 null·중복 write는 거부됐다.
-- Canonical 상태는 `FIXED`; 제품·감사 commit은 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`이다. 독립 fix-recheck와 production legacy 정리가 남았다.
+- Canonical 상태는 Round 14 독립 검증 후 `RECHECKED`; 제품·감사 구현 commit은 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`이다. Production legacy 정리는 남는다.
 
 ## 잔여 위험·외부 gate
 
 - main 고유 기록 보존: F-083 process restart/offline durable intent, device socket-cut, 구버전 rollout 검증과 F-005/F-039 physical-device relaunch는 남아 있다.
 
 - F-069은 실제 운영 cardinality, Redis capacity, query plan, managed failover와 p50/p95/p99가 미측정이다. Cache miss가 projection 후에도 남으면 bounded window-query fallback이 DB sort 부하를 만들 수 있다. WebSocket delta는 F-074 범위다.
-- F-065 app-side 설정은 공식 Android 문서상 구형 OS의 모든 StrandHogg 변형에 대한 완전한 보장이 아니다. API 24~29 malicious-app PoC, OEM patch matrix와 독립 fix-recheck가 남았다.
+- F-065는 app-side 설정을 독립 검토했으나 API 24~29 malicious-app PoC·OEM patch matrix가 없어 UNKNOWN이다. API 36 결과로 구형 OS 공격을 종결하지 않는다.
 - F-067/F-068 공개 privacy/deletion URL과 외부 삭제 절차가 없고 Google Play 앱 이름·내부 삭제 경로·Data safety 증거를 최종 대조하지 않았다.
-- F-001/F-002는 offline에서 명시적 logout을 완료할 수 없고 보호 REST 요청마다 indexed family 조회가 추가된다. Commit 전 승인된 in-flight 요청, production latency·availability와 독립 fix-recheck가 남았다.
-- F-007/F-008/F-009는 독립 fix-recheck가 남았다. F-008의 역사적 contradictory row와 same-value COMPLETED의 legacy null은 자동 보정하지 않으며, F-009는 production invalid-row scan·정정 또는 soft-delete 뒤 CHECK validation이 필요하다.
+- F-001/F-002 독립 recheck는 통과했다. Offline 명시적 logout 불가, 보호 REST의 indexed family 조회, commit 전 허용된 in-flight 요청과 production latency·availability는 잔여 경계다.
+- F-007/F-008/F-009 독립 recheck는 통과했다. F-008의 역사적 contradictory row와 same-value COMPLETED의 legacy null은 자동 보정하지 않으며, F-009는 production invalid-row scan·정정 또는 soft-delete 뒤 CHECK validation이 필요하다.
 - F-012 legacy snapshot은 null bucket으로 남아 있다. Production에서 날짜 정책을 정해 분류·backfill·중복 해소한 뒤 CHECK를 validate해야 하며 SQL-only partial index의 migration drift도 감시해야 한다.
 - 실제 upload/Play signer, production OAuth, signed-device cold start·link open, readiness mapping과 운영 DB·Firebase 증거가 미완료다.
 - 현재 CONFIRMED P1은 0건이다. 다음 finding은 canonical 우선순위와 새 계획·승인을 기준으로 선택한다.

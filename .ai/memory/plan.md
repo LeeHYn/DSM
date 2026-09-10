@@ -1,5 +1,17 @@
 # DSM 실행 계획 — 2026-09-10
 
+## 수정 11건 독립 재검증 — 2026-09-10
+
+- 사용자 선택 `수정된 항목의 독립 검증 (추천)`을 아래 검증·기록·main 게시의 실행 승인으로 적용한다. 기준은 `main@2da4817b27d8359649e38e0e37ccb73d05979b91`이며 제품 수정은 포함하지 않는다.
+- 기존 release-audit의 targeted Round 14: F-001/F-002, F-007/F-008/F-009, F-011/F-012/F-029/F-030/F-069 및 F-065를 원 condition·수정 diff·회귀 관점에서 검증한다. 자유 탐색 round로 계산하지 않는다.
+- 실행 주체: 메인이 disposable DB/Redis와 회귀 검증·원장 병합을 담당한다. 상위 실행 지침에 따라 inherited profile의 읽기 전용 reviewer 두 명이 P2 열 건을 각각 독립 검토하고, 세 번째 reviewer가 Android F-065를 검토한다. 다른 reviewer의 판정은 공유하지 않으며 불일치는 독립 타이브레이크한다.
+- M1: 범위·원 finding·fix metadata를 준비하고 11건을 RECHECKING으로 전이한다. M2: 소스/diff 독립 검토와 현재 checkout의 unit/E2E·실제 PostgreSQL/Redis 회귀를 수행한다. M3: 증거로 RECHECKED/CONFIRMED/UNKNOWN을 결정하고 외부 gate를 보존한다. M4: 임시 서비스 정리·schema/상태 이력·무관 finding 보존을 검증하고 기록을 main에 commit/push한다.
+- 메인 exact tracked writable allowlist: `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, `.ai/memory/README.md`, `.ai/audits/20260817-release-audit-full-project/findings.jsonl`, `.ai/audits/20260817-release-audit-full-project/README.md`, `.ai/audits/20260817-release-audit-full-project/2026-09-10-fix-recheck.md`. 각 편집 단계는 1~2개 파일이다. Reviewer writable allowlist는 `none`이다.
+- 임시 검증 도구는 기존 ignored `.local`에 저장한다: `fix-recheck-records.json`, `fix-recheck-init.cjs`, `fix-recheck.ps1`, `fix-recheck-finalize.cjs`, `fix-recheck-results.json`, `fix-recheck-jest.json`, `fix-recheck-ledger-check.cjs`; 로그는 `.local/logs/fix-recheck-backend.log`, `fix-recheck-frontend.log`, `fix-recheck-e2e.log`, `fix-recheck-postgres.log`, `fix-recheck-android.log`에 기록한다. Jest cache는 이번 검증 전용 ignored 위치를 사용한다.
+- PostgreSQL/Redis는 이름 `dsm-fix-recheck-pg-20260910`, `dsm-fix-recheck-redis-20260910`와 ownership label을 확인하고 127.0.0.1 임시 포트로 생성·제거한다. 기존 dsm-back-dev 데이터·서비스와 환경 비밀값은 건드리지 않는다. API 24~29 공격 PoC·OEM 증거가 없으면 Android 항목을 검증 완료로 닫지 않는다. 새 결함은 기록하되 이번 범위에서 자동 수정하지 않는다.
+- 추가 검증: 고정 2026-09-08 fixture와 현재 날짜가 다른 기존 ranking integration의 실패를 보존하고 검증 runner에서만 시계를 맞춰 원 테스트를 재실행한다. 현재 날짜·실제 DB 중지 상태의 cache read와 부분 key 유실도 별도 검증한다. Task·snapshot은 이전 6개 DDL→legacy fixture→현재 2개 DDL의 보존 검증을 더한다. 추가 ignored exact paths: `.local/fix-recheck-probes.cjs`, `.local/fix-recheck-clock.cjs`, `.local/logs/fix-recheck-probes.log`. 제품·committed test 수정은 없다. 검증 중 발견한 별도 후보는 원 finding과 분리하고 독립 반박을 거쳐 기록한다.
+- 결과: 두 P2 reviewer가 9 RECHECKED/F-069 FAILED로 일치했고 F-065는 독립 UNKNOWN이다. 새 F-084/P2와 F-085/P3도 finder와 다른 reviewer 두 명이 각각 SURVIVED로 확정했다. Backend 317/Front 229/E2E 2·격리 DB·추가 동시성/cache probe와 schema 85행 검증을 마쳤고 owned 컨테이너 두 개를 제거했다. 원 실패·운영/구형 기기 gate는 상세 보고와 원장에 남겼다. 제품·committed test는 기준 commit과 동일하다.
+
 ## 전체 브랜치 통합·정리 — 2026-09-10
 
 - 사용자 `다른 브랜치들과 비교해서 병합 방향 제시하고 브랜치 하나에 통합해서 병합하고 나머지 제거해`를 비교·통합·검증·원격 게시 및 통합된 나머지 로컬/원격 branch 삭제 승인으로 적용한다. 이전 branch 보존 조건은 이번 범위에서 해제한다.
@@ -60,15 +72,15 @@
 
 ## Canonical audit
 
-- F-001~F-083, 83건: 58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN.
-- F-012는 공개 snapshot API를 유지하면서 사용자·period·UTC 날짜당 1행으로 신규 write를 제한해 FIXED다. Legacy 정리·CHECK validation과 독립 fix-recheck가 남았다.
-- F-007/F-008/F-009는 PATCH null·completion metadata·Task interval 계약과 PostgreSQL active-row CHECK 검증을 마쳐 FIXED다. 독립 fix-recheck와 production legacy scan이 남았다.
-- F-001/F-002는 refresh-authenticated server-first logout과 access `sid` 활성-family 검사, 전체·실제 PostgreSQL·Android 검증을 마쳐 FIXED다. 독립 fix-recheck가 남았다.
-- F-011/F-029/F-030은 cache와 DB fallback의 tie·전체 사용자·UTC anchor 계약을 통일하고 전체·실제 서비스 검증을 마쳐 FIXED다. 독립 fix-recheck가 남았다.
-- F-065는 MainActivity의 package affinity 상속을 제거하고 task reparenting을 명시적으로 막은 뒤 merged/packaged manifest, Android build/lint와 emulator task smoke를 통과해 FIXED다. 구형 OS 독립 recheck가 남았다.
-- F-069는 PostgreSQL batch projection·Redis cache, 동시성·세대 수명 보강과 실제 서비스·50,000-user 합성 검증을 마쳐 FIXED다. 구현자와 독립된 fix-recheck가 남았다.
+- F-001~F-085, 85건: 61 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 17 RECHECKED / 4 UNKNOWN. Round 14 상세 근거는 `.ai/audits/20260817-release-audit-full-project/2026-09-10-fix-recheck.md`다.
+- F-012는 사용자·period·UTC 날짜당 immutable 1행을 두 독립 reviewer와 fresh/legacy PostgreSQL 검증으로 RECHECKED 처리했다. Production legacy 분류·backfill·중복 해소·CHECK validation은 남는다.
+- F-007/F-008/F-009는 null·completion·interval 계약을 두 독립 reviewer가 RECHECKED 판정했다. Legacy 상태 정리·Task CHECK validation은 운영 gate다.
+- F-001/F-002는 server-first logout과 access sid-family 폐기를 두 독립 reviewer가 RECHECKED 판정했다. 실제 PostgreSQL 및 동시 refresh/logout 10회가 통과했고 운영 guard 지연·가용성은 남는다.
+- F-011/F-029/F-030은 cache·DB fallback tie·전체 사용자·UTC reference 계약을 두 독립 reviewer가 RECHECKED 판정했다. 별도 partial-cache 회귀는 F-084다.
+- F-065는 source·merged·packaged manifest 설정을 확인했으나 취약한 API 24~29 공격·OEM 증거가 없어 독립 reviewer UNKNOWN으로 전이했다.
+- F-069는 cache·batch 부재 자체는 해소됐으나 비어 있지 않은 generation의 목록 유실 후 [] 성공 반환 회귀가 재현돼 두 reviewer FAILED, CONFIRMED 복귀다. 새 원인 F-084/P2와 날짜 의존 integration F-085/P3는 독립 반박 2건씩 거쳐 CONFIRMED다. 제품은 미수정이다.
 - F-067/F-068은 코드 검증을 마쳤으나 실제 privacy/deletion URL·외부 처리·signed device·Play Console 증거가 없어 FIXING이다.
-- UNKNOWN은 F-003, F-013, F-017이며 signer·production OAuth·readiness·signed-device 증거가 필요하다. F-066은 Android-only 확정으로 REFUTED다.
+- UNKNOWN은 F-003/F-013/F-017/F-065이며 signer·production OAuth·readiness·signed-device 및 구형 Android 공격 증거가 필요하다. F-066은 Android-only 확정으로 REFUTED다.
 - Release-ready가 아니다.
 
 ## 완료된 핵심 구현
@@ -85,11 +97,11 @@
 - 2026-09-09 사용자 `ㄱ` 승인에 따라 공개 API를 보존하고 사용자·period·UTC 날짜당 최초 snapshot 하나만 생성한다. 같은 날 반복 호출은 기존 immutable row를 반환해 ranking 재계산과 durable write를 생략한다.
 - `snapshotDate DATE`와 non-null `NOT VALID` CHECK, non-null row 대상 partial unique index가 신규·수정 write를 제한한다. `createMany(skipDuplicates)` 뒤 winner를 읽어 동시 최초 호출도 한 row로 합친다.
 - Legacy row 두 개가 같은 날짜에 있어도 null bucket으로 보존한 채 7→8 migration upgrade가 성공했다. 신규 null·중복은 거부됐고 fresh·legacy DB 모두 committed 3/3 spec을 통과했다.
-- F-012는 canonical audit에서 `FIXED`다. 구현자 독립 recheck가 없으므로 `RECHECKED`가 아니며, production legacy 분류·backfill·중복 해소·CHECK validation은 별도 gate다.
+- F-012는 Round 14에서 두 독립 reviewer의 RECHECKED와 현재 실제 DB 증거로 종결했다. Production legacy 분류·backfill·중복 해소·CHECK validation은 별도 gate다.
 
 ## 후속 실행
 
-1. 열한 개 FIXED finding의 구현자 독립 fix-recheck, F-008/F-009/F-012 legacy-state scan·정리와 staged CHECK validation을 수행한다.
+1. F-084 캐시 완전성 처리·회귀 테스트와 F-085 날짜 독립 integration을 별도 제품 수정 계획으로 진행하고 F-069를 다시 독립 검증한다. F-008/F-009/F-012 운영 legacy scan·정리·CHECK validation은 별도다.
 2. F-069 운영 cardinality·capacity·latency·failover 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보하고 남은 P2→P3를 진행한다.
 
