@@ -3,7 +3,7 @@
 - Audit ID: `20260817-release-audit-full-project`
 - Mode: `release-audit`
 - Authoritative checkout: `D:\DSM`
-- Current verification baseline: `main@2da4817b27d8359649e38e0e37ccb73d05979b91`
+- Current verification baseline: `main@61ce21e628e30477462effae567db26bcd8a92e5`
 - Canonical ledger: `findings.jsonl`
 - Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records. The F-011/F-029/F-030 follow-up changes five existing ranking source/test paths to make the bounded DB fallback use the same window projection and stable UTC reference. The combined F-001/F-002 closure changes twenty Backend/Front source and test paths, reuses the existing refresh-family schema and adds one disposable PostgreSQL integration specification. F-007/F-008/F-009 change four existing Task source/test paths and add one staged temporal CHECK migration plus one PostgreSQL specification; F-008 product logic was already shipped in `e2bda53`. F-012 changes three existing ranking service/schema paths and adds one staged snapshot migration plus one PostgreSQL specification; the public controller, Front, Android, dependencies and existing migrations remain unchanged.
 
@@ -18,15 +18,15 @@
 
 ## Current canonical state
 
-The ledger contains 85 findings. Targeted Round 14 independently rechecked eleven fixes: nine passed, F-069 returned to CONFIRMED after a reproduced regression, and F-065 returned to UNKNOWN for missing old-OS evidence. Two new causes were independently confirmed as F-084/P2 and F-085/P3. [Detailed current verification](2026-09-10-fix-recheck.md).
+The ledger contains 85 findings. Targeted Round 14 rechecked eleven fixes and discovered F-084/P2 and F-085/P3. The user then authorized repair: Round 15 fixed the cache regression and calendar-dependent integration, and two independent reviewers returned RECHECKED for F-069/F-084/F-085. [Current repair and verification](2026-09-10-ranking-fix.md); [preserved Round 14 failures](2026-09-10-fix-recheck.md).
 
 | Status | Count | IDs requiring attention |
 |---|---:|---|
-| `CONFIRMED` | 61 | Includes reopened F-069 and new F-084/P2, F-085/P3; product fixes require separate plans and approval |
+| `CONFIRMED` | 58 | Remaining product fixes require scoped plans and approval |
 | `FIXING` | 2 | F-067, F-068 — public URL and external release evidence pending |
 | `FIXED` | 0 | No fix remains awaiting its first independent recheck |
 | `REFUTED` | 1 | F-066 |
-| `RECHECKED` | 17 | F-001, F-002, F-005, F-006, F-007, F-008, F-009, F-011, F-012, F-016, F-025, F-029, F-030, F-035, F-039, F-040, F-083 |
+| `RECHECKED` | 20 | F-001, F-002, F-005, F-006, F-007, F-008, F-009, F-011, F-012, F-016, F-025, F-029, F-030, F-035, F-039, F-040, F-069, F-083, F-084, F-085 |
 | `UNKNOWN` | 4 | F-003, F-013, F-017, F-065 |
 | `VALIDATING` | 0 | — |
 
@@ -36,13 +36,13 @@ The ledger contains 85 findings. Targeted Round 14 independently rechecked eleve
 | `P2` | 54 |
 | `P3` | 21 |
 
-- Ledger bytes: 392,514.
-- Ledger SHA-256: `81F794633531E59D263B888F393B3A0D50AB1CE09EFE1E0E7C6800DB403F1273`.
+- Ledger bytes: 409,173.
+- Ledger SHA-256: `1EF86022FE64F9A3F78270CA4826E676F2AA7C839704F6BFBBBEB0535CAE46E5`.
 - IDs are contiguous from F-001 through F-085.
 - Finding IDs and fingerprint values are unique.
 - Every fingerprint value equals SHA-256 of its recorded basis.
 - The former F-006 `recheck.profile` schema drift was removed without changing its reviewer identity or verdict. Round 14 preserves the 72 unrelated original rows byte-for-byte and retains prior histories and fix metadata for the eleven rechecked rows.
-- All 85 rows pass the Draft 2020-12 schema; IDs, fingerprints and continuous status histories pass current validation. Both new causes received SURVIVED from `/root/fix_recheck_android` and `/root/ranking_candidate_validator`, independently of their finders.
+- All 85 rows pass the Draft 2020-12 schema; IDs, fingerprints and continuous status histories pass current validation. Round 15 preserves the 82 unrelated rows verbatim. F-069/F-084/F-085 were independently rechecked by `/root/ranking_fix_review_a` and `/root/ranking_fix_review_b`; prior F-069 fix evidence and failure history remain preserved.
 
 ## Merge and adjudication
 
@@ -77,6 +77,7 @@ Recovered additions are grouped as follows:
 | 12 | no new canonical ID | F-065, F-067, F-068 and F-069 revalidated from unknown to confirmed |
 | 13 | no new canonical ID | F-066 revalidated from unknown to refuted after Android-only scope confirmation |
 | 14 | F-084, F-085 | Targeted eleven-fix recheck: nine RECHECKED, F-069 FAILED/reopened, F-065 UNKNOWN; independent validators confirmed cache-key-loss P2 and calendar-dependent test P3 |
+| 15 | no new canonical ID | Approved F-084/F-085 repair; two independent reviewers returned RECHECKED for F-069/F-084/F-085; two-date real-service matrix 12/12 passed |
 
 F-015 changed from `UNKNOWN` to `CONFIRMED P2`: the approved full-v1.3 scope still includes M12C reminders, while the Android notification permission, client, token lifecycle and settings path remain absent. No scope waiver was found.
 
@@ -105,7 +106,9 @@ F-083 first changed from `VALIDATING` to `CONFIRMED P2` after two independent da
 - F-066: `REFUTED P1`. The user explicitly confirmed the v1.3 release as Android-only. Two independent reviewers found that the current Front contract, approved Android-only design and tracked native inventory match that scope, so the missing iOS project is not a release blocker. The three current v1.3 planning documents now explicitly exclude their retained historical iOS wording from release acceptance; a read-only follow-up review passed. A future return to iOS scope requires a separate deliverable audit.
 - F-067: `FIXING P1`. The authenticated 204 endpoint, transactional deletion order, Android session fence, two-stage UI and real PostgreSQL cascade test are implemented. Public web deletion, operator handling, signed-device cold start and Play Console evidence remain open.
 - F-068: `FIXING P1`. Login/MyPage legal links and release URL validation are implemented, with placeholder release hosts rejected. Actual public privacy/deletion content, signed-device link opening and Play Console/Data safety evidence remain open. Terms of Service stays outside this finding.
-- F-069: `CONFIRMED P2`. Both independent reviewers returned FAILED: cache/batch architecture is present, but new P2 generation-list-loss regression F-084 was reproduced. Current-date reads with actual PostgreSQL stopped passed; production capacity/failover/latency gates remain.
+- F-069: `RECHECKED P2`. Two independent Round 15 reviewers confirmed the batch/cache architecture and repair of the F-084 regression. Current unit 328/328, E2E 2/2, static gates and two-date PostgreSQL/Redis integration 12/12 pass. Production capacity/failover/latency gates remain.
+- F-084: `RECHECKED P2`. Marker entryCount and expected bounded list length distinguish nonempty generation loss from legitimate emptiness; malformed/missing/truncated data becomes a miss and real DB fallback returns the correct population.
+- F-085: `RECHECKED P3`. Date-only fake timers align relative fixtures with service reads at two references, including UTC midnight. Real network timers remain active; exact fixture cleanup and zero-DB-read cache assertions pass.
 
 Round 12 policy conclusions use current official [Google Play account-deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en), [Google Play User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311?hl=en), [Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), and [Android task-affinity risk guidance](https://developer.android.com/privacy-and-security/risks/strandhogg). Play Console, public legal/deletion resources and device exploit behavior were not inspected.
 
@@ -220,4 +223,4 @@ The recovery matrix did not run Prisma generate, an actual database, a standalon
 
 ## Termination status
 
-The release audit remains open: 61 CONFIRMED, 2 FIXING, 0 FIXED, 1 REFUTED, 4 UNKNOWN and 17 RECHECKED. F-069 requires regression repair and recheck, with the distinct new cause in F-084; F-085 requires a date-independent integration fixture. Production legacy-state cleanup and staged CHECK validation remain for Task/snapshots. F-065 lacks vulnerable API 24–29/OEM attack evidence. F-067/F-068 lack public legal resources, external deletion handling and signed-device/Play evidence. F-003/F-017 retain signer/OAuth/endpoint/device gates, and F-013 requires production readiness wiring. Rounds 12–14 are targeted and do not extend the free-exploration zero-new-P0–P2 streak. Release-ready criteria are not met.
+The release audit remains open: 58 CONFIRMED, 2 FIXING, 0 FIXED, 1 REFUTED, 4 UNKNOWN and 20 RECHECKED. F-069/F-084/F-085 are independently rechecked after the approved repair. Production legacy-state cleanup and staged CHECK validation remain for Task/snapshots. F-065 lacks vulnerable API 24–29/OEM attack evidence. F-067/F-068 lack public legal resources, external deletion handling and signed-device/Play evidence. F-003/F-017 retain signer/OAuth/endpoint/device gates; F-013 requires production readiness wiring. Rounds 12–15 are targeted and do not extend the free-exploration zero-new-P0–P2 streak. Release-ready criteria are not met.

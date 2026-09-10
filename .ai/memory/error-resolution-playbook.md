@@ -93,6 +93,8 @@
 | `ER-20260909-004` | `VERIFIED` | Windows setup, Microsoft OpenJDK, SHA-256 | 추정한 checksum URL suffix 때문에 배포본 hash 검증이 실패함 |
 | `ER-20260909-005` | `VERIFIED` | Windows Metro, FallbackWatcher, ENOENT, CMakeTmp | native build의 임시 폴더 삭제로 Metro가 종료됨 |
 | `ER-20260909-006` | `VERIFIED` | Windows MSIX, Docker Desktop, AppData virtualization, AF_UNIX, 1920 | 명령 환경에만 보이는 Docker 소켓과 설치 정보 때문에 엔진이 시작되지 않음 |
+| `ER-20260910-001` | `VERIFIED` | Redis, ranking generation, marker, partial loss | 사용자 hash가 남아도 목록 유실을 [] cache hit로 반환 |
+| `ER-20260910-002` | `VERIFIED` | Jest, Date, PostgreSQL/Redis integration | 고정 fixture와 실행일 불일치로 DAILY rank assertion 실패 |
 | `ER-20260809-001` | `VERIFIED` | historical learning site, source exposure | exact path·reason 집합으로 검토 범위를 제한 |
 | `ER-20260809-002` | `VERIFIED` | historical learning site, fixture scanner | visible fixture token과 파일명 오탐 분리 |
 | `ER-20260809-003` | `VERIFIED` | historical learning site, CSS overflow | 긴 path/hash의 반응형 줄바꿈 |
@@ -1499,6 +1501,34 @@
 - 적용 불가 또는 잔여 위험: source code pane처럼 내부 가로 스크롤이 의도된 영역은 document overflow와 구분해 별도 scroll container로 유지한다.
 - 근거: [Site CSS](../../tools/learning-site/assets/site.css), [Style tests](../../tools/learning-site/tests/style.test.mjs), [QA report](../../learning-site/qa-report.md)
 - `lastVerifiedAt`: `2026-08-09`
+
+### ER-20260910-001 — Redis 목록 유실과 정상 빈 projection 구별
+
+- `resolutionId`: `ER-20260910-001`
+- `status`: `VERIFIED`
+- 증상/signature: complete marker의 entryCount=3과 entries hash 3행이 남아 있으나 leaderboard list가 사라지면 cache/service가 []를 성공 반환한다.
+- 적용 조건: immutable generation의 완료 표식과 별도 list/hash를 사용하며 빈 배열을 truthy cache hit로 취급하는 ranking reader.
+- root cause: marker 존재만 확인하고 기대 목록 개수를 읽지 않아, Redis LRANGE의 missing-key 빈 결과와 정상 0명 projection을 구별하지 못했다.
+- 해결 절차: 유효한 비음수 safe integer entryCount를 읽고 실제 목록 길이를 min(limit, entryCount)와 비교한다. 부재·불일치·파싱 실패는 null miss로 기존 recovery/fallback에 넘기며 진짜 0명은 []로 보존한다.
+- 검증: unit RED 7실패/4통과 → 수정 후 11/11; Backend 328/E2E 2 통과. 실제 PostgreSQL/Redis 두 날짜에서 missing/truncated/invalid-marker fallback 및 정상 empty를 포함한 12/12 통과.
+- 재발 방지/금지: 모든 []를 실패로 바꾸거나 marker의 존재만으로 완전성을 가정하지 않는다. 요청 limit와 전체 population 차이를 반영한다.
+- 잔여 위험: 자연 eviction 빈도·정확한 30초 retirement reader 중단 순서는 미실행. 추가 marker GET과 반복 fallback의 운영 비용은 측정 필요.
+- 근거: [reader](../../DSM_Back/src/rankings/ranking-cache.service.ts), [unit](../../DSM_Back/src/rankings/ranking-cache.service.spec.ts), [수정 보고서](../audits/20260817-release-audit-full-project/2026-09-10-ranking-fix.md)
+- `lastVerifiedAt`: `2026-09-10`
+
+### ER-20260910-002 — 실제 서비스 integration의 fixture/Date 정렬
+
+- `resolutionId`: `ER-20260910-002`
+- `status`: `VERIFIED`
+- 증상/signature: 고정 2026-09-08 fixture의 DAILY rank 3을 기대하지만 09-10 실행의 올바른 현재 날짜 조회는 rank 1을 반환해 전용 integration이 실패한다.
+- 적용 조건: projection에는 고정 reference를 전달하지만 공개 service는 new Date()를 쓰는 실제 PostgreSQL/Redis Jest test.
+- root cause: fixture와 공개 service clock이 달랐다. 제품 날짜 계산 오류가 아니며 Prisma $disconnect()만으로 재접속을 막을 수도 없다.
+- 해결 절차: Date만 fixture reference에 고정하고 socket/timer/monotonic clock은 실제 동작을 유지한다. 상대 날짜 fixture를 두 시점에 실행하고 teardown 첫 단계에 실제 Date를 복원한다. Cache-only 주장은 현재 모든 fallback DB read spy로 보강한다.
+- 검증: 09-08 정오와 09-15 UTC 자정 matrix 12/12; 날짜별 6개 정상 cache call의 DB read 0. 변경 후 spec typecheck·lint·format 통과.
+- 재발 방지/금지: 현재 날짜의 정상 응답을 과거 fixture 기대값에 맞추도록 제품 코드를 바꾸지 않는다. 네트워크 timer까지 fake하거나 $disconnect()만으로 DB-free라고 주장하지 않는다.
+- 잔여 위험: 운영 clock shift·managed failover를 검증한 것은 아니다.
+- 근거: [integration spec](../../DSM_Back/test/ranking-projection.pg-redis-spec.ts), [수정 보고서](../audits/20260817-release-audit-full-project/2026-09-10-ranking-fix.md)
+- `lastVerifiedAt`: `2026-09-10`
 
 ## 새 record 템플릿
 

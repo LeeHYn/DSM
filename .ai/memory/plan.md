@@ -1,5 +1,15 @@
 # DSM 실행 계획 — 2026-09-10
 
+## F-084/F-085 수정과 F-069 재종결
+
+- 사용자 `수정 진행해`를 직전 권고한 F-084 캐시 목록 유실과 F-085 날짜 의존 테스트 수정·검증·main 게시 승인으로 적용한다. 기준 main@61ce21e, main 단일 branch를 유지한다.
+- 설계: reader가 complete marker의 유효한 entryCount와 요청 limit에 따른 기대 목록 길이를 확인한다. 정상 0명만 []로 반환하며 누락·잘림·잘못된 marker는 null cache miss로 기존 bounded refresh/DB fallback에 전달한다. 공개 API·cache format·dependency·schema는 바꾸지 않는다. 원인과 실제 Redis 재현은 Round 14 보고서에 있으며 관련 playbook에 동일 원인 기록은 없다.
+- M1: missing/truncated list·marker·정상 빈 projection 회귀 테스트를 먼저 실패시킨다. M2: reader 최소 수정, integration 시계를 fixture에 고정하고 DB query spy로 cache-only를 입증한다. M3: unit/E2E·build/type/lint와 격리 PostgreSQL/Redis 및 날짜별 통합 검증을 수행한다. M4: verification-workflow의 P2 데이터 회귀 종결 규칙에 따라 독립 reviewer 두 명을 배정하고 F-069/F-084/F-085를 재검증, memory·audit 동기화 후 main 게시한다.
+- 제품 exact writable allowlist: `DSM_Back/src/rankings/ranking-cache.service.ts`, 새 `DSM_Back/src/rankings/ranking-cache.service.spec.ts`, `DSM_Back/test/ranking-projection.pg-redis-spec.ts`. 한 단계 1~2개 파일씩 편집한다. 메인만 구현·DB·원장을 수정하며 reviewer는 none이다. 새 기능·운영 DB·Android F-065·다른 finding 수정은 포함하지 않는다.
+- 기록 exact allowlist: `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, `.ai/memory/README.md`, `.ai/memory/error-resolution-playbook.md`, `.ai/audits/20260817-release-audit-full-project/findings.jsonl`, `.ai/audits/20260817-release-audit-full-project/README.md`, 새 `.ai/audits/20260817-release-audit-full-project/2026-09-10-ranking-fix.md`. 과거 Round 14 보고서는 보존한다.
+- 임시 exact paths: `.local/ranking-fix.ps1`, `.local/ranking-fix-ledger.cjs`, `.local/ranking-fix-verify.cjs`, `.local/ranking-fix-review-input.json`, `.local/ranking-fix-results.json`, `.local/ranking-fix-jest.json`, `.local/logs/ranking-fix-red.log`, `ranking-fix-unit.log`, `ranking-fix-static.log`, `ranking-fix-pg.log`, `ranking-fix-e2e.log`(로그는 모두 `.local/logs/` 아래). Jest cache는 ignored 이번 검증 전용 위치다. `dsm-ranking-fix-pg-20260910`/`dsm-ranking-fix-redis-20260910`만 ownership label 확인 후 생성·제거하고 기존 dev 서비스는 유지한다.
+- 종결 결과: marker/count 길이 검증과 두 날짜 fixture를 구현하고 unit328/E2E2·정적 gate·실제 PG/Redis12를 통과했다. 두 독립 reviewer의 F-069/F-084/F-085 RECHECKED를 원장에 반영했다. 임시 서비스 정리와 무관82행 보존을 확인했으며 운영·구형 Android gate는 유지한다.
+
 ## 수정 11건 독립 재검증 — 2026-09-10
 
 - 사용자 선택 `수정된 항목의 독립 검증 (추천)`을 아래 검증·기록·main 게시의 실행 승인으로 적용한다. 기준은 `main@2da4817b27d8359649e38e0e37ccb73d05979b91`이며 제품 수정은 포함하지 않는다.
@@ -72,13 +82,13 @@
 
 ## Canonical audit
 
-- F-001~F-085, 85건: 61 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 17 RECHECKED / 4 UNKNOWN. Round 14 상세 근거는 `.ai/audits/20260817-release-audit-full-project/2026-09-10-fix-recheck.md`다.
+- F-001~F-085, 85건: 58 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 20 RECHECKED / 4 UNKNOWN. 현재 Round 15 수정 근거는 `.ai/audits/20260817-release-audit-full-project/2026-09-10-ranking-fix.md`; 이전 Round 14 실패 기록은 별도 보고서로 보존한다.
 - F-012는 사용자·period·UTC 날짜당 immutable 1행을 두 독립 reviewer와 fresh/legacy PostgreSQL 검증으로 RECHECKED 처리했다. Production legacy 분류·backfill·중복 해소·CHECK validation은 남는다.
 - F-007/F-008/F-009는 null·completion·interval 계약을 두 독립 reviewer가 RECHECKED 판정했다. Legacy 상태 정리·Task CHECK validation은 운영 gate다.
 - F-001/F-002는 server-first logout과 access sid-family 폐기를 두 독립 reviewer가 RECHECKED 판정했다. 실제 PostgreSQL 및 동시 refresh/logout 10회가 통과했고 운영 guard 지연·가용성은 남는다.
 - F-011/F-029/F-030은 cache·DB fallback tie·전체 사용자·UTC reference 계약을 두 독립 reviewer가 RECHECKED 판정했다. 별도 partial-cache 회귀는 F-084다.
 - F-065는 source·merged·packaged manifest 설정을 확인했으나 취약한 API 24~29 공격·OEM 증거가 없어 독립 reviewer UNKNOWN으로 전이했다.
-- F-069는 cache·batch 부재 자체는 해소됐으나 비어 있지 않은 generation의 목록 유실 후 [] 성공 반환 회귀가 재현돼 두 reviewer FAILED, CONFIRMED 복귀다. 새 원인 F-084/P2와 날짜 의존 integration F-085/P3는 독립 반박 2건씩 거쳐 CONFIRMED다. 제품은 미수정이다.
+- F-069/F-084/F-085는 사용자 승인 후 marker/count 기반 cache miss 처리·회귀 테스트·두 날짜 integration으로 수정했다. 두 독립 reviewer가 모두 RECHECKED 판정했으며 Backend 328/E2E 2/실제 PG·Redis 12와 정적 gate가 통과했다. F-069 운영 capacity/latency/failover gate는 남는다.
 - F-067/F-068은 코드 검증을 마쳤으나 실제 privacy/deletion URL·외부 처리·signed device·Play Console 증거가 없어 FIXING이다.
 - UNKNOWN은 F-003/F-013/F-017/F-065이며 signer·production OAuth·readiness·signed-device 및 구형 Android 공격 증거가 필요하다. F-066은 Android-only 확정으로 REFUTED다.
 - Release-ready가 아니다.
@@ -101,7 +111,7 @@
 
 ## 후속 실행
 
-1. F-084 캐시 완전성 처리·회귀 테스트와 F-085 날짜 독립 integration을 별도 제품 수정 계획으로 진행하고 F-069를 다시 독립 검증한다. F-008/F-009/F-012 운영 legacy scan·정리·CHECK validation은 별도다.
+1. 남은 CONFIRMED P2의 우선순위에 따라 F-014 production migration 실행 경로 등을 별도 계획으로 검토한다. F-008/F-009/F-012 운영 legacy scan·정리·CHECK validation도 별도 gate다.
 2. F-069 운영 cardinality·capacity·latency·failover 증거를 확보한다.
 3. F-067/F-068 공개 URL·외부 삭제·Play 증거를 확보하고 남은 P2→P3를 진행한다.
 

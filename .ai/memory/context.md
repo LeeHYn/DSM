@@ -1,6 +1,14 @@
 # DSM 현재 맥락 — 2026-09-10
 
-## 수정 11건 독립 검증 — 현재 결과
+## 랭킹 수정 — 현재 결과
+
+- 사용자 `수정 진행해`에 따라 main@61ce21e에서 Backend reader·unit spec·PG/Redis spec 3개 파일을 수정했다. Marker entryCount와 min(limit,count) 목록 길이를 확인해 손상은 null/fallback, 정상 empty는 []로 처리한다. Redis 저장 형식·공개 API·schema·dependency·Front·Android는 보존했다.
+- RED 7실패/4통과 → cache unit11 통과, 전체 Backend328/E2E2·build/source+spec type/full lint/format 통과. 최종 09-08정오·09-15자정 상대 fixture matrix12/12, 날짜별 cache read6건 DB read0, 손상3종 실제 DB fallback 복구를 확인했다. Date만 고정하고 teardown 시작에 복원한다.
+- Round15 두 독립 reviewer가 F-069/F-084/F-085 전부 RECHECKED, 신규 P0/P1 없음으로 일치했다. Owned PG/Redis 두 컨테이너를 제거했고 기존 dev 서비스는 유지했다. 해법은 ER-20260910-001/002에 기록했다.
+- 상세 판정·검증·미실행 운영 gate·CCTV는 `.ai/audits/20260817-release-audit-full-project/2026-09-10-ranking-fix.md`다. 과거 Round14 실패 기록은 그대로 보존한다.
+
+
+## 이전 Round 14 독립 검증 결과
 
 - 사용자 선택에 따라 targeted Round 14를 main@2da4817에서 수행했다. 두 독립 reviewer의 P2 판정은 모두 9 RECHECKED / F-069 FAILED로 일치했고 Android reviewer는 F-065 UNKNOWN이다. 제품 변경은 없다.
 - Fresh Backend 317·Front 229·E2E 2, Auth PostgreSQL 1, Task fresh/legacy 3씩, Snapshot fresh/legacy 3씩, refresh/logout 동시 호출 10회와 실제 PostgreSQL 정지 상태의 현재 날짜 cache read 6건을 검증했다.
@@ -42,10 +50,10 @@
 
 ## Canonical audit 상태
 
-- F-001~F-085, 85건: `61 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 17 RECHECKED / 4 UNKNOWN / 0 VALIDATING / 0 RECHECKING`.
-- Ledger는 392,514 bytes, SHA-256 `81F794633531E59D263B888F393B3A0D50AB1CE09EFE1E0E7C6800DB403F1273`다. Draft 2020-12 schema 85행·UTF-8/LF·연속 ID·fingerprint 고유성/basis hash·연속 status history 검증을 통과했다. 무관 기존 72행 원문과 재검증 11건의 과거 history/fix/validation/evidence를 보존했다.
-- `RECHECKED`: F-001/F-002/F-005/F-006/F-007/F-008/F-009/F-011/F-012/F-016/F-025/F-029/F-030/F-035/F-039/F-040/F-083. `UNKNOWN`: F-003/F-013/F-017/F-065. `REFUTED`: F-066. `FIXING`: F-067/F-068. `FIXED`: 없음.
-- Round 14 독립 검증에서 9건 종결, F-069 회귀로 CONFIRMED 복귀, F-065 증거 부족 UNKNOWN. 신규 F-084/P2(부분 캐시 유실의 false-empty)와 F-085/P3(고정 날짜 integration)는 finder와 분리된 두 reviewer의 SURVIVED로 CONFIRMED다.
+- F-001~F-085, 85건: `58 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 20 RECHECKED / 4 UNKNOWN / 0 VALIDATING / 0 RECHECKING`.
+- Ledger는 409,173 bytes, SHA-256 `1EF86022FE64F9A3F78270CA4826E676F2AA7C839704F6BFBBBEB0535CAE46E5`다. Draft 2020-12 schema 85행·UTF-8/LF·연속 ID·fingerprint·status history를 검증했다. 이번 수정과 무관한 82행과 관련 3건의 과거 history·원 condition/evidence/validation을 보존했다.
+- `RECHECKED`: F-001/F-002/F-005/F-006/F-007/F-008/F-009/F-011/F-012/F-016/F-025/F-029/F-030/F-035/F-039/F-040/F-069/F-083/F-084/F-085. `UNKNOWN`: F-003/F-013/F-017/F-065. `REFUTED`: F-066. `FIXING`: F-067/F-068. `FIXED`: 없음.
+- Round 14의 F-069 회귀 복귀와 신규 F-084/F-085 확정 이후 사용자 승인으로 수정했다. Round 15에서 세 항목 모두 독립 RECHECKED다. F-065는 증거 부족 UNKNOWN을 유지한다.
 - main 고유 기록 보존: Round 12·13은 targeted revalidation이므로 자유 탐색 연속 조건에서 제외하며 Round 11만 zero-new-confirmed-P0~P2 1회로 계산한다.
 
 ## 구현 결정

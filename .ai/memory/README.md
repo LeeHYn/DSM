@@ -4,9 +4,9 @@
 
 | File | 역할 | Owner |
 |---|---|---|
-| `plan.md` | 22,593 | `EBD4DB45B96DBB8BD292D5306FF37102BFC1BE26283CACE774654AF0F1368A41` |
-| `context.md` | 14,979 | `9C0964EC3D0E1BFAD04BCC791594011CDBCBAC410BA32E2E2A6CA84DF93C60D7` |
-| `checklist.md` | 8,943 | `1F8F6F98AFB1AF8434C3716FBE14CA8E64A2606272C473E00A66FCBFC061F588` |
+| `plan.md` | 25,604 | `DABC0CBB92E0E59DB474C688A1D187BA9BD60B211425B573B20EC72D86C0EA11` |
+| `context.md` | 16,046 | `21294397A40A6451ADA3C8A6E96ABF01230C88155B847E477B473EDCB405F74D` |
+| `checklist.md` | 9,439 | `473DA763BEB8A91B9AE71F60A706E6E2AF7F4CDE136B98A43529617B5BCA4773` |
 
 - 위 3개만 active memory다. 이 README는 routing과 byte/hash ledger다.
 - 현재 PC는 `D:\DSM/main`이며 merge `9e33031`이 원격 main에 반영돼 있다. 548 tests·정적 gate·Android debug와 Docker·DB·API 검증을 마쳤다. 2026-09-10 Computer Use에서 정상 설치본의 약관·온보딩 차단 없는 대시보드를 확인하고 PostgreSQL/Redis healthy·migration 8개 up-to-date·API HTTP 200을 재검증해 세팅 확인을 마쳤다. 소켓 원본 삭제와 공식 per-user 설치 복구 이력, 현재 실행 상태는 active 3을 따른다.
@@ -22,8 +22,8 @@
 | `context.md` | 13,595 | `1CF3C6B876B72C46FCE07057E23AEF487585F3A7C1404E0038F943A03EC8F7B3` |
 | `checklist.md` | 8,134 | `D1F87C497DC60225E42C6E859E7D323B7396C52135E53FB236FBE022E73D62B6` |
 
-- Active 3 합계: 46,515 bytes.
-- 이전 압축 snapshot 16,844 bytes에서 현재 PC 세팅·main 통합·Round 14 독립 검증의 현재 상태와 외부 gate를 추가했다. 해시는 strict UTF-8/LF 파일 bytes 기준이며 repository-local core.autocrlf=input으로 보존한다.
+- Active 3 합계: 51,089 bytes.
+- 이전 압축 snapshot 16,844 bytes에서 현재 PC 세팅·main 통합·Round 14 검증·Round 15 랭킹 수정의 현재 상태와 외부 gate를 추가했다. 해시는 strict UTF-8/LF 파일 bytes 기준이며 repository-local core.autocrlf=input으로 보존한다.
 - F-012와 이전 PC checkpoint를 보존했다. 현재 PC 실행 도우미는 `D:\DSM\.local`, 상세 일반 절차는 tracked setup guide에 있다.
 
 ## Recovery 정책

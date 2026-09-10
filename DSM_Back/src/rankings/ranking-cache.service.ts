@@ -158,8 +158,30 @@ export class RankingCacheService implements OnModuleInit, OnModuleDestroy {
         return null;
       }
 
+      const rawMarker = await client.get(
+        this.markerKey(period, reference, generation),
+      );
+      if (!rawMarker) {
+        return null;
+      }
+      const marker: unknown = JSON.parse(rawMarker);
+      if (typeof marker !== 'object' || marker === null) {
+        return null;
+      }
+      const entryCount = (marker as { entryCount?: unknown }).entryCount;
+      if (
+        typeof entryCount !== 'number' ||
+        !Number.isSafeInteger(entryCount) ||
+        entryCount < 0
+      ) {
+        return null;
+      }
+
       const leaderboardKey = this.leaderboardKey(period, reference, generation);
       const userIds = await client.lRange(leaderboardKey, 0, limit - 1);
+      if (userIds.length !== Math.min(limit, entryCount)) {
+        return null;
+      }
       if (userIds.length === 0) {
         return [];
       }

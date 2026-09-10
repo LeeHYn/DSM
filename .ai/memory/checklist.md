@@ -2,6 +2,13 @@
 
 표기: [x] 완료, [/] 진행 중, [ ] 미완료·외부 gate.
 
+## 랭킹 캐시·통합 테스트 수정
+
+- [x] 사용자 수정 승인, F-069/F-084/F-085 범위와 최소 설계 기록.
+- [x] RED 7실패/4통과 → cache unit11통과, marker/length 기반 reader와 Date-only 두 날짜 integration 수정.
+- [x] Backend328/E2E2·build/type/lint/format·격리 PostgreSQL/Redis 두 날짜12/12 통과, 임시 컨테이너 정리.
+- [x] 두 독립 reviewer F-069/F-084/F-085 RECHECKED; 원장·memory/hash·상세 보고를 main 게시 범위에 동기화.
+
 ## 수정 11건 독립 재검증 — 2026-09-10
 
 - [x] 사용자 독립 검증 선택과 main 기준·정확한 쓰기 범위 기록.
@@ -92,7 +99,7 @@
 - [ ] F-007/F-008/F-009 RECHECKED 후 F-008/F-009 legacy row scan·정정과 F-009 CHECK validation.
 - [ ] F-012 legacy snapshot 분류·backfill·중복 정책과 staged CHECK validation.
 - [x] F-011/F-029/F-030 구현자와 독립된 fix-recheck.
-- [ ] F-069 CONFIRMED 복귀: F-084 부분 캐시 유실 회귀를 수정한 뒤 재검증. F-085 날짜 의존 integration도 수정 필요.
+- [x] F-069/F-084/F-085 수정 및 두 독립 reviewer 재검증 완료. 운영 capacity/failover/latency gate는 아래 항목으로 유지.
 - [ ] F-069 실제 운영 cardinality·capacity·managed Redis failover·latency 증거.
 - [ ] F-067/F-068 공개 privacy/deletion URL·외부 처리·signed-device·Play Console/Data safety 증거.
 - [ ] F-003/F-017 signer·production OAuth·signed artifact/device와 F-013 readiness mapping.
