@@ -1,4 +1,14 @@
-# DSM 현재 맥락 — 2026-09-10
+# DSM 현재 맥락 — 2026-09-11
+
+## 구형 Android·운영 모사 검증 — 현재 결과
+
+- 사용자 요청과 `운영 환경이 없다`는 답변에 따라 실제 production 대신 격리 검증을 수행했다. 제품 baseline은 main@07aaa35이며 Backend/Front 소스·dependency·schema·APK를 변경하지 않았다.
+- 09-11 AOSP default x86_64 API24~29 여섯 이미지에서 동일 debug APK의 로그인 화면·초기 JS/PID·task 경로를 검증했다. 기본 affinity native control은 probe와 같은 task, DSM은 별도 task였다. 직접 Back 후 control→probe/DSM→Launcher, 재실행 뒤 Recents 화면에서 MAIN/LAUNCHER intent 재진입 시 task 유지가 모두 확인됐다. Back으로 종료하기 전 최초 task와 재실행 task가 같다는 주장은 하지 않는다.
+- API별 보안 패치 속성은 24=2017-06-05, 25=2018-01-01, 26=2018-04-05, 27=2018-01-05, 28=2018-08-05, 29=2019-09-05다. 실제 OEM·전체 exploit 변형·Recents 카드 탭·signed release·OAuth return은 미검증이다. F-065 UNKNOWN은 유지하고 보충 runtime 증거만 추가했다. 전체 85건 상태는 58 CONFIRMED/2 FIXING/1 REFUTED/20 RECHECKED/4 UNKNOWN으로 유지된다.
+- 09-10 격리 PG17/Redis8에서 50,000 User/350,000 DailyScore benchmark를 수행했다. 기간별 projection 10표본 최대 DAILY 799.065/WEEKLY 1029.727/TOTAL 786.985ms, TOTAL cache TOP100 p99=17.046ms/개인=5.068ms다. 동시성 25·종류별 1000회이며 인증 HTTP/SLO 수치가 아니다. Generation key 9→18→31초 후 9를 확인했다.
+- 장애·복구 16관찰: PG 중지 warm-cache 서비스 6조회 DB query 0이지만 보호 HTTP는 500, health는 200/configured true였다. Redis 중지는 DB fallback 6조회 일치/HTTP 200, 양쪽 복구 후 같은 인스턴스에서 정상 결과와 다시 cache query 0을 확인했다. Fresh task 2/snapshot 3은 검사 이상 0, legacy는 역전 interval 1·completion 모순 1·null bucket 2·동일 UTC일 중복 1을 검출했다. NOT VALID CHECK 2개는 false를 유지한다. 실제 운영 readiness/migration/backfill/managed failover 검증은 남아 있다.
+- task 컨테이너는 09-10 제거했고 당시 기존 개발 PG/Redis healthy를 확인했다. 09-11 재개 시 Docker engine/Backend 3000은 정지 상태였으며 이를 변경하지 않았다. task emulator·Metro·ADB는 09-11 종료했고 SDK/AVD와 합성 실험 자료는 `.local`에 보존했다. CLI의 `.env` 자동 로더 로그와 helper 실패·재실행은 숨기지 않고 기록했다.
+- 근거: `.ai/audits/20260817-release-audit-full-project/2026-09-10-android-operations-validation.md` 및 동반 `2026-09-10-operations-benchmark.json`. Backend 독립 검토의 `.env` 자동 로더 표현 정정을 반영했다. 앱 초기 PID fatal 0은 후속 모든 시나리오의 무오류를 의미하지 않는다. 신규 helper 해법은 ER-20260910-003이다.
 
 ## 랭킹 수정 — 현재 결과
 

@@ -95,6 +95,7 @@
 | `ER-20260909-006` | `VERIFIED` | Windows MSIX, Docker Desktop, AppData virtualization, AF_UNIX, 1920 | 명령 환경에만 보이는 Docker 소켓과 설치 정보 때문에 엔진이 시작되지 않음 |
 | `ER-20260910-001` | `VERIFIED` | Redis, ranking generation, marker, partial loss | 사용자 hash가 남아도 목록 유실을 [] cache hit로 반환 |
 | `ER-20260910-002` | `VERIFIED` | Jest, Date, PostgreSQL/Redis integration | 고정 fixture와 실행일 불일치로 DAILY rank assertion 실패 |
+| `ER-20260910-003` | `VERIFIED` | PowerShell, adb, component escape | 함수가 adb를 가리거나 device shell이 nested class 이름을 확장함 |
 | `ER-20260809-001` | `VERIFIED` | historical learning site, source exposure | exact path·reason 집합으로 검토 범위를 제한 |
 | `ER-20260809-002` | `VERIFIED` | historical learning site, fixture scanner | visible fixture token과 파일명 오탐 분리 |
 | `ER-20260809-003` | `VERIFIED` | historical learning site, CSS overflow | 긴 path/hash의 반응형 줄바꿈 |
@@ -1528,6 +1529,20 @@
 - 재발 방지/금지: 현재 날짜의 정상 응답을 과거 fixture 기대값에 맞추도록 제품 코드를 바꾸지 않는다. 네트워크 timer까지 fake하거나 $disconnect()만으로 DB-free라고 주장하지 않는다.
 - 잔여 위험: 운영 clock shift·managed failover를 검증한 것은 아니다.
 - 근거: [integration spec](../../DSM_Back/test/ranking-projection.pg-redis-spec.ts), [수정 보고서](../audits/20260817-release-audit-full-project/2026-09-10-ranking-fix.md)
+- `lastVerifiedAt`: `2026-09-10`
+
+### ER-20260910-003 — Android 검증 helper의 명령 해석 오류
+
+- `resolutionId`: `ER-20260910-003`
+- `status`: `VERIFIED`
+- 증상/signature: adb wrapper에서 같은 로그의 파일 잠금 오류가 발생하거나, nested Activity component의 `$Control`이 사라져 `Error type 3`을 출력해도 native exit code가 0으로 남는다.
+- 적용 조건: PowerShell에서 `Adb`라는 함수를 선언한 뒤 그 안에서 `adb`를 실행하거나, `adb shell am start`에 Java nested class 이름을 전달하는 로컬 검증 helper.
+- root cause: PowerShell은 대소문자를 구분하지 않아 함수가 native 명령을 가린다. 별도로 device shell은 `$`를 변수 확장한다. 종료 코드만 보는 검증은 Activity 시작 실패를 성공으로 오판할 수 있다.
+- 해결 절차: wrapper를 `Invoke-Adb`로 분리하고 `adb.exe`를 명시한다. device shell에 전달하는 component의 `$`를 escape한다. 종료 코드와 명령 출력의 `Error type`/`Error:`를 함께 확인하고 최종 task dump의 정확한 component·task ID를 assertion한다.
+- 검증: 실패 원문과 첫 API29 산출물을 보존했다. 수정 후 API29에서 probe Activity가 실제 실행됐고 control과 같은 task 11, DSM은 task 13/probe 12로 분리됨을 확인했다. 제품 코드는 수정하지 않았다.
+- 재발 방지/금지: 앱 PID 존재나 launcher 성공만으로 probe 실행을 통과 처리하지 않는다. 기본 affinity 대조군의 양성 관찰과 DSM의 별도 task를 각각 확인한다.
+- 잔여 위험: helper 명령 실행 신뢰성에 대한 해결이며 모든 task-routing exploit 또는 OEM 보안을 증명하지 않는다. Recents/Back 전환도 버전별로 확인한다.
+- 근거: [검증 보고서](../audits/20260817-release-audit-full-project/2026-09-10-android-operations-validation.md)
 - `lastVerifiedAt`: `2026-09-10`
 
 ## 새 record 템플릿

@@ -1,9 +1,9 @@
-# Full Project Release Audit — 2026-09-10 current state
+# Full Project Release Audit — 2026-09-11 current state
 
 - Audit ID: `20260817-release-audit-full-project`
 - Mode: `release-audit`
 - Authoritative checkout: `D:\DSM`
-- Current verification baseline: `main@61ce21e628e30477462effae567db26bcd8a92e5`
+- Current verification baseline: `main@07aaa3585e532fb834a1feaf66dca46e01fd4073`
 - Canonical ledger: `findings.jsonl`
 - Mutation boundary: the approved F-005 implementation spans seventeen Front source/test paths; F-083 spans eleven Backend/Front paths with overlap in Product code; F-040 changed one Backend integration-test block and F-039 added one test-local timeout. F-035 handoff committed exactly five Android release paths in local commit `d7400bf`. Round 12 revalidated four UNKNOWN findings, and Round 13 refuted F-066 after the user confirmed Android-only. F-067/F-068 add account deletion and legal-link gates while public URLs remain undetermined. F-069 changed fifteen Backend paths plus one audit artifact and was published in `c3205df`. F-065 changes only the main Android manifest and audit/memory records. The F-011/F-029/F-030 follow-up changes five existing ranking source/test paths to make the bounded DB fallback use the same window projection and stable UTC reference. The combined F-001/F-002 closure changes twenty Backend/Front source and test paths, reuses the existing refresh-family schema and adds one disposable PostgreSQL integration specification. F-007/F-008/F-009 change four existing Task source/test paths and add one staged temporal CHECK migration plus one PostgreSQL specification; F-008 product logic was already shipped in `e2bda53`. F-012 changes three existing ranking service/schema paths and adds one staged snapshot migration plus one PostgreSQL specification; the public controller, Front, Android, dependencies and existing migrations remain unchanged.
 
@@ -17,6 +17,8 @@
 - Recovery used bounded read-only inventory, dedupe and verification tasks, followed by main-agent-only ledger edits.
 
 ## Current canonical state
+
+[Supplemental Android and isolated operations validation, 2026-09-10–11](2026-09-10-android-operations-validation.md) adds runtime evidence to F-065 while retaining UNKNOWN. All status counts and prior histories are unchanged; 84 unrelated ledger rows are preserved verbatim. The user confirmed no production environment exists. This supplemental run is not an additional free-exploration round or a release closure.
 
 The ledger contains 85 findings. Targeted Round 14 rechecked eleven fixes and discovered F-084/P2 and F-085/P3. The user then authorized repair: Round 15 fixed the cache regression and calendar-dependent integration, and two independent reviewers returned RECHECKED for F-069/F-084/F-085. [Current repair and verification](2026-09-10-ranking-fix.md); [preserved Round 14 failures](2026-09-10-fix-recheck.md).
 
@@ -36,8 +38,8 @@ The ledger contains 85 findings. Targeted Round 14 rechecked eleven fixes and di
 | `P2` | 54 |
 | `P3` | 21 |
 
-- Ledger bytes: 409,173.
-- Ledger SHA-256: `1EF86022FE64F9A3F78270CA4826E676F2AA7C839704F6BFBBBEB0535CAE46E5`.
+- Ledger bytes: 410,001.
+- Ledger SHA-256: `C9E0D3E6E94F80E1D4D10C7B5B5FA841A10D79884F4FDB848953A051A381EE64`.
 - IDs are contiguous from F-001 through F-085.
 - Finding IDs and fingerprint values are unique.
 - Every fingerprint value equals SHA-256 of its recorded basis.

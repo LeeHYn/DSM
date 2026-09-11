@@ -1,6 +1,14 @@
-# DSM 공정표 — 2026-09-10
+# DSM 공정표 — 2026-09-11
 
 표기: [x] 완료, [/] 진행 중, [ ] 미완료·외부 gate.
+
+## 구형 Android·운영 환경 검증
+
+- [x] 현재 APK/SDK·문서·운영 연결 부재 확인, 운영 URL/플랫폼 질문과 검증 범위 기록.
+- [x] API24~29 여섯 이미지에서 로그인 UI·초기 JS/PID·affinity 대조·직접 Back·Recents→MAIN intent 재진입 통과. Task emulator·Metro·ADB 종료.
+- [x] 운영 환경 부재 확인. 격리 5만 사용자 benchmark·장애/복구 16관찰·fresh/legacy 무결성 scan 완료, task 컨테이너 정리·기존 개발 서비스 보존.
+- [x] Backend·Android 독립 증거 검토와 한계 기록. F-065 UNKNOWN 및 기존 상태 이력 유지, audit와 memory를 main 게시 대상으로 동기화.
+- [ ] 실제 OEM/서명 release/OAuth·전체 exploit 변형·운영 환경 검증은 해당 환경 준비 후 수행.
 
 ## 랭킹 캐시·통합 테스트 수정
 

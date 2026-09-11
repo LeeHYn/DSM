@@ -1,4 +1,18 @@
-# DSM 실행 계획 — 2026-09-10
+# DSM 실행 계획 — 2026-09-11
+
+## 구형 Android·운영 환경 검증
+
+- 사용자 `구형 Android·운영 환경 검증 진행해`를 검증 환경 준비·격리 실험·결과 기록의 승인으로 적용한다. 기준 main@07aaa35. 사용자가 `아직 운영 환경이 없다`고 확인했다. 운영 검증은 격리된 모사 실험으로 수행하며 실제 production 통과로 표시하지 않는다.
+- M1: 공식 Android 문서·SDK image/patch·기기 및 운영 배포 연결 증거를 수집한다. M2: API24~29 AOSP x86_64 emulator에서 현재 debug APK의 시작·task stack·launcher/recents와 credential 없는 표시 전용 affinity probe를 실행한다. OS patch와 exploit-positive control을 구분하며 실패한 공격만으로 취약성이 없다고 결론내리지 않는다. M3: 격리 PostgreSQL/Redis에서 현재 ranking benchmark·서비스 장애/복구·schema/legacy scan을 수행하고 실제 운영 증거와 구분한다. M4: 증거 충분성 독립 검토, memory·audit/report 동기화 및 main 기록 게시.
+- 독립 Android/Backend 환경은 `dispatching-parallel-agents`의 영역별 위임 지침을 적용한다. 메인이 Android와 실제 실험을 수행하고 investigator는 Backend의 운영 모사 계약·장애 판정·schema scan을 읽기 전용으로 조사한다. investigator writable allowlist는 none이다. backend-developer는 DSM_Back 외 helper 쓰기를 허용하지 않으므로 사용하지 않는다. 원장·memory와 local helper는 메인만 수정한다. 제품 소스·manifest·schema·migration·dependency와 실제 env/key는 수정하지 않는다.
+- Tracked exact writable allowlist: `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, `.ai/memory/README.md`, `.ai/memory/error-resolution-playbook.md`, `.ai/audits/20260817-release-audit-full-project/findings.jsonl`, `.ai/audits/20260817-release-audit-full-project/README.md`, 새 `.ai/audits/20260817-release-audit-full-project/2026-09-10-android-operations-validation.md`, `.ai/audits/20260817-release-audit-full-project/2026-09-10-operations-benchmark.json`.
+- Ignored main helper exact paths: `.local/android-old-validation.ps1`, `.local/android-old-lab/ProbeActivity.java`, `.local/android-old-lab/AndroidManifest.xml`, `.local/android-old-lab/ControlActivity.java`, `.local/android-old-lab/ControlManifest.xml`, `.local/android-old-results.json`, `.local/android-operations-ledger.cjs`, `.local/android-operations-verify.cjs`, `.local/android-operations-review.json`. Lab APK/classes/dex/resources와 새 test-signing.jks는 이 source에서 생긴 isolated generated artifact이며 실제 사용자 signing key를 사용하지 않는다.
+- Runtime 설치: 기존 `.local/android-sdk`에 공식 system-images;android-24/25/26/27/28/29;default;x86_64와 필요한 tools를 추가하고 `.local/avd`에 DSM_OLD_API24~29 task AVD를 생성한다. 기존 DSM_API_36은 건드리지 않는다. Task emulator만 종료·정리하며 일반 GUI helper는 숨겨 실행한다.
+- Main Backend helper exact allowlist: `.local/ops-validation.ps1`, `.local/ops-validation.cjs`. Generated evidence exact paths: `.local/ops-validation-results.json`, `.local/ops-validation-benchmark.json`, `.local/logs/ops-validation.log`. Task containers `dsm-ops-validation-pg-20260910`/`dsm-ops-validation-redis-20260910`, 127.0.0.1:55344/56381만 사용하고 ownership 검증 후 정리한다. Synthetic auth/DB/Redis fixture만 사용하며 운영 장애·쓰기·secret 조회는 금지한다.
+- Android 로그·화면은 `.local/logs/android-old-sdk-list.log`, `android-old-install.log`, `android-old-build.log`, `android-old-api24.log`~`android-old-api29.log`, `.local/android-old-lab/api24.png`~`api29.png` 및 probe/control phase별 task dump로 저장한다. Runtime generated output은 tracked stage에서 제외한다. OEM device/Play signer·운영 backend/DB/Redis가 없으면 해당 gate는 유지한다.
+
+- 실행 결과: 09-11 최종 API24~29 여섯 버전 모두 로그인 UI·초기 PID/JS·control 같은 task/DSM 별도 task·직접 Back·Recents 화면에서 MAIN/LAUNCHER intent 재진입 검증을 통과했다. Recents 카드 탭이나 전체 StrandHogg/OEM 증거로 확대하지 않는다. 09-10 benchmark 50,000 User/350,000 DailyScore와 장애·복구 16관찰, fresh/legacy scan을 완료했다. F-065에는 보충 증거만 추가하고 UNKNOWN 및 기존 상태 이력을 유지한다.
+- 종료 경계: task 컨테이너는 09-10 label 검증 후 제거, emulator·task Metro/ADB는 09-11 종료했다. 공식 SDK 이미지·AVD·ignored 실험 산출물은 재사용용으로 보존한다. 09-11 Docker engine과 Backend listener는 없었으며 개발 서비스를 새로 시작하지 않았다. 제품 tree는 main@07aaa35와 동일하다. 상세 한계·도우미 실패 이력·독립 검토는 검증 보고서에 기록한다.
 
 ## F-084/F-085 수정과 F-069 재종결
 

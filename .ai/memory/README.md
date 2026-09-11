@@ -4,26 +4,27 @@
 
 | File | 역할 | Owner |
 |---|---|---|
-| `plan.md` | 25,604 | `DABC0CBB92E0E59DB474C688A1D187BA9BD60B211425B573B20EC72D86C0EA11` |
-| `context.md` | 16,046 | `21294397A40A6451ADA3C8A6E96ABF01230C88155B847E477B473EDCB405F74D` |
-| `checklist.md` | 9,439 | `473DA763BEB8A91B9AE71F60A706E6E2AF7F4CDE136B98A43529617B5BCA4773` |
+| `plan.md` | 계획·승인 범위 | Main agent |
+| `context.md` | 구현·검증 맥락 | Main agent |
+| `checklist.md` | 진행 상태·외부 gate | Main agent |
 
 - 위 3개만 active memory다. 이 README는 routing과 byte/hash ledger다.
+- 최신 검증: main@07aaa35 제품을 유지한 2026-09-10~11 구형 Android·운영 모사 증거를 기록했다. 상세 결과·시행착오·F-065 UNKNOWN 및 실제 운영/OEM gate는 active 3과 audit의 `2026-09-10-android-operations-validation.md`를 따른다. 아래 세팅·병합 수치는 이전 checkpoint다.
 - 현재 PC는 `D:\DSM/main`이며 merge `9e33031`이 원격 main에 반영돼 있다. 548 tests·정적 gate·Android debug와 Docker·DB·API 검증을 마쳤다. 2026-09-10 Computer Use에서 정상 설치본의 약관·온보딩 차단 없는 대시보드를 확인하고 PostgreSQL/Redis healthy·migration 8개 up-to-date·API HTTP 200을 재검증해 세팅 확인을 마쳤다. 소켓 원본 삭제와 공식 per-user 설치 복구 이력, 현재 실행 상태는 active 3을 따른다.
 - 현재 개발·제품·감사는 `main` 기준이다. 사용자 승인으로 고유 offline 자료를 보존하고 merge `35b3944`에 모든 비교 tip 이력을 연결했다. 원격 codex 5개·로컬 integration 1개 삭제 후 main 하나만 남았다. 상세 결과와 보류 기능은 active 3과 `docs/reviews/2026-09-10-branch-consolidation.md`를 따른다.
 - F-012 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213`와 외부 PC 문서 `af2ff2640b1fa27111302766baa61aada15b304d`까지 원격에 있다.
-- Canonical audit는 83건: `58 CONFIRMED / 2 FIXING / 11 FIXED / 1 REFUTED / 8 RECHECKED / 3 UNKNOWN / 0 VALIDATING`. Release-ready가 아니다.
+- Canonical audit는 85건: `58 CONFIRMED / 2 FIXING / 0 FIXED / 1 REFUTED / 20 RECHECKED / 4 UNKNOWN / 0 VALIDATING`. Release-ready가 아니다.
 
-## Current active snapshot — 2026-09-10
+## Current active snapshot — 2026-09-11
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `plan.md` | 18,466 | `A78FF285751E81B13E5FDBE3316C11B8FBA1B0AE68C109ECE7D4530EF55069BD` |
-| `context.md` | 13,595 | `1CF3C6B876B72C46FCE07057E23AEF487585F3A7C1404E0038F943A03EC8F7B3` |
-| `checklist.md` | 8,134 | `D1F87C497DC60225E42C6E859E7D323B7396C52135E53FB236FBE022E73D62B6` |
+| `plan.md` | 30,481 | `98E8F8EB15B3C6A3D322814883212047CFC45E4AA52D6F4E0285FFD8E9345412` |
+| `context.md` | 18,920 | `80A5F0694F885D9F6F89404C30343EB4268102004DA857243636F33AC4FA6C42` |
+| `checklist.md` | 10,233 | `F9295FF8E8B8A5482E71FC9E0266C2D2EA05DE121D947340C59865100CD3F052` |
 
-- Active 3 합계: 51,089 bytes.
-- 이전 압축 snapshot 16,844 bytes에서 현재 PC 세팅·main 통합·Round 14 검증·Round 15 랭킹 수정의 현재 상태와 외부 gate를 추가했다. 해시는 strict UTF-8/LF 파일 bytes 기준이며 repository-local core.autocrlf=input으로 보존한다.
+- Active 3 합계: 59,634 bytes.
+- 이전 압축 snapshot 16,844 bytes에서 현재 PC 세팅·main 통합·Round 14 검증·Round 15 랭킹 수정 및 구형 Android·운영 모사 검증의 현재 상태와 외부 gate를 추가했다. 해시는 strict UTF-8/LF 파일 bytes 기준이며 repository-local core.autocrlf=input으로 보존한다.
 - F-012와 이전 PC checkpoint를 보존했다. 현재 PC 실행 도우미는 `D:\DSM\.local`, 상세 일반 절차는 tracked setup guide에 있다.
 
 ## Recovery 정책
