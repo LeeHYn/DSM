@@ -36,4 +36,5 @@ dist/
 # AI memory compression recovery backups
 .ai/memory/*.original.md
 .ai/memory/*.failed-*
+DSM_Back/.local/
 /.superpowers/sdd/

@@ -1,121 +1,56 @@
-# DSM 공정표 — 2026-09-11
+# DSM 공정표 — 2026-09-17
 
-표기: [x] 완료, [/] 진행 중, [ ] 미완료·외부 gate.
+## 현재 게시·memory 정리
 
-## 구형 Android·운영 환경 검증
+- [x] `main`/`origin/main` 시작 기준과 전체 tracked/untracked 변경 목록 확인.
+- [x] actual secret 후보 검사. test placeholder 외 실제 credential 없음.
+- [x] Backend 43 suites/960 tests, production-start 3, build·spec typecheck·ESLint 통과.
+- [x] Front 51 suites/1,156 tests, typecheck 통과. ESLint error 0/warning 44; strict warning budget만 실패.
+- [x] 활성 memory의 과거 snapshot·중복 계획을 제거하고 현재 원장·외부 gate 중심으로 압축.
+- [/] exact 파일 stage, diff·UTF-8/LF·link/hash 검증, commit, `origin/main` push, 원격 SHA 대조.
+- [x] `DSM_Back/.local/` Jest cache는 보존하고 Git stage에서 제외.
 
-- [x] 현재 APK/SDK·문서·운영 연결 부재 확인, 운영 URL/플랫폼 질문과 검증 범위 기록.
-- [x] API24~29 여섯 이미지에서 로그인 UI·초기 JS/PID·affinity 대조·직접 Back·Recents→MAIN intent 재진입 통과. Task emulator·Metro·ADB 종료.
-- [x] 운영 환경 부재 확인. 격리 5만 사용자 benchmark·장애/복구 16관찰·fresh/legacy 무결성 scan 완료, task 컨테이너 정리·기존 개발 서비스 보존.
-- [x] Backend·Android 독립 증거 검토와 한계 기록. F-065 UNKNOWN 및 기존 상태 이력 유지, audit와 memory를 main 게시 대상으로 동기화.
-- [ ] 실제 OEM/서명 release/OAuth·전체 exploit 변형·운영 환경 검증은 해당 환경 준비 후 수행.
+## 로컬 구현·검증 완료
 
-## 랭킹 캐시·통합 테스트 수정
+- [x] Canonical92 중 83 RECHECKED, 1 REFUTED. 원래 CONFIRMED55의 로컬 처리 가능 54개 분야와 추가 F-088~F-091 종결.
+- [x] Auth/session, profile, notification, realtime, offline sync, calendar, statistics, ranking, Task 입력/동시성 방어 구현과 자동 회귀.
+- [x] API24 notification/task-affinity/process-kill receiver, API36 TalkBack task-sheet 진입·격리·Back·opener focus 복원.
+- [x] Docker migration-before-start, non-root image, liveness/readiness, DB 장애 503·복구 200.
+- [x] Render Blueprint과 local Docker image preflight. production·FCM dispatch는 외부 설정 전 비활성화.
+- [x] 감사 원장·보고서·error-resolution playbook 동기화.
 
-- [x] 사용자 수정 승인, F-069/F-084/F-085 범위와 최소 설계 기록.
-- [x] RED 7실패/4통과 → cache unit11통과, marker/length 기반 reader와 Date-only 두 날짜 integration 수정.
-- [x] Backend328/E2E2·build/type/lint/format·격리 PostgreSQL/Redis 두 날짜12/12 통과, 임시 컨테이너 정리.
-- [x] 두 독립 reviewer F-069/F-084/F-085 RECHECKED; 원장·memory/hash·상세 보고를 main 게시 범위에 동기화.
+## 외부 환경 준비
 
-## 수정 11건 독립 재검증 — 2026-09-10
+- [x] Render Free + Neon Free + Upstash Free 선택.
+- [x] `render.yaml`에 Docker context, Singapore free service, `/health/ready`, secret 전달 경계 선언.
+- [ ] Render/Neon/Upstash 계정 연결과 Dashboard secret 입력, 공개 deploy.
+- [ ] 소유 domain 또는 공개 legal URL, 개인정보·삭제 책임자와 문의 채널 확정.
+- [ ] 실제 Android/OEM 기기와 provider A/B 테스트 계정 2개 준비.
+- [ ] Play 기존 계정·초대 여부 확인. 신규 등록과 USD 25 결제는 보류.
+- [ ] upload key·Play App Signing·Web/Android OAuth·Firebase Android app와 ADC identity 구성.
+- [ ] privacy/account-deletion web resource와 실제 외부 삭제 처리 수단 게시.
 
-- [x] 사용자 독립 검증 선택과 main 기준·정확한 쓰기 범위 기록.
-- [x] Round 14: 11건 독립 검토 완료 — 9 RECHECKED, F-069 FAILED/CONFIRMED 복귀, F-065 UNKNOWN.
-- [x] Backend 317/Front 229/E2E 2·격리 DB fresh/legacy·auth 동시 10회·실제 PG 중지 cache read 6건 통과. 원 ranking fixture 실패·부분 캐시 유실 오류와 Android 미검증 증거를 보존.
-- [x] 독립 판정 병합·신규 F-084/P2와 F-085/P3 반박 검증 각 2건 완료. Schema 85행·fingerprint·이력·무관 72행 원문 보존 확인.
-- [x] 검증 서비스 정리·memory/hash·상세 보고 동기화, main 게시용 정확한 7개 tracked 경로 검증.
+## 열린 finding gate
 
-## 전체 브랜치 통합·정리 — 2026-09-10
+- [ ] F-003/F-017 UNKNOWN: 실제 signer, production OAuth/API, signed artifact cold start·link open.
+- [ ] F-013 UNKNOWN: 실제 platform에서 readiness traffic mapping, DB 장애 제외·복구, production bootstrap.
+- [ ] F-015 FIXING: actual FCM foreground/background/종료 수신과 notification lifecycle.
+- [ ] F-065 UNKNOWN: malicious-app PoC, Recents·OAuth return, signed release, 구형 Android/OEM matrix.
+- [ ] F-067/F-068 FIXING: 공개 privacy/deletion URL, 외부 요청 수단, 책임자·지원 채널, signed-device 삭제, Play Data safety.
+- [ ] F-092 UNKNOWN: 실제 provider A→B 전환 중 old engine/outbox/notification 격리.
+- [ ] 운영 공통: legacy data backfill/validate, guard/cache 성능, managed Redis failover, 다중 인스턴스, rollout/rollback.
 
-- [x] 사용자 전체 branch 비교·통합·잔여 branch 삭제 승인 확인.
-- [x] 원격 codex 5개·로컬 integration의 고유 commit·patch·파일 비교 및 독립 검토.
-- [x] main 유지 방향 보고, 오프라인 자료 83파일·3개 ER 보존, merge `35b3944`에 모든 tip 이력 통합.
-- [x] Backend 317/Front 229/E2E 2·historical 66 tests·28 source verifier 통과. 제품·audit tree 보존 확인.
-- [x] 통합 main 원격 게시 후 expected-tip 대조·보존 검증, codex 원격 5개·로컬 1개 삭제.
-- [x] main 하나·로컬/원격 일치·clean tree 확인 및 memory/hash·비교 보고서 동기화.
+## 다음 실행 순서
 
-## 세팅 재개·main 병합 — 2026-09-09
-
-- [x] 사용자 세팅 재개·병합 승인, 기존 memory와 실제 Git 상태 대조.
-- [x] MSIX 가상/실제 run 디렉터리 File ID 일치 확인, Computer Use에서 승인된 sailor-ingest.sock 1개 삭제 및 다른 3개 보존 검증.
-- [x] Explorer에서 공식 per-user 설치 복구, Docker engine 29.7.2와 CLI 정상 연결.
-- [x] PostgreSQL·Redis healthy/localhost 바인딩, migration 8개 적용·up-to-date, Redis PONG, Backend health HTTP 200.
-- [x] 2026-09-10 Computer Use에서 정상 설치본을 Explorer로 실행, 약관·온보딩 차단 없는 Containers 대시보드와 Engine running 확인.
-- [x] 2026-09-10 DB·Redis healthy/localhost·migration 8개 up-to-date·PONG 재검증, Backend PID 22108 재기동·health HTTP 200 확인.
-- [x] Backend/Front 전체 548 tests·정적 gate·Android debug 365 tasks. 로컬 DB 검증은 위 별도 항목으로 남김.
-- [x] 독립 reviewer의 main 고유 변경·충돌·병합 gate 검토 및 기존 single-branch clone 문서 수정.
-- [x] 기존 세팅 변경과 새 검증 결과 memory 동기화·commit, root README·clone 가이드 main 전환.
-- [x] main 통합·tree/ancestry 검증·원격 반영 `9e33031`, 로컬 main fast-forward와 clean tree 확인.
-
-## 현재 PC D드라이브 세팅 — 2026-09-09
-
-- [x] `D:\DSM` clone, 원격 branch와 현재 Windows 개발 문서 확인.
-- [x] 전용 Node.js 22.23.2/npm 10.9.8 다운로드·SHA-256 검증·설치.
-- [x] Backend·Frontend lockfile 기반 의존성 설치: 884/988 packages.
-- [x] 새 PC 전용 ignored 환경 파일과 `.local/env.ps1`, `dev.ps1`, `dev.cmd` 실행 도우미 준비.
-- [x] Backend 26 suites/317 tests, build, non-fixing lint, E2E 2 tests, Prisma Client generate/validate.
-- [x] Front 24 suites/229 tests, typecheck, lint 오류 0/기존 경고 30, Android Metro bundle 생성.
-- [x] JDK 17·Android SDK 36/Build Tools 36.0.0/NDK 27.1.12297006/CMake 3.22.1 및 API 36 AVD 준비.
-- [x] Android `assembleDebug`: 365 tasks, 4개 ABI, APK 생성·에뮬레이터 설치 성공.
-- [x] Windows Metro native build watcher 오류를 `.local/metro.config.cjs`로 회피, 폴더 생성·삭제 후 health 유지 및 bundle HTTP 200 검증.
-- [x] 에뮬레이터 재시작 후 cold launch, 데일리업 로그인 화면과 native runtime 오류 없음 확인.
-- [x] Docker Desktop·WSL 2.7.13.0 설치 및 Compose 구성 검증.
-- [x] WSL 기능 활성화 재부팅 및 MSIX 경로 문제 복구 후 PostgreSQL·Redis healthy, migration·API health 확인.
-- [x] 현재 검증 결과·미완료 외부 조건·실행 방법을 `.local/DSM-setup.md`와 memory에 기록. DB·API·Desktop GUI 확인은 완료했고 OAuth/실기기/release gate는 유지한다.
-
-## 완료
-
-- [x] Canonical audit F-001~F-083 구성과 strict UTF-8·schema·fingerprint·status-history 검증.
-- [x] F-005, F-006, F-016, F-025, F-035, F-039, F-040, F-083 독립 종결.
-- [x] Android-only 범위 확정과 F-066 REFUTED.
-- [x] F-067/F-068 URL 미정 범위의 account deletion·legal gate 구현 및 Backend·Front·Android 회귀.
-- [x] F-069 window projection·fenced Redis generation 구현, Backend·PostgreSQL·Redis 검증과 50,000-user benchmark 완료.
-- [x] F-069 제품·감사 `c3205dfa2e5e04524513ef8e11beba737af074e0` commit·push.
-- [x] F-065 빈 task affinity·reparenting 차단, manifest/build/lint/API 36 task smoke와 제품·감사 `24d65e4788652b611d9942e60c65b8efd0004755` 게시.
-- [x] F-011/F-029/F-030 DB fallback rank·population·UTC 계약 통일, 전체·PostgreSQL·Redis 검증과 제품·감사 `0c6031b862e9c777d2403e2e3b46c7e1d37c3a8e` 게시.
-- [x] F-001/F-002 refresh-authenticated logout·access `sid` family 검사와 Android server-first retry UX 구현.
-- [x] F-001/F-002 Backend 304·Front 229·Android 456 tasks·PostgreSQL 17.10 통합 1/1·ledger 검증 후 제품·감사 `a323dcad531e971ad792e8e9a20a47de29ab8c41` 게시.
-- [x] F-007/F-008/F-009 null·state·interval 무결성, staged CHECK와 제품·감사 `317253cff1fd938b847017697f049582720261f9` 게시.
-- [x] Active memory를 현재 결정·증거·gate 중심으로 재압축.
-
-## 현재
-
-- [x] F-001/F-002 인증 폐기 범위·결합 영향 진단과 무 migration 설계 확정.
-- [x] Backend refresh-authenticated family logout·access `sid` 활성 검사 구현과 회귀 검증.
-- [x] Android server-first logout·실패 재시도 UX 구현과 회귀 검증.
-- [x] F-001/F-002 self-review·전체 gate·canonical audit FIXED 전이.
-- [x] F-007 PATCH date `null`이 validation 0건으로 통과하는 현재 실패 재현.
-- [x] F-008 status/completedAt 동기화가 `e2bda53a`에 이미 구현됐고 focused 81/81이 통과함을 source·blame으로 확인.
-- [x] F-009 server·migration 부재와 Android full-date update 호환성 진단.
-- [x] F-007/F-009 최소 구현·`NOT VALID` CHECK·실제 PostgreSQL 검증 계획 승인.
-- [x] F-007/F-009 regression·DTO/service 방어·PostgreSQL CHECK 구현.
-- [x] Focused 91, Backend 314·e2e 2·build/type/lint/format과 PostgreSQL fresh 3/3·legacy upgrade 검증.
-- [x] F-007/F-008/F-009 audit FIXED 전이와 제품·감사 commit·push.
-- [x] F-012 공개 POST·service·schema·소비자·요구사항과 과거 deferred branch 진단.
-- [x] Focused ranking baseline 2 suites/15 tests와 반복 호출당 신규 durable row 생성 확인.
-- [x] 사용자 `ㄱ`으로 공개 API 보존형 일일 멱등화와 exact allowlist 승인.
-- [x] F-012 unit RED 4건, service·schema/migration과 PostgreSQL spec 구현.
-- [x] Focused 18, Backend 317·e2e 2·build/type/lint/format·Prisma 검증.
-- [x] PostgreSQL fresh·legacy 3/3, legacy 2행 보존과 20개 동시 호출 1 ID 검증.
-- [x] F-012 audit FIXED 전이와 제품·감사 `5642640cfbcd3b5d410f4bdbcbaeecedd106b213` commit·push.
-- [x] 외부 PC Windows guide·root/Backend 진입점·역사 handoff 경고·compose-safe example, 정적 검증과 `af2ff2640b1fa27111302766baa61aada15b304d` commit·push.
-
-## 열린 gate
-
-- [ ] F-065 UNKNOWN: API 24~29 malicious-app PoC·OEM patch matrix와 기기 회귀 증거.
-- [ ] F-001/F-002 RECHECKED 후 production guard latency·availability 관찰.
-- [ ] F-007/F-008/F-009 RECHECKED 후 F-008/F-009 legacy row scan·정정과 F-009 CHECK validation.
-- [ ] F-012 legacy snapshot 분류·backfill·중복 정책과 staged CHECK validation.
-- [x] F-011/F-029/F-030 구현자와 독립된 fix-recheck.
-- [x] F-069/F-084/F-085 수정 및 두 독립 reviewer 재검증 완료. 운영 capacity/failover/latency gate는 아래 항목으로 유지.
-- [ ] F-069 실제 운영 cardinality·capacity·managed Redis failover·latency 증거.
-- [ ] F-067/F-068 공개 privacy/deletion URL·외부 처리·signed-device·Play Console/Data safety 증거.
-- [ ] F-003/F-017 signer·production OAuth·signed artifact/device와 F-013 readiness mapping.
-- [ ] 남은 CONFIRMED finding 수정·recheck와 zero-new-confirmed-P0~P2 연속 두 자유 탐색 round.
+1. [ ] Render/Neon/Upstash 연결 후 migration과 공개 `/health`·`/health/ready` 검증.
+2. [ ] legal URL·책임자·문의 채널을 확정하고 privacy/deletion 실제 동작과 문구 대조.
+3. [ ] Play 재개 시 기존 account/초대 확인→signing→OAuth→Firebase→internal track 순서로 구성.
+4. [ ] 실제 기기·provider 계정으로 8개 gate를 실행하고 직접 증거가 생긴 finding만 전이.
+5. [ ] release 후보에서 dependency audit, OEM/rollout/rollback, production 성능과 장애 복구를 재검증.
 
 ## 유지 규칙
 
-- [x] 실제 .env, key·keystore·private Gradle property와 recovery 파일 미접근·미변경.
-- [x] F-012에서 controller/API response·Front·Android·dependency·기존 migration을 보존.
-- [x] 이전 PC에서 제품·감사는 integration branch에 게시했고 당시 root checkout은 미변경. 현재 PC는 위 main 병합 상태를 따른다.
-- [x] stage 시 git add -A 없이 exact path만 사용.
+- 현재 상태는 [context.md](./context.md), 목표·순서는 [plan.md](./plan.md), 상세 과거 증거는 연결된 감사 보고서를 따른다.
+- 로컬·합성 통과를 actual FCM/OAuth/OEM/production/Play/release 완료로 표현하지 않는다.
+- 실제 env/key/credential/keystore와 recovery `*.original.md`·`*.failed-*`는 명시적 복구 작업 외에는 읽기·수정·삭제·stage하지 않는다.
+- 오류 해결은 [error-resolution-playbook.md](./error-resolution-playbook.md)에서 환경·버전·signature가 일치하는 VERIFIED record만 재사용한다.

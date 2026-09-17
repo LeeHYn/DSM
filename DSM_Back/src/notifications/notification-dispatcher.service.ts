@@ -2,9 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, TaskStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import type { SendResponse } from 'firebase-admin/messaging';
+import type {
+  BatchResponse,
+  MulticastMessage,
+  SendResponse,
+} from 'firebase-admin/messaging';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseMessagingProvider } from './firebase-messaging.provider';
+import { MAX_ACTIVE_FCM_TOKENS } from './notifications.service';
 import {
   NOTIFICATION_DELIVERY_STATUS,
   NOTIFICATION_NONTERMINAL_STATUSES,
@@ -17,6 +22,8 @@ const MAX_DELIVERIES_PER_BATCH = 500;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const DELIVERY_LEASE_MS = 5 * 60 * 1000;
 const DELIVERY_HEARTBEAT_MS = 60 * 1000;
+const DELIVERY_SEND_DEADLINE_MS = 30 * 1000;
+const MAX_OUTSTANDING_SENDS = 2;
 const BASE_RETRY_DELAY_MS = 60 * 1000;
 const MAX_RETRY_DELAY_MS = 60 * 60 * 1000;
 const NOTIFICATION_DISPATCH_CRON_NAME = 'notification-dispatcher';
@@ -97,6 +104,8 @@ class SendStartClaimMismatchError extends Error {}
 
 @Injectable()
 export class NotificationDispatcherService {
+  private outstandingSends = 0;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly firebase: FirebaseMessagingProvider,
@@ -113,7 +122,14 @@ export class NotificationDispatcherService {
 
     const now = new Date();
     await this.recoverStaleDeliveryLeases(now);
+    await this.reconcileTerminalSchedules();
     await this.materializeDueSchedules(now);
+
+    // A timeout cannot cancel the SDK transport. Keep one spare slot so a
+    // single hung transport does not block other schedules, but bound buildup.
+    if (this.outstandingSends >= MAX_OUTSTANDING_SENDS) {
+      return;
+    }
 
     const claimed = await this.claimDueDeliveryBatch(now);
     if (claimed.length === 0) {
@@ -140,7 +156,7 @@ export class NotificationDispatcherService {
 
     let responses: SendResponse[];
     try {
-      const batchResponse = await this.firebase.sendEachForMulticast({
+      const batchResponse = await this.sendWithDeadline({
         tokens: active.map((delivery) => delivery.fcmToken.token),
         data: {
           type: 'REMINDER_SYNC',
@@ -214,9 +230,34 @@ export class NotificationDispatcherService {
     ]);
   }
 
+  private async sendWithDeadline(
+    message: MulticastMessage,
+  ): Promise<BatchResponse> {
+    this.outstandingSends += 1;
+    const transport = Promise.resolve()
+      .then(() => this.firebase.sendEachForMulticast(message))
+      .finally(() => {
+        this.outstandingSends -= 1;
+      });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(AMBIGUOUS_DELIVERY_OUTCOME_REASON)),
+        DELIVERY_SEND_DEADLINE_MS,
+      );
+    });
+    try {
+      // Late transport settlement only releases capacity; it never persists a
+      // result or retries an outcome already terminalized as UNKNOWN.
+      return await Promise.race([transport, deadline]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async recoverStaleDeliveryLeases(now: Date): Promise<void> {
     const staleBefore = new Date(now.getTime() - DELIVERY_LEASE_MS);
-    await this.prisma.notificationDelivery.updateMany({
+    const stale = await this.prisma.notificationDelivery.updateManyAndReturn({
       where: {
         status: NOTIFICATION_DELIVERY_STATUS.PROCESSING,
         processingStartedAt: { lt: staleBefore },
@@ -229,6 +270,7 @@ export class NotificationDispatcherService {
         processingStartedAt: null,
         nextAttemptAt: null,
       },
+      select: { scheduleId: true },
     });
     await this.prisma.notificationDelivery.updateMany({
       where: {
@@ -243,33 +285,66 @@ export class NotificationDispatcherService {
         nextAttemptAt: null,
       },
     });
-    await this.prisma.notificationDelivery.updateMany({
+    const orphaned = await this.prisma.notificationDelivery.updateManyAndReturn(
+      {
+        where: {
+          status: NOTIFICATION_DELIVERY_STATUS.PENDING,
+          sendStartedAt: { not: null },
+        },
+        data: {
+          status: NOTIFICATION_DELIVERY_STATUS.UNKNOWN,
+          failureReason: AMBIGUOUS_DELIVERY_OUTCOME_REASON,
+          claimId: null,
+          processingStartedAt: null,
+          nextAttemptAt: null,
+        },
+        select: { scheduleId: true },
+      },
+    );
+    const exhausted =
+      await this.prisma.notificationDelivery.updateManyAndReturn({
+        where: {
+          status: NOTIFICATION_DELIVERY_STATUS.PENDING,
+          attemptCount: { gte: MAX_DELIVERY_ATTEMPTS },
+        },
+        data: {
+          status: NOTIFICATION_DELIVERY_STATUS.FAILED,
+          failureReason: MAX_ATTEMPTS_FAILURE_CODE,
+          claimId: null,
+          processingStartedAt: null,
+          sendStartedAt: null,
+          nextAttemptAt: null,
+        },
+        select: { scheduleId: true },
+      });
+    const scheduleIds = [
+      ...new Set(
+        [...stale, ...orphaned, ...exhausted].map((row) => row.scheduleId),
+      ),
+    ];
+    if (scheduleIds.length > 0) {
+      await this.aggregateSchedules(scheduleIds);
+    }
+  }
+
+  private async reconcileTerminalSchedules(): Promise<void> {
+    // Terminal delivery writes can commit before aggregation fails. Rediscover
+    // the durable condition on every tick, including after a process restart.
+    const schedules = await this.prisma.notificationSchedule.findMany({
       where: {
-        status: NOTIFICATION_DELIVERY_STATUS.PENDING,
-        sendStartedAt: { not: null },
+        status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        deliveries: {
+          some: {},
+          none: { status: { in: [...NOTIFICATION_NONTERMINAL_STATUSES] } },
+        },
       },
-      data: {
-        status: NOTIFICATION_DELIVERY_STATUS.UNKNOWN,
-        failureReason: AMBIGUOUS_DELIVERY_OUTCOME_REASON,
-        claimId: null,
-        processingStartedAt: null,
-        nextAttemptAt: null,
-      },
+      select: { id: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take: MAX_SCHEDULES_MATERIALIZED_PER_TICK,
     });
-    await this.prisma.notificationDelivery.updateMany({
-      where: {
-        status: NOTIFICATION_DELIVERY_STATUS.PENDING,
-        attemptCount: { gte: MAX_DELIVERY_ATTEMPTS },
-      },
-      data: {
-        status: NOTIFICATION_DELIVERY_STATUS.FAILED,
-        failureReason: MAX_ATTEMPTS_FAILURE_CODE,
-        claimId: null,
-        processingStartedAt: null,
-        sendStartedAt: null,
-        nextAttemptAt: null,
-      },
-    });
+    if (schedules.length > 0) {
+      await this.aggregateSchedules(schedules.map((schedule) => schedule.id));
+    }
   }
 
   private async materializeDueSchedules(now: Date): Promise<void> {
@@ -341,7 +416,8 @@ export class NotificationDispatcherService {
 
         const tokens = await client.fcmToken.findMany({
           where: { userId: schedule.userId, revokedAt: null },
-          orderBy: { createdAt: 'asc' },
+          orderBy: [{ lastSeenAt: 'desc' }, { id: 'asc' }],
+          take: MAX_ACTIVE_FCM_TOKENS,
           select: { id: true, updatedAt: true },
         });
         const uniqueTokens = [
@@ -375,10 +451,10 @@ export class NotificationDispatcherService {
     }
   }
 
-  private claimDueDeliveryBatch(now: Date): Promise<ClaimedDelivery[]> {
+  private async claimDueDeliveryBatch(now: Date): Promise<ClaimedDelivery[]> {
     const claimId = randomUUID();
 
-    return this.runSerializableTransaction(async (client) => {
+    const result = await this.runSerializableTransaction(async (client) => {
       const first = await client.notificationDelivery.findFirst({
         where: {
           status: NOTIFICATION_DELIVERY_STATUS.PENDING,
@@ -390,7 +466,7 @@ export class NotificationDispatcherService {
         select: { scheduleId: true },
       });
       if (!first) {
-        return [];
+        return { claimedDeliveries: [], scheduleIds: [] };
       }
 
       const candidates = (
@@ -461,8 +537,18 @@ export class NotificationDispatcherService {
         }
       }
 
-      return claimedDeliveries;
+      return {
+        claimedDeliveries,
+        scheduleIds: [
+          ...new Set(candidates.map((candidate) => candidate.scheduleId)),
+        ],
+      };
     });
+    // Retain schedules touched by cancellation even when no delivery was claimed.
+    if (result.scheduleIds.length > 0) {
+      await this.aggregateSchedules(result.scheduleIds);
+    }
+    return result.claimedDeliveries;
   }
 
   private revalidateClaimedBatch(
@@ -666,7 +752,7 @@ export class NotificationDispatcherService {
             revokedAt: null,
             updatedAt: delivery.tokenUpdatedAt,
           },
-          data: { revokedAt: now },
+          data: { revokedAt: now, updatedAt: delivery.tokenUpdatedAt },
         });
       });
       return;

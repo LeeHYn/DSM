@@ -12,6 +12,7 @@ import {
   useDailyupPalette,
 } from '@/components/dailyup/primitives';
 import { TaskSheets } from '@/components/dailyup/task-sheets';
+import { NotificationTaskBridge } from '@/components/dailyup/notification-task-bridge';
 import { ProductProvider } from '@/features/product/product-context';
 import {
   dailyupFonts,
@@ -20,6 +21,15 @@ import {
 import HomeScreen from './index';
 import MyPageScreen from './mypage';
 import RankingScreen from './ranking';
+import { useSession } from '@/features/auth/session-context';
+import SessionRecoveryScreen from '../session-recovery';
+
+function OnlineRankingScreen() {
+  return useSession().state.status === 'authenticated' ? <RankingScreen /> : <SessionRecoveryScreen />;
+}
+function OnlineMyPageScreen() {
+  return useSession().state.status === 'authenticated' ? <MyPageScreen /> : <SessionRecoveryScreen />;
+}
 
 type AppTabParamList = {
   Home: undefined;
@@ -107,13 +117,14 @@ function DailyupTabBar({ navigation, state }: BottomTabBarProps) {
 export default function TabLayout() {
   return (
     <ProductProvider>
+      <NotificationTaskBridge />
     <PrototypeFrame>
       <Tab.Navigator
         screenOptions={{ headerShown: false }}
         tabBar={(props) => <DailyupTabBar {...props} />}>
         <Tab.Screen component={HomeScreen} name="Home" />
-        <Tab.Screen component={RankingScreen} name="Ranking" />
-        <Tab.Screen component={MyPageScreen} name="MyPage" />
+        <Tab.Screen component={OnlineRankingScreen} name="Ranking" />
+        <Tab.Screen component={OnlineMyPageScreen} name="MyPage" />
       </Tab.Navigator>
       <TaskSheets />
     </PrototypeFrame>

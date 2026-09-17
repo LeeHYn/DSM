@@ -75,7 +75,7 @@ function SkeletonBlock({ height, width = '100%' }: { height: number; width?: num
   );
 }
 
-function LoadingState() {
+export function LoadingState() {
   return (
     <View accessibilityLabel="일과를 불러오는 중" style={styles.loadingWrap}>
       <SurfaceCard style={styles.scoreSkeleton}>

@@ -4,7 +4,13 @@ import {
   METHOD_METADATA,
   PATH_METADATA,
 } from '@nestjs/common/constants';
-import { HttpStatus, RequestMethod } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpStatus,
+  NotFoundException,
+  RequestMethod,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -37,6 +43,9 @@ const MOCK_TASK = {
 };
 
 const makeTasksServiceMock = () => ({
+  getSyncClock: jest.fn(),
+  sync: jest.fn(),
+  findAllForSync: jest.fn(),
   issueClientMutationId: jest.fn().mockReturnValue({
     clientMutationId: CLIENT_MUTATION_ID,
   }),
@@ -55,7 +64,13 @@ const makeTasksServiceMock = () => ({
 const makeAuthRequest = (userId = 'user-uuid-1') =>
   ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
-const getControllerHandler = (methodName: 'issueClientMutationId'): object => {
+const getControllerHandler = (
+  methodName:
+    | 'issueClientMutationId'
+    | 'sync'
+    | 'findAllForSync'
+    | 'getSyncClock',
+): object => {
   const handler: unknown = Object.getOwnPropertyDescriptor(
     TasksController.prototype,
     methodName,
@@ -130,6 +145,93 @@ describe('TasksController', () => {
 
     expect(tasksServiceMock.issueClientMutationId).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ clientMutationId: CLIENT_MUTATION_ID });
+  });
+
+  it('reads the clock for the authenticated owner through the dedicated static route', async () => {
+    const checkpoint = {
+      serverTime: '2026-09-11T12:00:00.000Z',
+      logicalTime: 0,
+    };
+    tasksServiceMock.getSyncClock.mockResolvedValue(checkpoint);
+    expect(await controller.getSyncClock(makeAuthRequest('actual-owner'))).toBe(
+      checkpoint,
+    );
+    expect(tasksServiceMock.getSyncClock).toHaveBeenCalledWith('actual-owner');
+    expect(
+      Reflect.getMetadata(PATH_METADATA, getControllerHandler('getSyncClock')),
+    ).toBe('sync/clock');
+    expect(tasksServiceMock.findOne).not.toHaveBeenCalled();
+  });
+
+  it('exposes guarded sync routes and declares GET sync before the dynamic task ID', () => {
+    const post = getControllerHandler('sync');
+    const get = getControllerHandler('findAllForSync');
+    expect(Reflect.getMetadata(PATH_METADATA, post)).toBe('sync');
+    expect(Reflect.getMetadata(METHOD_METADATA, post)).toBe(RequestMethod.POST);
+    expect(Reflect.getMetadata(HTTP_CODE_METADATA, post)).toBe(HttpStatus.OK);
+    expect(Reflect.getMetadata(PATH_METADATA, get)).toBe('sync');
+    expect(Reflect.getMetadata(METHOD_METADATA, get)).toBe(RequestMethod.GET);
+    const methods = Object.getOwnPropertyNames(TasksController.prototype);
+    expect(methods.indexOf('findAllForSync')).toBeLessThan(
+      methods.indexOf('findOne'),
+    );
+  });
+
+  it('passes the original unknown body and authenticated owner to sync validation', async () => {
+    const input: unknown = { userId: 'forged-owner', unexpected: true };
+    const response = {
+      mutationId: CLIENT_MUTATION_ID,
+      outcome: 'applied',
+      task: MOCK_TASK,
+      serverTime: new Date().toISOString(),
+    };
+    tasksServiceMock.sync.mockResolvedValue(response);
+    await expect(
+      controller.sync(makeAuthRequest('actual-owner'), input),
+    ).resolves.toBe(response);
+    expect(tasksServiceMock.sync).toHaveBeenCalledWith('actual-owner', input);
+    expect(tasksServiceMock.create).not.toHaveBeenCalled();
+  });
+
+  it('delegates sync pagination using the authenticated owner', async () => {
+    const query = { date: '2026-06-03', limit: 25, cursor: CLIENT_MUTATION_ID };
+    const rows = [
+      {
+        ...MOCK_TASK,
+        syncUpdatedAt: MOCK_TASK.updatedAt.toISOString(),
+        syncMutationId: '',
+      },
+    ];
+    tasksServiceMock.findAllForSync.mockResolvedValue(rows);
+    await expect(
+      controller.findAllForSync(makeAuthRequest('actual-owner'), query),
+    ).resolves.toBe(rows);
+    expect(tasksServiceMock.findAllForSync).toHaveBeenCalledWith(
+      'actual-owner',
+      query,
+    );
+    expect(tasksServiceMock.findOne).not.toHaveBeenCalled();
+  });
+
+  it.each([BadRequestException, ConflictException, NotFoundException])(
+    'propagates sync policy exception %p',
+    async (Exception) => {
+      const failure = new Exception();
+      tasksServiceMock.sync.mockRejectedValue(failure);
+      await expect(controller.sync(makeAuthRequest(), null)).rejects.toBe(
+        failure,
+      );
+    },
+  );
+
+  it('propagates inaccessible sync cursor failure', async () => {
+    const failure = new NotFoundException();
+    tasksServiceMock.findAllForSync.mockRejectedValue(failure);
+    await expect(
+      controller.findAllForSync(makeAuthRequest(), {
+        cursor: CLIENT_MUTATION_ID,
+      }),
+    ).rejects.toBe(failure);
   });
 
   it('create delegates to tasksService.create', async () => {

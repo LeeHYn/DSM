@@ -3,12 +3,13 @@ import { HttpClient, HttpRequest } from './http-client';
 
 export type SessionCallbacks = {
   getAccessToken(): string | null;
+  getEpoch?(): number;
   refreshAccessToken(): Promise<string>;
   onUnauthorized(): Promise<void> | void;
 };
 
 export interface AuthenticatedClient {
-  request<T>(request: HttpRequest<T>): Promise<T>;
+  request<T>(request: HttpRequest<T>, isCurrent?: () => boolean): Promise<T>;
 }
 
 type CompletedRefresh = {
@@ -41,6 +42,7 @@ export function createAuthenticatedClient(
   const refreshAccessToken = (
     previousAccessToken: string | null,
     initialUnauthorizedError: ApiError,
+    isCurrent: () => boolean,
   ): Promise<string> => {
     if (
       completedRefresh?.previousAccessToken === previousAccessToken
@@ -64,14 +66,15 @@ export function createAuthenticatedClient(
     }
 
     completedRefresh = null;
-    const operation = Promise.resolve().then(() =>
-      session.refreshAccessToken(),
-    );
+    const operation = Promise.resolve().then(() => {
+      if (!isCurrent() || session.getAccessToken() !== previousAccessToken) throw initialUnauthorizedError;
+      return session.refreshAccessToken();
+    });
     refreshPromise = operation;
     refreshPromisePreviousAccessToken = previousAccessToken;
     void operation.then(
       (refreshedAccessToken) => {
-        completedRefresh = { previousAccessToken, refreshedAccessToken };
+        if (isCurrent() && session.getAccessToken() === refreshedAccessToken) completedRefresh = { previousAccessToken, refreshedAccessToken };
         if (refreshPromise === operation) {
           refreshPromise = null;
           refreshPromisePreviousAccessToken = null;
@@ -92,30 +95,35 @@ export function createAuthenticatedClient(
     request: HttpRequest<T>,
     initialAccessToken: string | null,
     initialUnauthorizedError: ApiError,
+    isCurrent: () => boolean,
   ): Promise<T> => {
     const currentAccessToken = session.getAccessToken();
     const canUseCompletedRefresh =
       completedRefresh?.previousAccessToken === initialAccessToken &&
       completedRefresh.refreshedAccessToken === currentAccessToken;
-    if (
-      currentAccessToken !== initialAccessToken &&
-      !canUseCompletedRefresh
-    ) {
+    if (!isCurrent() || (currentAccessToken !== initialAccessToken && !canUseCompletedRefresh)) {
       throw initialUnauthorizedError;
     }
 
     const refreshedAccessToken = await refreshAccessToken(
       initialAccessToken,
       initialUnauthorizedError,
+      isCurrent,
     );
-    if (session.getAccessToken() !== refreshedAccessToken) {
+    if (!isCurrent() || session.getAccessToken() !== refreshedAccessToken) {
       throw initialUnauthorizedError;
     }
 
     try {
-      return await http.request(withAccessToken(request, refreshedAccessToken));
+      const result = await http.request(withAccessToken(request, refreshedAccessToken));
+      if (!isCurrent()) throw initialUnauthorizedError;
+      return result;
     } catch (error) {
-      if (isUnauthorized(error)) {
+      if (
+        isUnauthorized(error) &&
+        isCurrent() &&
+        session.getAccessToken() === refreshedAccessToken
+      ) {
         try {
           await session.onUnauthorized();
         } finally {
@@ -128,17 +136,23 @@ export function createAuthenticatedClient(
   };
 
   return {
-    async request<T>(request: HttpRequest<T>): Promise<T> {
+    async request<T>(request: HttpRequest<T>, requestIsCurrent: () => boolean = () => true): Promise<T> {
+      const epoch = session.getEpoch?.();
+      const isCurrent = () => requestIsCurrent() && session.getEpoch?.() === epoch;
+      const stale = () => new ApiError('unauthorized', 'Request session is unavailable');
+      if (!isCurrent()) throw stale();
       const initialAccessToken = session.getAccessToken();
 
       try {
-        return await http.request(withAccessToken(request, initialAccessToken));
+        const result = await http.request(withAccessToken(request, initialAccessToken));
+        if (!isCurrent()) throw stale();
+        return result;
       } catch (error) {
         if (!isUnauthorized(error)) {
           throw error;
         }
 
-        return replayAfterRefresh(request, initialAccessToken, error);
+        return replayAfterRefresh(request, initialAccessToken, error, isCurrent);
       }
     },
   };

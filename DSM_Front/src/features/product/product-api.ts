@@ -1,4 +1,5 @@
 import type { AuthenticatedClient } from '../../lib/api/authenticated-client';
+import { ApiError } from '../../lib/api/api-error';
 import {
   parseTasks,
   parseTask,
@@ -31,18 +32,43 @@ function parseClientMutationId(value: unknown): string {
 }
 
 export function createProductApi(client: AuthenticatedClient) {
+  async function readPages<T extends { id: string }>(
+    basePath: `/tasks?${string}` | '/categories',
+    validate: (value: unknown) => T[],
+  ): Promise<T[]> {
+    const rows: T[] = [];
+    const seen = new Set<string>();
+    let cursor: string | undefined;
+    for (let pageNumber = 0; pageNumber < 100; pageNumber += 1) {
+      const page = await client.request({
+        path: `${basePath}${basePath.includes('?') ? '&' : '?'}limit=100${
+          cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+        }`,
+        validate,
+      });
+      if (page.length > 100 || page.some(row => seen.has(row.id))) {
+        throw new ApiError('protocol', 'Invalid paginated list response');
+      }
+      for (const row of page) {
+        if (seen.has(row.id)) {
+          throw new ApiError('protocol', 'Duplicate paginated list item');
+        }
+        seen.add(row.id);
+        rows.push(row);
+      }
+      if (page.length < 100) return rows;
+      cursor = page[page.length - 1].id;
+    }
+    throw new ApiError('protocol', 'Paginated list limit exceeded');
+  }
   const path = (id: string): `/tasks/${string}` =>
     `/tasks/${encodeURIComponent(id)}`;
   return {
     tasks(date: string) {
       utcTimestamp(date, '00:00');
-      return client.request({
-        path: `/tasks?date=${date}`,
-        validate: parseTasks,
-      });
+      return readPages(`/tasks?date=${date}`, parseTasks);
     },
-    categories: () =>
-      client.request({ path: '/categories', validate: parseCategories }),
+    categories: () => readPages('/categories', parseCategories),
     score(date: string) {
       utcTimestamp(date, '00:00');
       return client.request({

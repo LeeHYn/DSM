@@ -7,7 +7,7 @@ try {
     def store = new File(sandbox, 'fixture.jks')
     store.text = 'not a key: existence validation fixture only'
     def env = new File(sandbox, '.env.release.local')
-    env.text = '''API_BASE_URL=https://api.example.invalid
+    env.text = '''API_BASE_URL=https://api.example.com
 GOOGLE_WEB_CLIENT_ID=fixture
 PRIVACY_POLICY_URL=https://privacy.example.com/dailyup
 ACCOUNT_DELETION_URL=https://privacy.example.com/dailyup#account-deletion
@@ -16,11 +16,12 @@ ACCOUNT_DELETION_URL=https://privacy.example.com/dailyup#account-deletion
                  DAILYUP_UPLOAD_STORE_PASSWORD: 'test-only-password',
                  DAILYUP_UPLOAD_KEY_ALIAS: 'test-only-alias',
                  DAILYUP_UPLOAD_KEY_PASSWORD: 'test-only-password']
-    def values = [API_BASE_URL: 'https://api.example.invalid',
+    def values = [API_BASE_URL: 'https://api.example.com',
                   GOOGLE_WEB_CLIENT_ID: 'fixture',
                   PRIVACY_POLICY_URL: 'https://privacy.example.com/dailyup',
                   ACCOUNT_DELETION_URL: 'https://privacy.example.com/dailyup#account-deletion']
-    def input = { -> [properties: props, envFile: env, env: values, tasks: [':app:bundleRelease'], override: false] }
+    def input = { -> [properties: props, envFile: env, env: values, tasks: [':app:bundleRelease'], override: false,
+                     architectures: 'armeabi-v7a,arm64-v8a,x86,x86_64'] }
     assert validate(input()).empty
     props.keySet().each { key ->
         def missing = new LinkedHashMap(props)
@@ -44,7 +45,17 @@ ACCOUNT_DELETION_URL=https://privacy.example.com/dailyup#account-deletion
         assert validate(input() + [env: values + [API_BASE_URL: url]]).any { it.contains('API_BASE_URL') }
     }
     assert !validate(input() + [env: values + [GOOGLE_WEB_CLIENT_ID: ' ']]).empty
-    assert validate(input() + [env: values + [API_BASE_URL: 'https://example.invalid:8443/api/']]).empty
+    ['https://api.example.invalid', 'https://INVALID', 'https://api.example.INVALID.',
+     'https://invalid.'].each { url ->
+        assert validate(input() + [env: values + [API_BASE_URL: url]]).any { it.contains('API_BASE_URL') }
+    }
+    [null, '', 'x86_64', 'armeabi-v7a,x86', 'arm64-v8a,unknown', 'arm64-v8a,'].each { abis ->
+        assert validate(input() + [architectures: abis]).any { it.contains('reactNativeArchitectures') }
+    }
+    ['arm64-v8a', 'armeabi-v7a,arm64-v8a', 'arm64-v8a,x86_64'].each { abis ->
+        assert validate(input() + [architectures: abis]).empty
+    }
+    assert validate(input() + [env: values + [API_BASE_URL: 'https://example.com:8443/api/']]).empty
     ['PRIVACY_POLICY_URL', 'ACCOUNT_DELETION_URL'].each { key ->
         def missing = new LinkedHashMap(values)
         missing.remove(key)

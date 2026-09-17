@@ -60,6 +60,7 @@ function createController(state: SessionState) {
     getEpoch: jest.fn().mockReturnValue(0),
     getSnapshot: jest.fn(() => snapshot),
     logout: jest.fn().mockResolvedValue(undefined),
+    leaveOffline: jest.fn().mockResolvedValue(true),
     refreshAccessToken: jest.fn().mockResolvedValue('access'),
     retryRecovery: jest.fn().mockResolvedValue(undefined),
     signIn: jest.fn().mockResolvedValue(undefined),
@@ -92,6 +93,7 @@ it.each([
   ['storage-error', 'SessionRecovery'],
   ['onboarding', 'Tutorial'],
   ['authenticated', 'AppTabs'],
+  ['offline-workspace', 'AppTabs'],
 ])('maps %s to the single active native route %s', (status, expected) => {
   expect(getSessionRouteName(status as SessionState['status'])).toBe(expected);
 });

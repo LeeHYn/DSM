@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/coverage
+**/.git
+**/.local
+**/.env
+**/.env.*
+**/*.key
+**/*.pem
+**/*.p8
+**/*.p12
+**/*.jks
+**/*.keystore
+**/npm-debug.log
+test
+docs

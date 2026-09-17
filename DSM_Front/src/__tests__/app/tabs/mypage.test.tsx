@@ -9,9 +9,31 @@ import { Alert } from 'react-native';
 
 import MyPageScreen from '../../../app/(tabs)/mypage';
 
+jest.mock('@/components/dailyup/profile-panel', () => ({
+  ProfilePanel: () => {
+    const { Text } = require('react-native');
+    return <Text>프로필 설정 패널</Text>;
+  },
+}));
+
+jest.mock('@/components/dailyup/statistics-panel', () => ({
+  StatisticsPanel: () => {
+    const { Text } = require('react-native');
+    return <Text>실제 통계 패널</Text>;
+  },
+}));
+
 const mockUseSession = jest.fn();
 const mockUsePrototype = jest.fn();
 const mockOpenLegalLink = jest.fn();
+test('opens and collapses the actual notification settings panel', async () => {
+  mockUseSession.mockReturnValue(makeAuthenticatedSession(jest.fn()));
+  await render(<MyPageScreen />);
+  await fireEvent.press(screen.getByText('알림 설정'));
+  expect(screen.getByText('알림 설정을 준비하고 있습니다.')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByText('알림 설정 접기'));
+  expect(screen.queryByText('알림 설정을 준비하고 있습니다.')).toBeNull();
+});
 jest.mock('@/features/product/product-context', () => ({
   useProduct: () => ({ snapshot: { summary: { data: { totalScore: 321, tier: 'BRONZE' }, status: 'ready', error: null } }, store: { loadHome: jest.fn() } }),
 }));
@@ -66,6 +88,15 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+it('opens and closes statistics from the menu', async () => {
+  mockUseSession.mockReturnValue(makeAuthenticatedSession(jest.fn()));
+  await render(<MyPageScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: '나의 통계' }));
+  expect(screen.getByText('실제 통계 패널')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: '통계 접기' }));
+  expect(screen.queryByText('실제 통계 패널')).toBeNull();
+});
+
 it('resets prototype state only after secure logout succeeds', async () => {
   const logout = jest.fn().mockResolvedValue(true);
   const resetPrototype = jest.fn();
@@ -79,6 +110,7 @@ it('resets prototype state only after secure logout succeeds', async () => {
 
   await render(<MyPageScreen />);
   expect(screen.getByText('내 계정')).toBeOnTheScreen();
+  expect(screen.getByText('프로필 설정 패널')).toBeOnTheScreen();
   expect(screen.getByText('누적 점수 321점')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: '로그아웃' }));
 

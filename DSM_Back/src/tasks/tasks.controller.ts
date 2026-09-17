@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -14,7 +15,11 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import type { Task } from '@prisma/client';
-import { TasksService } from './tasks.service';
+import {
+  TasksService,
+  type SyncTaskProjection,
+  type TaskSyncResult,
+} from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
@@ -34,6 +39,15 @@ export class TasksController {
     return this.tasksService.issueClientMutationId();
   }
 
+  @Post('sync')
+  @HttpCode(HttpStatus.OK)
+  sync(
+    @Req() req: AuthRequest,
+    @Body() input: unknown,
+  ): Promise<TaskSyncResult> {
+    return this.tasksService.sync(req.user.sub, input);
+  }
+
   @Post()
   create(@Req() req: AuthRequest, @Body() dto: CreateTaskDto): Promise<Task> {
     return this.tasksService.create(req.user.sub, dto);
@@ -45,6 +59,22 @@ export class TasksController {
     @Query() query: TaskQueryDto,
   ): Promise<Task[]> {
     return this.tasksService.findAll(req.user.sub, query);
+  }
+
+  @Get('sync')
+  findAllForSync(
+    @Req() req: AuthRequest,
+    @Query() query: TaskQueryDto,
+  ): Promise<SyncTaskProjection[]> {
+    return this.tasksService.findAllForSync(req.user.sub, query);
+  }
+
+  @Get('sync/clock')
+  @Header('Cache-Control', 'no-store')
+  getSyncClock(
+    @Req() req: AuthRequest,
+  ): Promise<{ serverTime: string; logicalTime: number }> {
+    return this.tasksService.getSyncClock(req.user.sub);
   }
 
   @Get(':id')

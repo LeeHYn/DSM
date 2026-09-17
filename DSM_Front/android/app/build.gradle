@@ -2,6 +2,11 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Firebase remains optional until this application has its own project config.
+if (file('google-services.json').isFile()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
 project.ext.envConfigFiles = [
     debug: ".env.local",
     release: ".env.release.local",
@@ -15,6 +20,9 @@ if (releaseRequested && envOverride) {
 }
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
+def kakaoAppKey = (project.env.KAKAO_NATIVE_APP_KEY ?: '').trim()
+def kakaoConfigured = kakaoAppKey ==~ /[0-9a-fA-F]{32}/
+
 def signingProperties = ['DAILYUP_UPLOAD_STORE_FILE', 'DAILYUP_UPLOAD_STORE_PASSWORD',
                          'DAILYUP_UPLOAD_KEY_ALIAS', 'DAILYUP_UPLOAD_KEY_PASSWORD'].collectEntries {
     [(it): providers.gradleProperty(it).orNull]
@@ -23,7 +31,8 @@ def validateReleaseInputs = new GroovyShell().evaluate(rootProject.file('release
 def validateRelease = {
     def errors = validateReleaseInputs([properties: signingProperties,
         envFile: rootProject.file('../.env.release.local'), env: project.env,
-        tasks: gradle.startParameter.taskNames, override: envOverride])
+        tasks: gradle.startParameter.taskNames, override: envOverride,
+        architectures: providers.gradleProperty('reactNativeArchitectures').orNull])
     if (!errors.empty) throw new GradleException('Release configuration rejected:\n- ' + errors.join('\n- '))
 }
 tasks.register('validateReleaseConfiguration') { doLast { validateRelease() } }
@@ -43,7 +52,7 @@ react {
 }
 
 def enableMinifyInReleaseBuilds = false
-def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.0.1'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -58,6 +67,10 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName '1.0.0'
+        manifestPlaceholders = [
+            kakaoAuthEnabled: kakaoConfigured.toString(),
+            kakaoScheme: kakaoConfigured ? "kakao${kakaoAppKey}" : 'kakao-unconfigured',
+        ]
     }
 
     signingConfigs {
@@ -85,6 +98,7 @@ android {
 dependencies {
     implementation('com.facebook.react:react-android')
     implementation('androidx.core:core-splashscreen:1.0.1')
+    implementation('app.notifee:core:202108261754')
 
     if (hermesEnabled.toBoolean()) {
         implementation('com.facebook.react:hermes-android')

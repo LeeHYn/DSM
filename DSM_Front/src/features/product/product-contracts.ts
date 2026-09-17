@@ -82,7 +82,7 @@ function choice<T extends string>(value: unknown, choices: readonly T[]): T {
 function timestamp(value: unknown): string {
   const result = text(value);
   if (
-    !/^\d{4}-\d{2}-\d{2}T/.test(result) ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(result) ||
     !Number.isFinite(Date.parse(result))
   )
     throw new Error('Invalid timestamp');
@@ -131,6 +131,8 @@ export const parseCategories = (value: unknown) =>
 export function parseScore(value: unknown): Score | null {
   if (value === null) return null;
   const v = record(value);
+  const cappedScore = number(v.cappedScore);
+  if (cappedScore > 900) throw new Error('Invalid daily score');
   const rate =
     typeof v.achievementRate === 'string' && v.achievementRate.trim()
       ? Number(v.achievementRate)
@@ -138,7 +140,7 @@ export function parseScore(value: unknown): Score | null {
   return {
     userId: id(v.userId),
     scoreDate: timestamp(v.scoreDate),
-    cappedScore: number(v.cappedScore),
+    cappedScore,
     achievementRate: number(rate),
   };
 }

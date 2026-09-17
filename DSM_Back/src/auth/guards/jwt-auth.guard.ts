@@ -9,14 +9,23 @@ import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { JwtPayload } from '../types/jwt-payload.type';
+import { SessionVerifierService } from '../session-verifier.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
+  private readonly verifier: SessionVerifierService;
+
   constructor(
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
-  ) {}
+    jwtService: JwtService,
+    configService: ConfigService,
+    prisma: PrismaService,
+  ) {
+    this.verifier = new SessionVerifierService(
+      jwtService,
+      configService,
+      prisma,
+    );
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
@@ -28,47 +37,15 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing access token');
     }
 
-    let payload: JwtPayload;
-    try {
-      payload = this.jwtService.verify<JwtPayload>(token, {
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-      });
-    } catch {
-      throw new UnauthorizedException('Invalid or expired access token');
-    }
-
-    if (
-      payload.type !== 'access' ||
-      typeof payload.sub !== 'string' ||
-      payload.sub.length === 0 ||
-      typeof payload.sid !== 'string' ||
-      payload.sid.length === 0
-    ) {
-      throw new UnauthorizedException('Invalid access token claims');
-    }
-
-    const activeSession = await this.prisma.refreshToken.findFirst({
-      where: {
-        userId: payload.sub,
-        sessionId: payload.sid,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      select: { id: true },
-    });
-
-    if (!activeSession) {
-      throw new UnauthorizedException(
-        'Access token session is no longer active',
-      );
-    }
-
-    request.user = payload;
+    request.user = await this.verifier.verifyAccess(token);
     return true;
   }
 
   private extractToken(request: Request): string | null {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? (token ?? null) : null;
+    const header = request.headers.authorization;
+    if (typeof header !== 'string' || !header.startsWith('Bearer '))
+      return null;
+    const token = header.slice(7);
+    return token.length > 0 && !/\s/.test(token) ? token : null;
   }
 }

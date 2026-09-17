@@ -39,9 +39,11 @@ export class TokenStoreCoordinator {
     });
   }
 
-  readAndClear(): Promise<string | null> {
+  readAndClear(expectedEpoch?: number): Promise<string | null> {
     return this.enqueue(async () => {
+      if (expectedEpoch !== undefined && this.getCurrentEpoch() !== expectedEpoch) return null;
       const refreshToken = await this.store.read();
+      if (expectedEpoch !== undefined && this.getCurrentEpoch() !== expectedEpoch) return null;
       await this.store.clear();
       return refreshToken;
     });

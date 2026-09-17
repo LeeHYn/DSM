@@ -7,6 +7,25 @@ import { TaskSheets } from '../../components/dailyup/task-sheets';
 import { createHttpClient } from '../../lib/api/http-client';
 import type { Task } from './product-contracts';
 import { ProductStore } from './product-store';
+jest.mock('../realtime/realtime-context', () => ({ RealtimeProvider: ({ children }: { children: React.ReactNode }) => children }));
+const mockOfflineStores = new Map();
+let mockMutationSequence = 0;
+jest.mock('./task-offline-native', () => ({
+  getOfflineTaskStorage: (userId: string) => {
+    if (!mockOfflineStores.has(userId)) {
+      const { OfflineTaskStorage } = jest.requireActual('./task-offline-storage');
+      const values = new Map<string, string>();
+      mockOfflineStores.set(userId, new OfflineTaskStorage({
+        getItem: async (key: string) => values.get(key) ?? null,
+        setItem: async (key: string, value: string) => { values.set(key, value); },
+        removeItem: async (key: string) => { values.delete(key); },
+      }, userId));
+    }
+    return mockOfflineStores.get(userId);
+  },
+  createTaskMutationId: () => `00000000-0000-4000-8000-${String(++mockMutationSequence).padStart(12, '0')}`,
+}));
+beforeEach(() => { mockOfflineStores.clear(); mockMutationSequence = 0; });
 const mockSession = {
   state: { status: 'authenticated', userId: 'u' },
   action: 'idle',
@@ -41,6 +60,51 @@ function Probe() {
       }>{`${snapshot.summary.data?.totalScore ?? 'loading'}:${isNewTaskOpen}`}</Text>
   );
 }
+
+test('retains the same user store and open form when the session enters its offline workspace', async () => {
+  let context!: ReturnType<typeof useProduct>;
+  function LocalProbe() { context = useProduct(); return <Probe />; }
+  const view = await render(<ProductProvider><LocalProbe /></ProductProvider>);
+  await waitFor(() => expect(context.snapshot.summary.data?.totalScore).toBe(456));
+  const originalStore = context.store;
+  await act(() => context.openNewTask());
+  mockSession.state = { status: 'offline-workspace', userId: 'u' };
+  await view.rerender(<ProductProvider><LocalProbe /></ProductProvider>);
+  expect(screen.getByText('456:true')).toBeOnTheScreen();
+  expect(context.store).toBe(originalStore);
+  mockClient.request.mockClear();
+  await act(async () => { await context.store.create({ title: '연결 없이 저장',
+    startAt: `${context.snapshot.date}T09:00:00Z`, endAt: `${context.snapshot.date}T10:00:00Z`,
+    difficulty: 'LOW', notificationEnabled: false }); });
+  expect(context.tasks[0].title).toBe('연결 없이 저장');
+  expect(context.snapshot.sync.pendingCount).toBe(1);
+  expect(mockClient.request).not.toHaveBeenCalled();
+  await view.unmount();
+  mockSession.state = { status: 'authenticated', userId: 'u' };
+});
+
+test('preserves the editing snapshot and dirty form when a date refresh clears the task list', async () => {
+  let context!: ReturnType<typeof useProduct>;
+  const today = new Date().toISOString().slice(0, 10);
+  const task: Task = { id: '00000000-0000-4000-8000-999999999999', userId: 'u', title: '기존 편집 일과', description: null,
+    startAt: `${today}T09:00:00Z`, endAt: `${today}T10:00:00Z`, difficulty: 'LOW',
+    status: 'PENDING', completedAt: null, categoryId: null, notificationEnabled: false };
+  const original = mockClient.request.getMockImplementation()!;
+  mockClient.request.mockImplementation(async ({ path }: { path: string }) =>
+    path.startsWith('/tasks/sync?') ? (path.includes(today) ? [{ task, logicalTime: 0, mutationId: '' }] : []) : original({ path }),
+  );
+  function EditProbe() { context = useProduct(); return <TaskSheets />; }
+  const view = await render(<ProductProvider><EditProbe /></ProductProvider>);
+  await waitFor(() => expect(context.tasks).toHaveLength(1));
+  await act(() => context.editTask(task.id));
+  await fireEvent.changeText(screen.getByLabelText('일과 제목'), '저장 전 편집 내용');
+  await act(async () => { await context.store.setDate('2030-01-02'); });
+  expect(context.tasks).toHaveLength(0);
+  expect(context.editingTask?.id).toBe(task.id);
+  expect(screen.getByLabelText('일과 제목')).toHaveProp('value', '저장 전 편집 내용');
+  await view.unmount();
+  mockClient.request.mockImplementation(original);
+});
 test('loads actual data, survives strict effect reconnect and clears account-scoped UI on logout', async () => {
   const view = await render(
     <React.StrictMode>
@@ -95,25 +159,21 @@ test('unmounts and disposes account-scoped state while account deletion is pendi
   dispose.mockRestore();
 });
 
-test('real provider, store, parser and screens create, edit, complete, undo and delete through REST', async () => {
+test('real provider, durable store, parser and screens synchronize create, edit, complete, undo and delete', async () => {
   let tasks: Task[] = [];
-  const createdId = '123e4567-e89b-42d3-a456-426614174000';
+  let version = { syncUpdatedAt: new Date().toISOString(), syncMutationId: '' };
   const fetchImpl = jest.fn(async (url: string, init?: RequestInit) => {
     const path = new URL(url).pathname;
     const input = init?.body ? JSON.parse(String(init.body)) : {};
     let response: unknown = [];
-    if (path === '/tasks/client-mutation-ids' && init?.method === 'POST') {
-      response = { clientMutationId: createdId };
-    } else if (path === '/tasks' && init?.method === 'POST') {
-      tasks = [{ ...input, id: createdId, userId: 'u', status: 'PENDING', completedAt: null, categoryId: input.categoryId ?? null, description: input.description ?? null }];
-      response = tasks[0];
-    } else if (path === `/tasks/${createdId}` && init?.method === 'PATCH') {
-      tasks = [{ ...tasks[0], ...input }]; response = tasks[0];
-    } else if (path === `/tasks/${createdId}/complete`) {
-      tasks = [{ ...tasks[0], status: 'COMPLETED', completedAt: new Date().toISOString() }]; response = tasks[0];
-    } else if (path === `/tasks/${createdId}` && init?.method === 'DELETE') {
-      tasks = []; return { ok: true, status: 204, text: async () => '' } as Response;
-    } else if (path === '/tasks') response = tasks;
+    if (path === '/tasks/sync' && init?.method === 'POST') {
+      const result = input.kind === 'delete' ? tasks[0] : { ...input.task, id: input.taskId, userId: 'u',
+        completedAt: input.task.status === 'COMPLETED' ? new Date().toISOString() : null };
+      version = { syncUpdatedAt: input.updatedAt, syncMutationId: input.mutationId };
+      tasks = input.kind === 'delete' ? [] : [result];
+      response = { mutationId: input.mutationId, outcome: input.kind === 'delete' ? 'deleted' : 'applied',
+        task: { ...result, ...version }, serverTime: new Date().toISOString() };
+    } else if (path === '/tasks/sync') response = tasks.map(task => ({ ...task, ...version }));
     else if (path === '/scores/summary') response = { totalScore: tasks.some(task => task.status === 'COMPLETED') ? 789 : 456, tier: 'GOLD' };
     else if (path === '/scores') response = null;
     else if (path === '/rankings') response = { period: 'DAILY', score: 0, rank: 0, percentile: 0, totalUsers: 0 };

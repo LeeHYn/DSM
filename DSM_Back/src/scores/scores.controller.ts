@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import type { DailyScore, Tier } from '@prisma/client';
 import { ScoresService } from './scores.service';
 import { ScoreQueryDto } from './dto/score-query.dto';
+import { ScoreRangeQueryDto } from './dto/score-range-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/types/jwt-payload.type';
 
@@ -26,5 +27,22 @@ export class ScoresController {
     @Req() req: AuthRequest,
   ): Promise<{ totalScore: number; tier: Tier }> {
     return this.scoresService.getSummary(req.user.sub);
+  }
+
+  @Get('calendar')
+  getCalendar(@Req() req: AuthRequest, @Query() query: ScoreRangeQueryDto) {
+    return this.scoresService.getCalendar(req.user.sub, query.from, query.to);
+  }
+
+  @Get('categories')
+  getCategoryStatistics(
+    @Req() req: AuthRequest,
+    @Query() query: ScoreRangeQueryDto,
+  ) {
+    return this.scoresService.getCategoryStatistics(
+      req.user.sub,
+      query.from,
+      query.to,
+    );
   }
 }

@@ -68,7 +68,10 @@ describe('CategoriesController', () => {
   it('findAll delegates to categoriesService.findAll', async () => {
     const result = await controller.findAll(makeAuthRequest());
 
-    expect(categoriesServiceMock.findAll).toHaveBeenCalledWith('user-uuid-1');
+    expect(categoriesServiceMock.findAll).toHaveBeenCalledWith(
+      'user-uuid-1',
+      {},
+    );
     expect(result).toEqual([MOCK_CATEGORY]);
   });
 

@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { dailyupColors } from '@/constants/dailyup-theme';
 import { SessionProvider } from '@/features/auth/session-context';
+import { NotificationProvider } from '@/features/notifications/notification-context';
 import { SessionStack } from '@/features/auth/session-routing';
 import {
   PrototypeProvider,
@@ -60,7 +61,7 @@ export default function App() {
       <SafeAreaProvider>
         <PrototypeProvider>
           <SessionProvider>
-            <DailyupNavigator />
+            <NotificationProvider><DailyupNavigator /></NotificationProvider>
           </SessionProvider>
         </PrototypeProvider>
       </SafeAreaProvider>

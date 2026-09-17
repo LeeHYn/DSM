@@ -12,6 +12,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RankingsModule } from './rankings/rankings.module';
 import { ScoresModule } from './scores/scores.module';
 import { TasksModule } from './tasks/tasks.module';
+import { ProfilesModule } from './profiles/profiles.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { TasksModule } from './tasks/tasks.module';
     ScoresModule,
     RankingsModule,
     NotificationsModule,
+    ProfilesModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

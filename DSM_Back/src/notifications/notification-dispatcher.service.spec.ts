@@ -18,6 +18,7 @@ interface DelegateMock {
   findUnique: jest.Mock<Promise<unknown>, [Record<string, unknown>]>;
   createMany: jest.Mock<Promise<unknown>, [Record<string, unknown>]>;
   updateMany: jest.Mock<Promise<unknown>, [Record<string, unknown>]>;
+  updateManyAndReturn: jest.Mock<Promise<unknown>, [Record<string, unknown>]>;
 }
 
 interface PrismaMock {
@@ -84,6 +85,10 @@ interface DispatcherInternals {
     now: Date,
   ): Promise<void>;
   aggregateSchedules(scheduleIds: string[]): Promise<void>;
+  startLeaseHeartbeat(
+    deliveryIds: string[],
+    claimId: string,
+  ): { stop(): Promise<boolean> };
 }
 
 const now = new Date('2026-07-20T00:00:00.000Z');
@@ -100,6 +105,9 @@ const makeDelegate = (): DelegateMock => ({
   updateMany: jest
     .fn<Promise<unknown>, [Record<string, unknown>]>()
     .mockResolvedValue({ count: 0 }),
+  updateManyAndReturn: jest
+    .fn<Promise<unknown>, [Record<string, unknown>]>()
+    .mockResolvedValue([]),
 });
 
 const makeClaimedDelivery = (
@@ -236,9 +244,13 @@ describe('NotificationDispatcherService', () => {
 
     await service.dispatchDueNotifications();
 
-    const [postSendStale, preSendStale, orphanedPostSendPending] =
-      db.notificationDelivery.updateMany.mock.calls.map(([input]) => input);
+    const [postSendStale, orphanedPostSendPending] =
+      db.notificationDelivery.updateManyAndReturn.mock.calls.map(
+        ([input]) => input,
+      );
+    const preSendStale = db.notificationDelivery.updateMany.mock.calls[0][0];
     expect(postSendStale).toEqual({
+      select: { scheduleId: true },
       where: {
         status: NOTIFICATION_DELIVERY_STATUS.PROCESSING,
         processingStartedAt: {
@@ -270,6 +282,7 @@ describe('NotificationDispatcherService', () => {
       },
     });
     expect(orphanedPostSendPending).toEqual({
+      select: { scheduleId: true },
       where: {
         status: NOTIFICATION_DELIVERY_STATUS.PENDING,
         sendStartedAt: { not: null },
@@ -333,6 +346,12 @@ describe('NotificationDispatcherService', () => {
         scheduledAt: { lte: expect.any(Date) as Date },
       },
       data: { status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING },
+    });
+    expect(db.fcmToken.findMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', revokedAt: null },
+      orderBy: [{ lastSeenAt: 'desc' }, { id: 'asc' }],
+      take: 10,
+      select: { id: true, updatedAt: true },
     });
     expect(db.notificationDelivery.createMany).toHaveBeenCalledWith({
       data: [
@@ -505,6 +524,140 @@ describe('NotificationDispatcherService', () => {
       );
     }
   });
+
+  it.each([false, true])(
+    'aggregates an entirely cancelled claim batch with prior success=%s',
+    async (priorSuccess) => {
+      const { db, firebase, service, internals } = makeHarness();
+      jest.spyOn(internals, 'recoverStaleDeliveryLeases').mockResolvedValue();
+      jest.spyOn(internals, 'materializeDueSchedules').mockResolvedValue();
+      const candidate = makeClaimedDelivery();
+      candidate.fcmToken.revokedAt = now;
+      db.notificationDelivery.findFirst.mockResolvedValue({
+        scheduleId: candidate.scheduleId,
+      });
+      db.notificationDelivery.findMany
+        .mockResolvedValueOnce([candidate])
+        .mockResolvedValue([
+          { status: NOTIFICATION_DELIVERY_STATUS.CANCELLED },
+          ...(priorSuccess
+            ? [{ status: NOTIFICATION_DELIVERY_STATUS.SENT }]
+            : []),
+        ]);
+      db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.dispatchDueNotifications();
+
+      expect(firebase.sendEachForMulticast).not.toHaveBeenCalled();
+      expect(db.notificationSchedule.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: candidate.scheduleId,
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: priorSuccess
+          ? {
+              status: NOTIFICATION_SCHEDULE_STATUS.SENT,
+              sentAt: expect.any(Date) as Date,
+              failureReason: null,
+            }
+          : {
+              status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+              failureReason: 'all-deliveries-failed',
+            },
+      });
+    },
+  );
+
+  it('aggregates a partially cancelled claim without terminalizing active siblings', async () => {
+    const { db, internals } = makeHarness();
+    const cancelled = makeClaimedDelivery({ id: 'cancelled' });
+    cancelled.fcmToken.revokedAt = now;
+    const active = makeClaimedDelivery();
+    const aggregate = jest.spyOn(internals, 'aggregateSchedules');
+    db.notificationDelivery.findFirst.mockResolvedValue({
+      scheduleId: active.scheduleId,
+    });
+    db.notificationDelivery.findMany
+      .mockResolvedValueOnce([cancelled, active])
+      .mockResolvedValue([
+        { status: NOTIFICATION_DELIVERY_STATUS.CANCELLED },
+        { status: NOTIFICATION_DELIVERY_STATUS.PROCESSING },
+      ]);
+    db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+
+    const claimed = await internals.claimDueDeliveryBatch(now);
+
+    expect(claimed.map((delivery) => delivery.id)).toEqual([active.id]);
+    expect(aggregate).toHaveBeenCalledWith([active.scheduleId]);
+    expect(db.notificationSchedule.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rediscovers terminal deliveries after a committed cancellation loses its aggregation', async () => {
+    const { db, service, internals, firebase } = makeHarness();
+    jest.spyOn(internals, 'materializeDueSchedules').mockResolvedValue();
+    let processing = true;
+    db.notificationSchedule.findMany.mockImplementation(() =>
+      Promise.resolve(processing ? [{ id: 'stranded' }] : []),
+    );
+    db.notificationDelivery.findMany
+      .mockRejectedValueOnce(new Error('temporary aggregate outage'))
+      .mockResolvedValue([{ status: NOTIFICATION_DELIVERY_STATUS.CANCELLED }]);
+    db.notificationSchedule.updateMany.mockImplementation(() => {
+      processing = false;
+      return Promise.resolve({ count: 1 });
+    });
+
+    await expect(service.dispatchDueNotifications()).rejects.toThrow(
+      'temporary aggregate outage',
+    );
+    expect(processing).toBe(true);
+    await service.dispatchDueNotifications();
+    expect(processing).toBe(false);
+    expect(firebase.sendEachForMulticast).not.toHaveBeenCalled();
+    expect(db.notificationSchedule.findMany).toHaveBeenCalledWith({
+      where: {
+        status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        deliveries: {
+          some: {},
+          none: { status: { in: ['PENDING', 'PROCESSING'] } },
+        },
+      },
+      select: { id: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take: 100,
+    });
+  });
+
+  it.each([0, 1, 2])(
+    'aggregates recovery terminalization branch %s even without a due claim',
+    async (branch) => {
+      const { db, service } = makeHarness();
+      for (let index = 0; index < branch; index += 1) {
+        db.notificationDelivery.updateManyAndReturn.mockResolvedValueOnce([]);
+      }
+      db.notificationDelivery.updateManyAndReturn.mockResolvedValueOnce([
+        { scheduleId: 'recovered' },
+        { scheduleId: 'recovered' },
+      ]);
+      db.notificationDelivery.findMany.mockResolvedValue([
+        { status: NOTIFICATION_DELIVERY_STATUS.UNKNOWN },
+      ]);
+
+      await service.dispatchDueNotifications();
+
+      expect(db.notificationSchedule.updateMany).toHaveBeenCalledTimes(1);
+      expect(db.notificationSchedule.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'recovered',
+          status: NOTIFICATION_SCHEDULE_STATUS.PROCESSING,
+        },
+        data: {
+          status: NOTIFICATION_SCHEDULE_STATUS.FAILED,
+          failureReason: 'all-deliveries-failed',
+        },
+      });
+    },
+  );
 
   it('does not claim or send an exhausted PENDING delivery', async () => {
     const { db, firebase, internals } = makeHarness();
@@ -819,7 +972,7 @@ describe('NotificationDispatcherService', () => {
         revokedAt: null,
         updatedAt: delivery.tokenUpdatedAt,
       },
-      data: { revokedAt: now },
+      data: { revokedAt: now, updatedAt: delivery.tokenUpdatedAt },
     });
   });
 
@@ -1065,26 +1218,209 @@ describe('NotificationDispatcherService', () => {
     expect(consoleWarn).not.toHaveBeenCalled();
   });
 
-  it('heartbeats a slow active send and clears the timer after finalization', async () => {
+  it.each(['resolve', 'reject'] as const)(
+    'times out a hung send at 30 seconds and ignores a late %s',
+    async (settlement) => {
+      jest.useFakeTimers({ now });
+      const { db, firebase, service, internals } = makeHarness();
+      const { aggregateSchedules } = isolateDispatchDbSteps(internals, [
+        makeClaimedDelivery(),
+      ]);
+      let resolveSend!: (response: BatchResponse) => void;
+      let rejectSend!: (error: Error) => void;
+      firebase.sendEachForMulticast.mockImplementation(
+        () =>
+          new Promise<BatchResponse>((resolve, reject) => {
+            resolveSend = resolve;
+            rejectSend = reject;
+          }),
+      );
+      db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+      let finished = false;
+      const dispatch = service.dispatchDueNotifications().then(() => {
+        finished = true;
+      });
+
+      await jest.advanceTimersByTimeAsync(29_999);
+      expect(finished).toBe(false);
+      expect(db.notificationDelivery.updateMany).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(1);
+      expect(finished).toBe(true);
+      await dispatch;
+      expect(db.notificationDelivery.updateMany).toHaveBeenLastCalledWith({
+        where: {
+          id: { in: ['delivery-1'] },
+          status: NOTIFICATION_DELIVERY_STATUS.PROCESSING,
+          claimId: 'claim-1',
+          sendStartedAt: { not: null },
+        },
+        data: {
+          status: NOTIFICATION_DELIVERY_STATUS.UNKNOWN,
+          failureReason: 'ambiguous-delivery-outcome',
+          claimId: null,
+          processingStartedAt: null,
+          nextAttemptAt: null,
+        },
+      });
+      expect(aggregateSchedules).toHaveBeenCalledWith(['schedule-1']);
+      expect(jest.getTimerCount()).toBe(0);
+
+      if (settlement === 'resolve') {
+        resolveSend({
+          successCount: 1,
+          failureCount: 0,
+          responses: [{ success: true }],
+        });
+      } else {
+        rejectSend(new Error('late provider failure'));
+      }
+      await jest.advanceTimersByTimeAsync(5 * 60 * 1000);
+      expect(db.notificationDelivery.updateMany).toHaveBeenCalledTimes(2);
+      expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(1);
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each([
+    { responseAt: 29_999, expectedStatus: NOTIFICATION_DELIVERY_STATUS.SENT },
+    {
+      responseAt: 30_000,
+      expectedStatus: NOTIFICATION_DELIVERY_STATUS.UNKNOWN,
+    },
+  ])(
+    'applies the send deadline to a response at $responseAt ms',
+    async ({ responseAt, expectedStatus }) => {
+      jest.useFakeTimers({ now });
+      const { db, firebase, service, internals } = makeHarness();
+      isolateDispatchDbSteps(internals, [makeClaimedDelivery()]);
+      firebase.sendEachForMulticast.mockImplementation(
+        () =>
+          new Promise<BatchResponse>((resolve) => {
+            setTimeout(
+              () =>
+                resolve({
+                  successCount: 1,
+                  failureCount: 0,
+                  responses: [{ success: true }],
+                }),
+              responseAt,
+            );
+          }),
+      );
+      db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+
+      const dispatch = service.dispatchDueNotifications();
+      await jest.advanceTimersByTimeAsync(responseAt);
+      await dispatch;
+      expect(db.notificationDelivery.updateMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: expectedStatus,
+          }) as object,
+        }),
+      );
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('lets another schedule progress while one timed-out transport remains pending', async () => {
     jest.useFakeTimers({ now });
     const { db, firebase, service, internals } = makeHarness();
-    const delivery = makeClaimedDelivery();
-    isolateDispatchDbSteps(internals, [delivery]);
-    let resolveSend: (response: BatchResponse) => void = () => undefined;
+    isolateDispatchDbSteps(internals, [makeClaimedDelivery()]);
+    firebase.sendEachForMulticast
+      .mockImplementationOnce(() => new Promise<BatchResponse>(() => {}))
+      .mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+        responses: [{ success: true }],
+      });
+    db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+
+    let firstFinished = false;
+    const first = service.dispatchDueNotifications().then(() => {
+      firstFinished = true;
+    });
+    await jest.advanceTimersByTimeAsync(30_000);
+    expect(firstFinished).toBe(true);
+    await first;
+    jest.spyOn(internals, 'claimDueDeliveryBatch').mockResolvedValue([
+      makeClaimedDelivery({
+        id: 'next-delivery',
+        scheduleId: 'next-schedule',
+      }),
+    ]);
+    jest.spyOn(internals, 'revalidateClaimedBatch').mockResolvedValue([
+      makeClaimedDelivery({
+        id: 'next-delivery',
+        scheduleId: 'next-schedule',
+      }),
+    ]);
+    await service.dispatchDueNotifications();
+
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(2);
+    expect(db.notificationDelivery.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'next-delivery' }) as object,
+        data: expect.objectContaining({
+          status: NOTIFICATION_DELIVERY_STATUS.SENT,
+        }) as object,
+      }),
+    );
+  });
+
+  it('bounds pending transports at two and releases capacity on late settlement', async () => {
+    jest.useFakeTimers({ now });
+    const { db, firebase, service, internals } = makeHarness();
+    isolateDispatchDbSteps(internals, [makeClaimedDelivery()]);
+    const resolveSends: Array<(response: BatchResponse) => void> = [];
     firebase.sendEachForMulticast.mockImplementation(
       () =>
         new Promise<BatchResponse>((resolve) => {
-          resolveSend = resolve;
+          resolveSends.push(resolve);
         }),
     );
     db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
-
-    const dispatch = service.dispatchDueNotifications();
+    for (let index = 0; index < 2; index += 1) {
+      let finished = false;
+      const dispatch = service.dispatchDueNotifications().then(() => {
+        finished = true;
+      });
+      await jest.advanceTimersByTimeAsync(30_000);
+      expect(finished).toBe(true);
+      await dispatch;
+    }
+    await service.dispatchDueNotifications();
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(2);
+    expect(
+      jest.spyOn(internals, 'claimDueDeliveryBatch'),
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      jest.spyOn(internals, 'recoverStaleDeliveryLeases'),
+    ).toHaveBeenCalledTimes(3);
+    resolveSends[0]({ successCount: 0, failureCount: 0, responses: [] });
     await jest.advanceTimersByTimeAsync(0);
-    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(1);
+    firebase.sendEachForMulticast.mockResolvedValue({
+      successCount: 1,
+      failureCount: 0,
+      responses: [{ success: true }],
+    });
+    await service.dispatchDueNotifications();
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(3);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('heartbeats an owned lease and clears the timer on stop', async () => {
+    jest.useFakeTimers({ now });
+    const { db, internals } = makeHarness();
+    const delivery = makeClaimedDelivery();
+    db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+    const heartbeat = internals.startLeaseHeartbeat(
+      [delivery.id],
+      delivery.claimId,
+    );
 
     await jest.advanceTimersByTimeAsync(60_000);
-    expect(db.notificationDelivery.updateMany.mock.calls[1][0]).toEqual({
+    expect(db.notificationDelivery.updateMany.mock.calls[0][0]).toEqual({
       where: {
         id: { in: [delivery.id] },
         status: NOTIFICATION_DELIVERY_STATUS.PROCESSING,
@@ -1094,12 +1430,7 @@ describe('NotificationDispatcherService', () => {
       data: { processingStartedAt: new Date('2026-07-20T00:01:00.000Z') },
     });
 
-    resolveSend({
-      successCount: 1,
-      failureCount: 0,
-      responses: [{ success: true }],
-    });
-    await dispatch;
+    await expect(heartbeat.stop()).resolves.toBe(true);
     const callsAfterFinalization =
       db.notificationDelivery.updateMany.mock.calls.length;
 
@@ -1116,31 +1447,24 @@ describe('NotificationDispatcherService', () => {
     const { aggregateSchedules } = isolateDispatchDbSteps(internals, [
       delivery,
     ]);
-    let resolveSend: (response: BatchResponse) => void = () => undefined;
-    firebase.sendEachForMulticast.mockImplementation(
-      () =>
-        new Promise<BatchResponse>((resolve) => {
-          resolveSend = resolve;
-        }),
-    );
     db.notificationDelivery.updateMany
-      .mockResolvedValueOnce({ count: 1 })
       .mockRejectedValueOnce(new Error('heartbeat unavailable'))
       .mockResolvedValue({ count: 1 });
-
-    const dispatch = service.dispatchDueNotifications();
-    await jest.advanceTimersByTimeAsync(0);
-    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(1);
+    const heartbeat = internals.startLeaseHeartbeat(
+      [delivery.id],
+      delivery.claimId,
+    );
     await jest.advanceTimersByTimeAsync(60_000);
-    resolveSend({
+    jest.spyOn(internals, 'startLeaseHeartbeat').mockReturnValue(heartbeat);
+    firebase.sendEachForMulticast.mockResolvedValue({
       successCount: 1,
       failureCount: 0,
       responses: [{ success: true }],
     });
-    await dispatch;
+    await service.dispatchDueNotifications();
 
     expect(db.notificationDelivery.updateMany).toHaveBeenCalledTimes(3);
-    expect(db.notificationDelivery.updateMany.mock.calls[1][0]).toEqual({
+    expect(db.notificationDelivery.updateMany.mock.calls[0][0]).toEqual({
       where: {
         id: { in: [delivery.id] },
         status: NOTIFICATION_DELIVERY_STATUS.PROCESSING,

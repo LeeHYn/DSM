@@ -139,10 +139,20 @@ model Task {
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   category              Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   notificationSchedules NotificationSchedule[]
+  syncState             TaskSyncState?
 
   @@index([userId, startAt])
   @@index([userId, updatedAt])
   @@index([categoryId])
+}
+
+model TaskSyncState {
+  taskId       String   @id
+  updatedAt    DateTime @db.Timestamptz(3)
+  mutationId   String
+  mutationHash String
+  createHash   String?
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model DailyScore {

@@ -27,11 +27,25 @@ const REGISTERED_TOKEN = {
 const makeNotificationsServiceMock = () => ({
   register: jest.fn().mockResolvedValue(REGISTERED_TOKEN),
   revoke: jest.fn().mockResolvedValue(undefined),
+  getSettings: jest.fn().mockResolvedValue({ notificationEnabled: true }),
+  setSettings: jest.fn().mockResolvedValue({ notificationEnabled: false }),
+  reminders: jest.fn().mockResolvedValue({
+    serverTime: '2026-07-15T00:00:00.000Z',
+    reminders: [],
+    nextCursor: null,
+  }),
 });
 const makeAuthRequest = (userId = 'user-uuid-1') =>
   ({ user: { sub: userId, sid: 'session-1', type: 'access' } }) as never;
 
-const getControllerHandler = (methodName: 'register' | 'revoke'): object => {
+const getControllerHandler = (
+  methodName:
+    | 'register'
+    | 'revoke'
+    | 'getSettings'
+    | 'setSettings'
+    | 'reminders',
+): object => {
   const handler: unknown = Object.getOwnPropertyDescriptor(
     NotificationsController.prototype,
     methodName,
@@ -87,6 +101,55 @@ describe('NotificationsController', () => {
     expect(
       Reflect.getMetadata(GUARDS_METADATA, NotificationsController),
     ).toEqual([JwtAuthGuard]);
+  });
+
+  it.each([
+    ['getSettings', 'settings', RequestMethod.GET],
+    ['setSettings', 'settings', RequestMethod.PATCH],
+    ['reminders', 'reminders', RequestMethod.GET],
+  ] as const)(
+    '%s exposes %s with the default 200 status',
+    (method, path, verb) => {
+      const handler = getControllerHandler(method);
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(path);
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(verb);
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBeUndefined();
+    },
+  );
+
+  it('reads settings for the authenticated user only', async () => {
+    await expect(
+      controller.getSettings(makeAuthRequest('owner')),
+    ).resolves.toEqual({ notificationEnabled: true });
+    expect(notificationsServiceMock.getSettings).toHaveBeenCalledWith('owner');
+  });
+
+  it('passes false unchanged and never takes ownership from the body', async () => {
+    const dto = { notificationEnabled: false, userId: 'other' };
+    await expect(
+      controller.setSettings(makeAuthRequest('owner'), dto),
+    ).resolves.toEqual({ notificationEnabled: false });
+    expect(notificationsServiceMock.setSettings).toHaveBeenCalledWith(
+      'owner',
+      false,
+    );
+  });
+
+  it('binds the reminder query to the authenticated owner', async () => {
+    const query = { limit: 2, cursor: 'schedule-id', userId: 'other' };
+    const response = await controller.reminders(
+      makeAuthRequest('owner'),
+      query,
+    );
+    expect(notificationsServiceMock.reminders).toHaveBeenCalledWith(
+      'owner',
+      query,
+    );
+    expect(response).toEqual({
+      serverTime: '2026-07-15T00:00:00.000Z',
+      reminders: [],
+      nextCursor: null,
+    });
   });
 
   it('register exposes PUT fcm-tokens with the default 200 status', () => {

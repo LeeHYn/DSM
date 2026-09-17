@@ -8,6 +8,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { TaskDifficulty } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class CreateTaskDto {
   @IsUUID('4')
@@ -21,10 +22,10 @@ export class CreateTaskDto {
   @IsOptional()
   description?: string;
 
-  @IsDateString()
+  @IsDateString({ strict: true })
   startAt!: string;
 
-  @IsDateString()
+  @IsDateString({ strict: true })
   endAt!: string;
 
   @IsEnum(TaskDifficulty)
@@ -34,6 +35,8 @@ export class CreateTaskDto {
   @IsOptional()
   categoryId?: string;
 
+  // Preserve the JSON type so implicit conversion cannot turn "false" into true.
+  @Type(() => Object)
   @IsBoolean()
   @IsOptional()
   notificationEnabled?: boolean;

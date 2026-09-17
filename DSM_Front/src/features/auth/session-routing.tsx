@@ -14,6 +14,7 @@ export type SessionRouteGuards = {
   recovery: boolean;
   onboarding: boolean;
   authenticated: boolean;
+  localWorkspace: boolean;
 };
 
 export type SessionRouteName =
@@ -44,6 +45,7 @@ export function getSessionRouteGuards(
     recovery: status === 'offline' || status === 'storage-error',
     onboarding: status === 'onboarding',
     authenticated: status === 'authenticated',
+    localWorkspace: status === 'offline-workspace',
   };
 }
 

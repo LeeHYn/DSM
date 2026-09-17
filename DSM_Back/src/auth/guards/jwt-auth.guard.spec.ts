@@ -1,15 +1,19 @@
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
-import type { JwtService } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { JwtPayload } from '../types/jwt-payload.type';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-const PAYLOAD: JwtPayload = {
+const PAYLOAD: JwtPayload & { exp: number } = {
   sub: 'user-1',
   sid: 'session-1',
   type: 'access',
+  exp: Math.floor(Date.now() / 1000) + 900,
 };
 
 type TestRequest = {
@@ -53,6 +57,7 @@ describe('JwtAuthGuard', () => {
 
     expect(jwtService.verify).toHaveBeenCalledWith('signed-access-token', {
       secret: 'test-access-secret',
+      algorithms: ['HS256'],
     });
     expect(prisma.refreshToken.findFirst).toHaveBeenCalledWith({
       where: {
@@ -76,7 +81,7 @@ describe('JwtAuthGuard', () => {
           headers: { authorization: 'Bearer signed-access-token' },
         }),
       ),
-    ).rejects.toThrow('Access token session is no longer active');
+    ).rejects.toThrow('Invalid access session');
   });
 
   it('rejects access tokens that predate the required session claim', async () => {
@@ -88,7 +93,7 @@ describe('JwtAuthGuard', () => {
           headers: { authorization: 'Bearer legacy-access-token' },
         }),
       ),
-    ).rejects.toThrow('Invalid access token claims');
+    ).rejects.toThrow('Invalid access session');
     expect(prisma.refreshToken.findFirst).not.toHaveBeenCalled();
   });
 
@@ -109,7 +114,7 @@ describe('JwtAuthGuard', () => {
       guard.canActivate(
         makeContext({ headers: { authorization: 'Bearer malformed-token' } }),
       ),
-    ).rejects.toThrow('Invalid or expired access token');
+    ).rejects.toThrow('Invalid access session');
     expect(prisma.refreshToken.findFirst).not.toHaveBeenCalled();
   });
 
@@ -123,6 +128,70 @@ describe('JwtAuthGuard', () => {
           headers: { authorization: 'Bearer signed-access-token' },
         }),
       ),
-    ).rejects.toBe(databaseError);
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
+
+  it.each([
+    'Bearer signed-access-token junk',
+    'Bearer  signed-access-token',
+    'Bearer signed-access-token ',
+    'Bearer\tsigned-access-token',
+    'Bearer signed-access-token\n',
+    'bearer signed-access-token',
+    'Basic signed-access-token',
+  ])(
+    'rejects malformed Authorization header %j before verification',
+    async (authorization) => {
+      await expect(
+        guard.canActivate(makeContext({ headers: { authorization } })),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(jwtService.verify).not.toHaveBeenCalled();
+      expect(prisma.refreshToken.findFirst).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([undefined, Math.floor(Date.now() / 1000) - 1])(
+    'rejects missing or expired exp=%j before session lookup',
+    async (exp) => {
+      jwtService.verify.mockReturnValue({ ...PAYLOAD, exp });
+      await expect(
+        guard.canActivate(
+          makeContext({
+            headers: { authorization: 'Bearer signed-access-token' },
+          }),
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prisma.refreshToken.findFirst).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['missing-exp', 'expired', 'wrong-algorithm'] as const)(
+    'rejects a real signed JWT with %s',
+    async (condition) => {
+      const realJwt = new JwtService();
+      const claims = {
+        sub: PAYLOAD.sub,
+        sid: PAYLOAD.sid,
+        type: 'access',
+        ...(condition === 'missing-exp'
+          ? {}
+          : { exp: condition === 'expired' ? 1 : PAYLOAD.exp }),
+      };
+      const token = realJwt.sign(claims, {
+        secret: 'test-access-secret',
+        algorithm: condition === 'wrong-algorithm' ? 'HS384' : 'HS256',
+      });
+      const realGuard = new JwtAuthGuard(
+        realJwt,
+        configService as unknown as ConfigService,
+        prisma as unknown as PrismaService,
+      );
+      await expect(
+        realGuard.canActivate(
+          makeContext({ headers: { authorization: `Bearer ${token}` } }),
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prisma.refreshToken.findFirst).not.toHaveBeenCalled();
+    },
+  );
 });

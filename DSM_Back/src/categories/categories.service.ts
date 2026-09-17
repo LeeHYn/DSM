@@ -8,6 +8,11 @@ import { type Category, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateCategoryDto } from './dto/create-category.dto';
 import type { UpdateCategoryDto } from './dto/update-category.dto';
+import type { CategoryQueryDto } from './dto/category-query.dto';
+
+const MAX_PERSONAL_CATEGORIES = 50;
+const MAX_CATEGORY_PAGE_SIZE = 100;
+const MAX_SERIALIZABLE_TRANSACTION_RETRIES = 2;
 
 @Injectable()
 export class CategoriesService {
@@ -15,22 +20,45 @@ export class CategoriesService {
 
   async create(userId: string, dto: CreateCategoryDto): Promise<Category> {
     try {
-      return await this.prisma.category.create({
-        data: {
-          userId,
-          name: dto.name,
-          color: dto.color,
-        },
+      return await this.runSerializableTransaction(async (client) => {
+        await client.$queryRaw`
+          SELECT 1 FROM "User" WHERE id = ${userId} FOR UPDATE
+        `;
+        const count = await client.category.count({
+          where: { userId, isDefault: false },
+        });
+        if (count >= MAX_PERSONAL_CATEGORIES) {
+          throw new ConflictException('Personal category limit reached');
+        }
+        return client.category.create({
+          data: {
+            userId,
+            name: dto.name,
+            color: dto.color,
+          },
+        });
       });
     } catch (error) {
       throw this.mapKnownError(error);
     }
   }
 
-  findAll(userId: string): Promise<Category[]> {
+  async findAll(
+    userId: string,
+    query: CategoryQueryDto = {},
+  ): Promise<Category[]> {
+    if (query.cursor) {
+      await this.findOne(userId, query.cursor);
+    }
     return this.prisma.category.findMany({
       where: { OR: [{ userId }, { isDefault: true }] },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      // Keep timestamp comparison in the DB: createdAt can have microseconds.
+      ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
+      take: Math.min(
+        query.limit ?? MAX_CATEGORY_PAGE_SIZE,
+        MAX_CATEGORY_PAGE_SIZE,
+      ),
     });
   }
 
@@ -65,7 +93,11 @@ export class CategoriesService {
 
   async remove(userId: string, id: string): Promise<void> {
     await this.findOwned(userId, id);
-    await this.prisma.category.delete({ where: { id } });
+    try {
+      await this.prisma.category.delete({ where: { id } });
+    } catch (error) {
+      throw this.mapKnownError(error);
+    }
   }
 
   /**
@@ -83,12 +115,34 @@ export class CategoriesService {
     return category;
   }
 
+  private async runSerializableTransaction<T>(
+    operation: (client: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let retry = 0; ; retry += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (
+          !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+          error.code !== 'P2034' ||
+          retry >= MAX_SERIALIZABLE_TRANSACTION_RETRIES
+        ) {
+          throw error;
+        }
+      }
+    }
+  }
+
   private mapKnownError(error: unknown): unknown {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      return new ConflictException('Category name already exists');
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return new ConflictException('Category name already exists');
+      }
+      if (error.code === 'P2025') {
+        return new NotFoundException('Category not found');
+      }
     }
     return error;
   }

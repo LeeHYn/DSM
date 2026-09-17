@@ -1,13 +1,15 @@
 import React, {
   type PropsWithChildren,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
 import {
+  AccessibilityInfo,
+  Alert,
   Animated,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -44,6 +46,11 @@ import {
 
 const DIFFICULTIES: Difficulty[] = ['LOW', 'MEDIUM', 'HIGH'];
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const ACCESSIBILITY_FOCUS_RESTORE_DELAY_MS = 1500;
+
+function focusAccessibilityTarget(target: View) {
+  AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
+}
 
 function timeToMinutes(value: string) {
   if (!TIME_PATTERN.test(value)) {
@@ -55,11 +62,20 @@ function timeToMinutes(value: string) {
 
 function BottomSheet({
   children,
+  label,
+  initialFocusRef,
+  closeDisabled,
   onClose,
-}: PropsWithChildren<{ onClose: () => void }>) {
+}: PropsWithChildren<{
+  label: string;
+  initialFocusRef: React.RefObject<View | null>;
+  closeDisabled: boolean;
+  onClose: () => void;
+}>) {
   const palette = useDailyupPalette();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(80)).current;
+  const focusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     Animated.parallel([
@@ -74,35 +90,53 @@ function BottomSheet({
         useNativeDriver: Platform.OS !== 'web',
       }),
     ]).start();
+    return () => {
+      if (focusTimer.current) clearTimeout(focusTimer.current);
+    };
   }, [opacity, translateY]);
 
   return (
-    <View style={styles.overlay}>
-      <Animated.View
-        style={[
-          styles.backdrop,
-          { backgroundColor: palette.overlay, opacity },
-        ]}>
-        <Pressable
-          accessibilityLabel="시트 닫기"
-          accessibilityRole="button"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <Animated.View
-        style={[
-          styles.sheet,
-          {
-            backgroundColor: palette.background,
-            borderColor: palette.border,
-            transform: [{ translateY }],
-          },
-        ]}>
-        <View style={[styles.handle, { backgroundColor: palette.border }]} />
-        {children}
-      </Animated.View>
-    </View>
+    <Modal
+      testID="task-sheet-modal"
+      transparent
+      visible
+      accessibilityLabel={label}
+      onRequestClose={onClose}
+      onShow={() => {
+        focusTimer.current = setTimeout(() => {
+          if (initialFocusRef.current) {
+            focusAccessibilityTarget(initialFocusRef.current);
+          }
+        }, dailyupMotion.normal + 100);
+      }}>
+      <View accessibilityViewIsModal style={styles.overlay}>
+        <Animated.View
+          style={[
+            styles.backdrop,
+            { backgroundColor: palette.overlay, opacity },
+          ]}>
+          <Pressable
+            accessibilityLabel="시트 닫기"
+            accessibilityRole="button"
+            disabled={closeDisabled}
+            onPress={onClose}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: palette.background,
+              borderColor: palette.border,
+              transform: [{ translateY }],
+            },
+          ]}>
+          <View style={[styles.handle, { backgroundColor: palette.border }]} />
+          {children}
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
@@ -202,6 +236,15 @@ function ChoiceRow<T extends string>({
 function NewTaskSheet() {
   const { store, snapshot, closeNewTask, editingTask } = useProduct();
   const palette = useDailyupPalette();
+  const headingRef = useRef<View>(null);
+  const discardPromptOpen = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [title, setTitle] = useState(editingTask?.title ?? '');
   const [description, setDescription] = useState(
     editingTask?.description ?? '',
@@ -228,8 +271,47 @@ function NewTaskSheet() {
     date?: string;
   }>({});
 
-  const resetAndClose = () => {
-    closeNewTask();
+  const fields = [
+    title,
+    description,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    difficulty,
+    category,
+    notificationEnabled,
+  ];
+  const initialFields = useRef(fields).current;
+  const dirty = fields.some((value, index) => value !== initialFields[index]);
+  const sheetTitle = editingTask ? '일과 수정' : '새 일과 추가';
+
+  const requestClose = () => {
+    if (store.getSnapshot().mutating || discardPromptOpen.current) return;
+    if (!dirty) {
+      closeNewTask();
+      return;
+    }
+    discardPromptOpen.current = true;
+    const keepEditing = () => {
+      discardPromptOpen.current = false;
+    };
+    Alert.alert(
+      '변경 사항을 버릴까요?',
+      '저장하지 않은 입력은 사라집니다.',
+      [
+        { text: '계속 작성', style: 'cancel', onPress: keepEditing },
+        {
+          text: '버리기',
+          style: 'destructive',
+          onPress: () => {
+            discardPromptOpen.current = false;
+            if (mounted.current && !store.getSnapshot().mutating) closeNewTask();
+          },
+        },
+      ],
+      { cancelable: true, onDismiss: keepEditing },
+    );
   };
 
   const submit = async () => {
@@ -281,14 +363,22 @@ function NewTaskSheet() {
   };
 
   return (
-    <BottomSheet onClose={resetAndClose}>
+    <BottomSheet
+      label={sheetTitle}
+      initialFocusRef={headingRef}
+      closeDisabled={snapshot.mutating}
+      onClose={requestClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.sheetHeader}>
           <View>
-            <AppText variant="sectionTitle">
-              {editingTask ? '일과 수정' : '새 일과 추가'}
-            </AppText>
+            <View
+              ref={headingRef}
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel={sheetTitle}>
+              <AppText variant="sectionTitle">{sheetTitle}</AppText>
+            </View>
             <AppText color={palette.muted} variant="caption">
               날짜와 시간은 UTC 기준입니다.
             </AppText>
@@ -296,7 +386,8 @@ function NewTaskSheet() {
           <IconButton
             accessibilityLabel="새 일과 닫기"
             name="close"
-            onPress={resetAndClose}
+            disabled={snapshot.mutating}
+            onPress={requestClose}
           />
         </View>
         <ScrollView
@@ -450,6 +541,7 @@ function TaskDetailSheet() {
   const { closeTaskDetail, editTask, snapshot, store, selectedTask } =
     useProduct();
   const palette = useDailyupPalette();
+  const headingRef = useRef<View>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -458,21 +550,33 @@ function TaskDetailSheet() {
     }
   }, [selectedTask]);
 
-  const statusText = useMemo(
-    () => (selectedTask?.completed ? '완료됨' : '진행 전'),
-    [selectedTask?.completed],
-  );
+  const cancelled = selectedTask?.status === 'CANCELLED';
+  const statusText = cancelled
+    ? '취소됨'
+    : selectedTask?.completed ? '완료됨' : '진행 전';
 
   if (!selectedTask) {
     return null;
   }
 
   const interactionDisabled = snapshot.mutating;
+  const requestClose = () => {
+    if (!store.getSnapshot().mutating) closeTaskDetail();
+  };
 
   return (
-    <BottomSheet onClose={closeTaskDetail}>
+    <BottomSheet
+      label="일과 상세"
+      initialFocusRef={headingRef}
+      closeDisabled={interactionDisabled}
+      onClose={requestClose}>
       <View style={styles.sheetHeader}>
-        <View style={styles.detailHeading}>
+        <View
+          ref={headingRef}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel={`${selectedTask.title}, ${statusText}`}
+          style={styles.detailHeading}>
           <Badge tone={selectedTask.completed ? 'lime' : 'neutral'}>
             {statusText}
           </Badge>
@@ -481,7 +585,8 @@ function TaskDetailSheet() {
         <IconButton
           accessibilityLabel="일과 상세 닫기"
           name="close"
-          onPress={closeTaskDetail}
+          disabled={interactionDisabled}
+          onPress={requestClose}
         />
       </View>
       <ScrollView
@@ -524,12 +629,14 @@ function TaskDetailSheet() {
             수정
           </AppButton>
           <AppButton
-            disabled={interactionDisabled}
+            disabled={interactionDisabled || cancelled}
             icon={selectedTask.completed ? 'undo' : 'check'}
             onPress={() => {
               void store.toggle(selectedTask.id);
             }}>
-            {selectedTask.completed ? '완료 취소' : '완료 처리'}
+            {cancelled
+              ? '취소된 일과'
+              : selectedTask.completed ? '완료 취소' : '완료 처리'}
           </AppButton>
           {confirmDelete ? (
             <View
@@ -562,6 +669,7 @@ function TaskDetailSheet() {
             </View>
           ) : (
             <AppButton
+              accessibilityLabel="삭제"
               disabled={interactionDisabled}
               icon="trash-can-outline"
               onPress={() => setConfirmDelete(true)}
@@ -576,11 +684,43 @@ function TaskDetailSheet() {
 }
 
 export function TaskSheets() {
-  const { isNewTaskOpen, editingTask, snapshot } = useProduct();
+  const {
+    editingTask,
+    isNewTaskOpen,
+    selectedTask,
+    taskSheetReturnFocusRef,
+  } = useProduct();
+  const isTaskSheetOpen = isNewTaskOpen || selectedTask !== null;
+  const wasTaskSheetOpen = useRef(isTaskSheetOpen);
+
+  useEffect(() => {
+    const shouldRestoreFocus = wasTaskSheetOpen.current && !isTaskSheetOpen;
+    wasTaskSheetOpen.current = isTaskSheetOpen;
+    const returnFocusRequest = taskSheetReturnFocusRef.current;
+    if (!shouldRestoreFocus || !returnFocusRequest) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      const returnFocusTarget = returnFocusRequest.targetRef.current;
+      if (returnFocusTarget) {
+        focusAccessibilityTarget(returnFocusTarget);
+      }
+      if (taskSheetReturnFocusRef.current === returnFocusRequest) {
+        taskSheetReturnFocusRef.current = null;
+      }
+    }, ACCESSIBILITY_FOCUS_RESTORE_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      if (taskSheetReturnFocusRef.current === returnFocusRequest) {
+        taskSheetReturnFocusRef.current = null;
+      }
+    };
+  }, [isTaskSheetOpen, taskSheetReturnFocusRef]);
+
   return (
     <>
       {isNewTaskOpen ? (
-        <NewTaskSheet key={`${editingTask?.id ?? 'new'}:${snapshot.date}`} />
+        <NewTaskSheet key={editingTask?.id ?? 'new'} />
       ) : null}
       <TaskDetailSheet />
     </>

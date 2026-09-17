@@ -3,14 +3,17 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type PropsWithChildren,
 } from 'react';
-import { AppState } from 'react-native';
+import { AppState, type View } from 'react-native';
 import { useAuthenticatedClient, useSession } from '../auth/session-context';
 import { createProductApi } from './product-api';
 import { ProductStore } from './product-store';
+import { createTaskSyncApi, OfflineTaskSync } from './task-sync';
+import { RealtimeProvider } from '../realtime/realtime-context';
 import type { Task, Category } from './product-contracts';
 
 export const difficultyLabels = {
@@ -39,7 +42,10 @@ function useProductValue(store: ProductStore) {
   );
   const [isNewTaskOpen, setNewTaskOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskView | null>(null);
+  const taskSheetReturnFocusRef = useRef<{
+    targetRef: React.RefObject<View | null>;
+  } | null>(null);
   const tasks = useMemo(
     () =>
       (snapshot.tasks.data ?? []).map((task) =>
@@ -50,7 +56,7 @@ function useProductValue(store: ProductStore) {
   const closeNewTask = () => {
     if (!store.getSnapshot().mutating) {
       setNewTaskOpen(false);
-      setEditingId(null);
+      setEditingTask(null);
     }
   };
   return {
@@ -59,9 +65,15 @@ function useProductValue(store: ProductStore) {
     tasks,
     isNewTaskOpen,
     selectedTask: tasks.find((task) => task.id === selectedId) ?? null,
-    editingTask: tasks.find((task) => task.id === editingId) ?? null,
+    editingTask,
+    taskSheetReturnFocusRef,
+    rememberTaskSheetReturnFocus: (
+      returnFocusRef: React.RefObject<View | null>,
+    ) => {
+      taskSheetReturnFocusRef.current = { targetRef: returnFocusRef };
+    },
     openNewTask: () => {
-      setEditingId(null);
+      setEditingTask(null);
       setSelectedId(null);
       setNewTaskOpen(true);
     },
@@ -73,7 +85,9 @@ function useProductValue(store: ProductStore) {
       if (!store.getSnapshot().mutating) setSelectedId(null);
     },
     editTask: (id: string) => {
-      setEditingId(id);
+      const task = tasks.find(item => item.id === id);
+      if (!task) return;
+      setEditingTask(task);
       setSelectedId(null);
       setNewTaskOpen(true);
     },
@@ -85,14 +99,23 @@ const ProductContext = createContext<ReturnType<typeof useProductValue> | null>(
 function ScopedProductProvider({
   children,
   userId,
-}: PropsWithChildren<{ userId: string }>) {
+  online,
+}: PropsWithChildren<{ userId: string; online: boolean }>) {
   const client = useAuthenticatedClient();
   const store = useMemo(
-    () => new ProductStore(createProductApi(client), userId),
+    () => new ProductStore(createProductApi(client), userId, undefined, () => {
+      // Native storage is initialized only inside an active account's effect.
+      const native: typeof import('./task-offline-native') = require('./task-offline-native');
+      const storage = native.getOfflineTaskStorage(userId);
+      return { storage, engine: new OfflineTaskSync(storage, createTaskSyncApi(client, userId), { uuid: native.createTaskMutationId }) };
+    }),
     [client, userId],
   );
   const value = useProductValue(store);
+  const onlineRef = useRef(online);
+  onlineRef.current = online;
   useEffect(() => {
+    store.setOnline(onlineRef.current);
     store.activate();
     void store.refresh();
     const subscription = AppState.addEventListener('change', (state) => {
@@ -103,14 +126,21 @@ function ScopedProductProvider({
       store.dispose();
     };
   }, [store]);
+  const previousOnline = useRef(online);
+  useEffect(() => {
+    if (previousOnline.current === online) return;
+    previousOnline.current = online;
+    store.setOnline(online);
+    void store.refresh();
+  }, [online, store]);
   return (
-    <ProductContext.Provider value={value}>{children}</ProductContext.Provider>
+    <ProductContext.Provider value={value}><RealtimeProvider store={store}>{children}</RealtimeProvider></ProductContext.Provider>
   );
 }
 export function ProductProvider({ children }: PropsWithChildren) {
   const { state, action, epoch } = useSession();
   if (
-    state.status !== 'authenticated' ||
+    (state.status !== 'authenticated' && state.status !== 'offline-workspace') ||
     action === 'logging-out' ||
     action === 'deleting-account'
   ) {
@@ -119,7 +149,8 @@ export function ProductProvider({ children }: PropsWithChildren) {
   return (
     <ScopedProductProvider
       key={`${state.userId}:${epoch}`}
-      userId={state.userId}>
+      userId={state.userId}
+      online={state.status === 'authenticated'}>
       {children}
     </ScopedProductProvider>
   );

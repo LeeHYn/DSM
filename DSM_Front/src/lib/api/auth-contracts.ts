@@ -3,7 +3,7 @@ import { ApiError } from './api-error';
 const MAX_ACCESS_TOKEN_LENGTH = 16 * 1024;
 const MAX_REFRESH_TOKEN_LENGTH = 1024;
 
-export type SocialProvider = 'GOOGLE' | 'KAKAO';
+export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'APPLE';
 
 export type TokenPair = {
   accessToken: string;

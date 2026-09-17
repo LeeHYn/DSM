@@ -51,7 +51,7 @@ it('classifies unauthorized and other HTTP failures', async () => {
   }
 });
 
-it('classifies HTTP failures without reading error bodies', async () => {
+it('preserves HTTP classification when reading an error body fails', async () => {
   const cases = [
     { status: 401, kind: 'unauthorized' },
     { status: 500, kind: 'http' },
@@ -74,7 +74,56 @@ it('classifies HTTP failures without reading error bodies', async () => {
       kind: testCase.kind,
       status: testCase.status,
     });
-    expect(text).not.toHaveBeenCalled();
+    expect(text).toHaveBeenCalledTimes(1);
+  }
+});
+
+it.each([
+  [409, 'Daily task limit reached', 'TASK_DAILY_LIMIT'],
+  [409, 'Category name already exists', 'CATEGORY_NAME_CONFLICT'],
+  [400, 'endAt must be after startAt', 'INVALID_TIME_RANGE'],
+  [400, [{ property: 'title', constraints: { isNotEmpty: 'sensitive-input' } }], 'VALIDATION_FAILED'],
+])('maps only recognized error metadata for status %s', async (status, message, code) => {
+  const client = createHttpClient({
+    baseUrl: 'https://api.example.com',
+    fetchImpl: jest.fn().mockResolvedValue({
+      ok: false, status,
+      text: async () => JSON.stringify({ statusCode: status, message, path: '/private?token=secret' }),
+    }),
+  });
+  const failure = await client.request({ path: '/x' }).catch(error => error);
+  expect(failure).toMatchObject({ status, code, kind: 'http' });
+  expect(JSON.stringify(failure)).not.toMatch(/sensitive-input|private|secret/);
+});
+
+it.each(['not-json', JSON.stringify({ statusCode: 409, message: 'secret-token' }), ' '.repeat(8193)])(
+  'keeps unknown or excessive error details out of the error', async body => {
+    const client = createHttpClient({
+      baseUrl: 'https://api.example.com',
+      fetchImpl: jest.fn().mockResolvedValue({ ok: false, status: 409, text: async () => body }),
+    });
+    const failure = await client.request({ path: '/x' }).catch(error => error);
+    expect(failure).toMatchObject({ kind: 'http', status: 409 });
+    expect(failure).toHaveProperty('code', undefined);
+    expect(JSON.stringify(failure)).not.toContain('secret-token');
+  },
+);
+
+it('bounds a stuck 401 error body wait and retains unauthorized classification', async () => {
+  jest.useFakeTimers();
+  try {
+    const text = jest.fn(() => new Promise<string>(() => {}));
+    const client = createHttpClient({
+      baseUrl: 'https://api.example.com',
+      fetchImpl: jest.fn().mockResolvedValue({ ok: false, status: 401, text }),
+    });
+    const result = client.request({ path: '/x' }).catch(error => error);
+    await jest.advanceTimersByTimeAsync(251);
+    expect(await result).toMatchObject({ kind: 'unauthorized', status: 401 });
+    expect(text).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
   }
 });
 

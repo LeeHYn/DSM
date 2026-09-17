@@ -22,6 +22,7 @@
 
 ## 기록 규칙
 
+- 각 record 제목의 ID가 resolutionId다. 본문에서 동일 ID를 중복 기재하지 않는다. 상태·검증일·적용 조건은 record별로 유지한다.
 - ID 형식: `ER-YYYYMMDD-NNN`
 - 상태: `VERIFIED | MITIGATION_ONLY | DEPRECATED`
 - 같은 root cause는 새 ID를 만들지 않고 기존 record의 적용 조건·절차·검증일을 갱신한다.
@@ -83,7 +84,7 @@
 | `ER-20260813-005` | `VERIFIED` | Jest, mock factory, hoist, early binding | mock 객체가 초기화 전 함수를 값으로 캡처해 호출이 0회인 채 `TypeError`로 흐름 |
 | `ER-20260813-006` | `VERIFIED` | Expo config plugin, Android, autolinking, Google Sign-In | Android-only explicit client-ID 설정인데 plugin이 iOS/Firebase 설정을 요구해 config가 exit 1 |
 | `ER-20260816-001` | `VERIFIED` | ESLint 8, flat config, React Native, package exports | `eslint/config` subpath 또는 nested plugin을 찾지 못해 lint가 시작되지 않음 |
-| `ER-20260816-002` | `VERIFIED` | Jest, transform cache, isolated cache | focused test는 통과하지만 기존 cache를 쓴 full suite에서 Keychain mock이 어긋남 |
+| `ER-20260816-002` | `VERIFIED` | Jest29, virtual mock, shared resolver identity | 설치된 Keychain의 virtual mock ID가 다른 suite와 충돌 |
 | `ER-20260816-003` | `VERIFIED` | Metro, Windows Temp, cache, `EPERM` | Metro cache deserialize 실패 뒤 bundle이 멈추거나 reset이 권한 오류로 종료됨 |
 | `ER-20260817-001` | `VERIFIED` | Android, Google OAuth, debug signer, Credential Manager, `[16]` | 계정 선택 뒤 `Account reauth failed`로 ID token 전에 Login으로 복귀함 |
 | `ER-20260827-001` | `VERIFIED` | Prisma migration, PostgreSQL enum, disposable seed | migration upgrade seed가 존재하지 않는 enum literal로 중단됨 |
@@ -96,6 +97,18 @@
 | `ER-20260910-001` | `VERIFIED` | Redis, ranking generation, marker, partial loss | 사용자 hash가 남아도 목록 유실을 [] cache hit로 반환 |
 | `ER-20260910-002` | `VERIFIED` | Jest, Date, PostgreSQL/Redis integration | 고정 fixture와 실행일 불일치로 DAILY rank assertion 실패 |
 | `ER-20260910-003` | `VERIFIED` | PowerShell, adb, component escape | 함수가 adb를 가리거나 device shell이 nested class 이름을 확장함 |
+| `ER-20260911-001` | `VERIFIED` | Prisma, production, npm, migration gate | Migration 실패에도 서버가 먼저 시작될 수 있음 |
+| `ER-20260911-002` | `VERIFIED` | Nest, Prisma, readiness, timeout | DB 연결을 확인하는 별도 readiness와 동시 조회 제한 |
+| `ER-20260911-003` | `VERIFIED` | Nest, DTO, implicit Boolean | JSON 문자열 false가 true로 변환됨 |
+| `ER-20260911-004` | `VERIFIED` | Task, Gregorian, strict date | 불가능한 날짜의 rollover 영속화 진입 |
+| `ER-20260911-005` | `VERIFIED` | Node, npm engines, dependency range | 설치 dependency보다 넓은 프로젝트 Node 범위 |
+| `ER-20260911-006` | `VERIFIED` | Notifee, Java hash, Android tag | 서로 다른 알림 ID가 같은 정수 hash로 덮어쓰기 |
+| `ER-20260911-007` | `VERIFIED` | Android24, notification expiry, native ticket | pre26 timeout 무효 및 늦은 표시·취소 경합 |
+| `ER-20260911-008` | `VERIFIED` | offline, logical clock, owner checkpoint | 시계 보정 뒤에도 미래 floor가 동기화를 차단 |
+| `ER-20260911-009` | `VERIFIED` | WebSocket, pending auth, revocation | 타 계정 폐기 중 인증 대기 연결의 잘못된 로그아웃 |
+| `ER-20260911-010` | `VERIFIED` | monotonic clock, notification, realtime | 벽시계 후퇴가 로컬 deadline을 연장 |
+| `ER-20260914-001` | `VERIFIED` | Air, Windows, Git, PATH, repository discovery | Air에서 Git 실행 파일을 찾지 못하고 저장소 탐지가 실패함 |
+| `ER-20260914-002` | `VERIFIED` | React Native, Android Modal, TalkBack, Fabric, focus | sheet 닫힘 뒤 focus event가 첫 화면 heading 선택에 덮임 |
 | `ER-20260809-001` | `VERIFIED` | historical learning site, source exposure | exact path·reason 집합으로 검토 범위를 제한 |
 | `ER-20260809-002` | `VERIFIED` | historical learning site, fixture scanner | visible fixture token과 파일명 오탐 분리 |
 | `ER-20260809-003` | `VERIFIED` | historical learning site, CSS overflow | 긴 path/hash의 반응형 줄바꿈 |
@@ -104,7 +117,6 @@
 
 ### ER-20260715-001 — Google ID token audience 강제
 
-- `resolutionId`: `ER-20260715-001`
 - `status`: `VERIFIED`
 - 증상/signature: Google 로그인이 token signature만 확인하고 `aud`가 이 서비스의 OAuth client인지 보장하지 않는다. `GOOGLE_CLIENT_ID` 누락이나 빈 문자열도 startup에서 통과한다.
 - 적용 조건: `google-auth-library`의 `verifyIdToken`을 사용하고 backend가 단일 Google client ID를 신뢰 경계로 삼는 경우.
@@ -121,7 +133,6 @@
 
 ### ER-20260715-002 — Refresh token 단일 소비와 원자적 rotation
 
-- `resolutionId`: `ER-20260715-002`
 - `status`: `VERIFIED`
 - 증상/signature: 같은 refresh token으로 동시에 요청하면 둘 다 기존 row를 유효하다고 읽고 replacement token을 만들 수 있다.
 - 적용 조건: DB row로 refresh token 수명주기를 관리하고 token rotation을 수행하는 경우.
@@ -140,7 +151,6 @@
 
 ### ER-20260715-003 — Task category 소유권 경계
 
-- `resolutionId`: `ER-20260715-003`
 - `status`: `VERIFIED`
 - 증상/signature: 인증 사용자가 다른 사용자의 `categoryId`를 Task create/update에 전달할 수 있다.
 - 적용 조건: 사용자 소유 category와 공용 default category가 같은 relation에 저장되는 경우.
@@ -158,7 +168,6 @@
 
 ### ER-20260715-004 — Task·score transaction과 Prisma `P2034`
 
-- `resolutionId`: `ER-20260715-004`
 - `status`: `VERIFIED`
 - 증상/signature: 동시 Task 변경이 기본 `Read Committed`에서 같은 score 기준선을 읽어 stale `DailyScore`나 `User.totalScore`를 commit한다. Serializable conflict는 Prisma `P2034`로 실패한다.
 - 적용 조건: Task mutation 뒤 파생 점수를 같은 PostgreSQL DB에서 재계산하는 경우.
@@ -177,7 +186,6 @@
 
 ### ER-20260715-005 — CSS module `TS2307` 선언
 
-- `resolutionId`: `ER-20260715-005`
 - `status`: `VERIFIED`
 - 증상/signature: `Cannot find module './*.module.css' or its corresponding type declarations`, TypeScript `TS2307`.
 - 적용 조건: bundler는 CSS module을 처리하지만 TypeScript project에 module declaration이 없는 Expo/React 프로젝트.
@@ -194,7 +202,6 @@
 
 ### ER-20260720-001 — FCM multicast 부분 성공의 per-device 영속화
 
-- `resolutionId`: `ER-20260720-001`
 - `status`: `VERIFIED`
 - 증상/signature: 한 schedule에서 하나 이상의 device가 성공했다는 이유로 schedule 전체를 `SENT` 처리해 transient 실패 device가 재시도되지 않는다.
 - 적용 조건: 한 논리 알림을 여러 device token에 multicast하고 target별 응답을 받을 수 있는 경우.
@@ -212,7 +219,6 @@
 
 ### ER-20260720-002 — `Retry-After` 보존과 fallback backoff 분리
 
-- `resolutionId`: `ER-20260720-002`
 - `status`: `VERIFIED`
 - 증상/signature: FCM quota/unavailable 응답이 준 미래 `Retry-After`가 application의 1시간 fallback cap으로 잘린다.
 - 적용 조건: SDK 오류 객체에서 seconds, date, millisecond 또는 response header 형태의 retry 지시가 노출될 수 있는 경우.
@@ -230,7 +236,6 @@
 
 ### ER-20260720-003 — 기존 Firebase default app project 검증
 
-- `resolutionId`: `ER-20260720-003`
 - `status`: `VERIFIED`
 - 증상/signature: 프로세스에 이미 초기화된 Firebase default app이 있을 때 현재 `FCM_PROJECT_ID`와 무관하게 재사용된다.
 - 적용 조건: 여러 module/test/bootstrap 경로가 Firebase Admin default app을 공유할 수 있는 경우.
@@ -248,7 +253,6 @@
 
 ### ER-20260720-004 — 불명확한 외부 send를 terminal `UNKNOWN`으로 종료
 
-- `resolutionId`: `ER-20260720-004`
 - `status`: `VERIFIED`
 - 증상/signature: 느린 worker가 살아 있는 동안 lease가 만료돼 다른 worker가 같은 delivery를 재선점하고 FCM을 중복 발송한다.
 - 적용 조건: Task reminder처럼 중복·교차 계정 노출 비용이 누락보다 크고 provider가 exactly-once를 제공하지 않는 경우.
@@ -267,7 +271,6 @@
 
 ### ER-20260720-005 — 계정 중립 data-only 알림 payload
 
-- `resolutionId`: `ER-20260720-005`
 - `status`: `VERIFIED`
 - 증상/signature: 잠금 화면 preview 또는 token ownership race에서 Task title/body/id가 다른 사람이나 잠금 화면에 노출될 수 있다.
 - 적용 조건: client가 인증된 API에서 현재 상태를 다시 조회할 수 있는 reminder sync 설계.
@@ -285,7 +288,6 @@
 
 ### ER-20260720-006 — FCM send/cancel recall race 완화
 
-- `resolutionId`: `ER-20260720-006`
 - `status`: `MITIGATION_ONLY`
 - 증상/signature: worker가 send 직전 재검증을 통과해 FCM 호출을 시작한 뒤 Task가 취소·완료·삭제된다.
 - 적용 조건: 외부 FCM 호출과 DB Task mutation을 하나의 atomic transaction으로 묶을 수 없는 모든 경우.
@@ -304,7 +306,6 @@
 
 ### ER-20260720-007 — 실제 provider 결과 기준 attempt accounting
 
-- `resolutionId`: `ER-20260720-007`
 - `status`: `VERIFIED`
 - 증상/signature: worker가 claim 직후 send 전에 종료될 때마다 `attemptCount`가 증가해 실제 FCM 시도 없이 최대 횟수를 소진한다.
 - 적용 조건: claim, send와 result finalize가 분리된 delivery worker.
@@ -322,7 +323,6 @@
 
 ### ER-20260720-008 — batch 결과의 즉시 조건부 영속화
 
-- `resolutionId`: `ER-20260720-008`
 - `status`: `VERIFIED`
 - 증상/signature: 앞 chunk가 성공한 뒤 DB에 결과를 쓰기 전에 뒤 chunk가 throw하면 앞 target을 다시 발송하거나 결과를 잃는다.
 - 적용 조건: provider batch limit 때문에 여러 chunk로 외부 호출을 나누는 worker.
@@ -340,7 +340,6 @@
 
 ### ER-20260720-009 — cross-user token/FID in-place 이전 금지
 
-- `resolutionId`: `ER-20260720-009`
 - `status`: `VERIFIED`
 - 증상/signature: 전역 unique FCM token/FID row의 `userId`를 새 사용자로 바꾸는 동안 이전 사용자의 delivery가 같은 token으로 발송될 수 있다.
 - 적용 조건: token 또는 Firebase Installation ID가 전역 unique이고 account switch가 가능한 서비스.
@@ -359,7 +358,6 @@
 
 ### ER-20260720-010 — 실제 PostgreSQL migration parity gate
 
-- `resolutionId`: `ER-20260720-010`
 - `status`: `VERIFIED`
 - 증상/signature: 수동 작성한 Prisma migration SQL이 정적 schema 검증은 통과하지만 빈 DB 적용 여부와 live schema parity가 확인되지 않는다.
 - 적용 조건: migration SQL을 수동 작성하거나 초기 migration을 별도 검토한 PostgreSQL 프로젝트.
@@ -379,7 +377,6 @@
 
 ### ER-20260720-011 — retry와 stale lease index 분리
 
-- `resolutionId`: `ER-20260720-011`
 - `status`: `VERIFIED`
 - 증상/signature: `status=PROCESSING AND processingStartedAt < cutoff` 조회가 복합 index의 중간 `nextAttemptAt` 조건을 제공하지 않아 원하는 범위 scan을 사용하지 못한다.
 - 적용 조건: retry-due 조회와 stale-processing 조회가 서로 다른 column 조합을 사용하는 PostgreSQL queue table.
@@ -397,7 +394,6 @@
 
 ### ER-20260720-012 — Prisma migration provider lock
 
-- `resolutionId`: `ER-20260720-012`
 - `status`: `VERIFIED`
 - 증상/signature: `prisma/migrations`에 SQL은 있지만 `migration_lock.toml`이 없어 migration history의 provider가 명시되지 않는다.
 - 적용 조건: Prisma Migrate history를 저장소에 관리하는 프로젝트.
@@ -414,7 +410,6 @@
 
 ### ER-20260720-013 — NestJS feature module의 `JwtService` DI 경계
 
-- `resolutionId`: `ER-20260720-013`
 - `status`: `VERIFIED`
 - 증상/signature: AppModule compile 또는 startup에서 `Nest can't resolve dependencies of JwtAuthGuard` / `JwtService` provider를 feature module context에서 찾지 못한다.
 - 적용 조건: `JwtAuthGuard`를 Auth module 밖의 controller에 class reference로 적용하는 NestJS module graph.
@@ -432,7 +427,6 @@
 
 ### ER-20260720-014 — Windows locale text I/O의 UTF-8 문서 손상
 
-- `resolutionId`: `ER-20260720-014`
 - `status`: `VERIFIED`
 - 증상/signature: Python `UnicodeEncodeError: 'cp949' codec can't encode character`, 압축 대상 primary가 0 bytes가 되거나 `*.original.md` 한글이 깨진다. backup readback 비교는 통과할 수 있다.
 - 적용 조건: Windows non-UTF-8 locale에서 `Path.read_text(errors='ignore')`, `Path.write_text(text)`처럼 `encoding`을 지정하지 않는 문서 rewrite script.
@@ -457,7 +451,6 @@
 
 ### ER-20260722-001 — Obsidian Windows junction 전환 후 stale IndexedDB 복구
 
-- `resolutionId`: `ER-20260722-001`
 - `status`: `VERIFIED`
 - 증상/signature: Obsidian 1.12.7에서 Vault 내부의 full-source Windows junction을 좁은 문서 junction으로 교체한 뒤 2분 이상 `캐시 불러오는 중...`에 머물거나, 이미 제거된 `node_modules`·AI 지침·과거 agent plan이 Quick Switcher에 남는다.
 - 적용 조건: 단일 local Vault의 실제 파일·junction target·비순환 구조는 정상이고, Obsidian IndexedDB LevelDB에 전환 전 full-source 경로가 남아 있으며 일반 재시작과 Vault cache rebuild만으로 회복되지 않는 Windows 환경.
@@ -478,7 +471,6 @@
 
 ### ER-20260725-001 — PowerShell `npm.ps1` ExecutionPolicy 차단 우회
 
-- `resolutionId`: `ER-20260725-001`
 - `status`: `VERIFIED`
 - 증상/signature: PowerShell에서 `npm` 실행 즉시 `PSSecurityException`과 “이 시스템에서 스크립트를 실행할 수 없으므로 ... npm.ps1 파일을 로드할 수 없습니다”가 발생하며 npm script가 시작되지 않는다.
 - 적용 조건: `Get-Command npm -All`에서 같은 Node 설치의 `npm.ps1`과 `npm.cmd`가 함께 발견되고, PowerShell command resolution이 차단된 `npm.ps1`을 먼저 선택하는 Windows 환경.
@@ -496,7 +488,6 @@
 
 ### ER-20260725-002 — managed sandbox의 Jest Windows Temp cache `EPERM`
 
-- `resolutionId`: `ER-20260725-002`
 - `status`: `VERIFIED`
 - 증상/signature: Jest 결과는 모든 suite/test가 통과했지만 마지막에 사용자 Temp 아래 `jest-transform-cache` 또는 `perf-cache`를 `mkdir`·`open`하다 `EPERM: operation not permitted`로 exit 1이 된다. e2e는 transform cache 생성 전에 중단될 수 있다.
 - 적용 조건: workspace만 쓰기 가능한 managed sandbox에서 Jest의 기본 `TEMP`가 sandbox 밖 Windows 사용자 경로를 가리키고, stack trace가 `jest-util`, `@jest/transform` 또는 `@jest/test-sequencer` cache write에서 끝나는 경우.
@@ -515,7 +506,6 @@
 
 ### ER-20260725-003 — managed sandbox의 npm cache write `EPERM`
 
-- `resolutionId`: `ER-20260725-003`
 - `status`: `VERIFIED`
 - 증상/signature: `npm ci`, `npm install` 또는 Expo package install이 dependency
   해석 전에 사용자 `AppData\Local\npm-cache` 아래 파일 open/rename에서
@@ -542,7 +532,6 @@
 
 ### ER-20260725-004 — fresh worktree의 Prisma Client 생성 누락
 
-- `resolutionId`: `ER-20260725-004`
 - `status`: `VERIFIED`
 - 증상/signature: dependency 설치 후 Backend test/typecheck가
   `Cannot find module '.prisma/client/default'` 또는 Prisma Client 미초기화 오류로
@@ -568,7 +557,6 @@
 
 ### ER-20260725-005 — Expo install의 config plugin 및 devDependency 부작용
 
-- `resolutionId`: `ER-20260725-005`
 - `status`: `VERIFIED`
 - 증상/signature: `npx expo install expo-secure-store`가 package/lock 외에
   `app.json` plugin을 자동 추가하고, npm 11에서 `-- --dev` 형태가 Expo의
@@ -598,7 +586,6 @@
 
 ### ER-20260726-001 — Promise queue race test의 시작 시점 동기화
 
-- `resolutionId`: `ER-20260726-001`
 - `status`: `VERIFIED`
 - 증상/signature: `resolvedPromise.then(operation)`으로 직렬화한 queue의 race test가
   operation 호출 직후 동기적으로 epoch나 상태를 바꾸면, storage write가 진행 중일
@@ -631,7 +618,6 @@
 
 ### ER-20260726-002 — Dependency ApiError의 고정 오류 계약 우회
 
-- `resolutionId`: `ER-20260726-002`
 - `status`: `VERIFIED`
 - 증상/signature: dependency 호출을 감싼 catch에서 `cause instanceof ApiError`를
   그대로 rethrow하면, dependency가 다른 kind/message의 `ApiError`를 reject할 때
@@ -666,7 +652,6 @@
 
 ### ER-20260726-003 — Jest CommonJS module reload test의 runtime import 오류
 
-- `resolutionId`: `ER-20260726-003`
 - `status`: `VERIFIED`
 - 증상/signature: `jest.resetModules()` 뒤 대상 모듈을 runtime `import()`로 다시
   불러오는 테스트가 assertion이나 module resolution 전에
@@ -699,7 +684,6 @@
 
 ### ER-20260726-004 — Generic method용 Jest mock의 고정 반환형 `TS2322`
 
-- `resolutionId`: `ER-20260726-004`
 - `status`: `VERIFIED`
 - 증상/signature: `jest.fn((request: HttpRequest<unknown>) =>
   Promise.resolve(value))`를 `<T>(request: HttpRequest<T>) => Promise<T>`에
@@ -727,7 +711,6 @@
 
 ### ER-20260726-005 — 완료된 refresh 뒤 지연 `401`의 중복 rotation
 
-- `resolutionId`: `ER-20260726-005`
 - `status`: `VERIFIED`
 - 증상/signature: 같은 만료 access token으로 동시에 시작한 A/B 중 A의 `401`이
   refresh를 완료한 뒤 B의 초기 `401`이 늦게 도착하면 refresh callback이 두 번 호출된다.
@@ -755,7 +738,6 @@
 
 ### ER-20260726-006 — Promise callback 동기 throw의 assignment/cleanup race
 
-- `resolutionId`: `ER-20260726-006`
 - `status`: `VERIFIED`
 - 증상/signature: cached operation을 `cache = asyncIife()` 형태로 만들 때 내부
   callback이 Promise 반환 전에 동기 throw하면, cleanup이 먼저 `cache = null`을
@@ -783,7 +765,6 @@
 
 ### ER-20260726-007 — Authenticated request generation의 3단계 session fence
 
-- `resolutionId`: `ER-20260726-007`
 - `status`: `VERIFIED`
 - 증상/signature: 이전 session A의 delayed `401`이 B session refresh를 시작하거나,
   B 요청이 A의 in-flight refresh에 합류하거나, A refresh 대기 중 logout/B 전환 뒤
@@ -817,7 +798,6 @@
 
 ### ER-20260726-008 — Token read 실패 뒤 verified local cleanup
 
-- `resolutionId`: `ER-20260726-008`
 - `status`: `VERIFIED`
 - 증상/signature: session bootstrap 또는 refresh에서 token store `read()`가
   storage error를 반환하면 credential 정리를 시도하지 않고 곧바로
@@ -848,7 +828,6 @@
 
 ### ER-20260726-009 — 직접 refresh 실패의 stable action 복원
 
-- `resolutionId`: `ER-20260726-009`
 - `status`: `VERIFIED`
 - 증상/signature: authenticated request가 직접 `refreshAccessToken()`을 호출한 뒤
   rotation network/timeout failure가 발생하면 stable state는 남아도 action이
@@ -875,7 +854,6 @@
 
 ### ER-20260726-010 — Delegated replay-401 cleanup 재진입의 epoch fence
 
-- `resolutionId`: `ER-20260726-010`
 - `status`: `VERIFIED`
 - 증상/signature: authenticated client가 replay `401`에서 session cleanup callback을
   await한 뒤 error를 rethrow하고, 상위 profile handler가 같은 error로 cleanup을 다시
@@ -906,7 +884,6 @@
 
 ### ER-20260726-011 — Onboarding mutation의 stable-state precondition
 
-- `resolutionId`: `ER-20260726-011`
 - `status`: `VERIFIED`
 - 증상/signature: access token 존재 여부만 검사해 authenticated 또는
   `offline/profile` 상태에서도 onboarding completion PATCH가 실행된다.
@@ -929,7 +906,6 @@
 
 ### ER-20260726-012 — Malformed profile 뒤 issued pair revoke
 
-- `resolutionId`: `ER-20260726-012`
 - `status`: `VERIFIED`
 - 증상/signature: login/refresh pair를 저장한 뒤 `/auth/me` runtime validation이
   protocol error를 반환하면 local token만 clear되고 server refresh token은 만료까지
@@ -958,7 +934,6 @@
 
 ### ER-20260811-001 — Profile stale success의 epoch/token fence
 
-- `resolutionId`: `ER-20260811-001`
 - `status`: `VERIFIED`
 - 증상/signature: `/auth/me` error path는 epoch를 확인하지만 success path가 곧바로
   `publishUser`를 호출해, logout 또는 새 계정 sign-in 뒤 이전 user가 protected state를
@@ -985,7 +960,6 @@
 
 ### ER-20260811-002 — Onboarding completion의 epoch-scoped single-flight
 
-- `resolutionId`: `ER-20260811-002`
 - `status`: `VERIFIED`
 - 증상/signature: 같은 onboarding state에서 두 PATCH가 실행돼 첫 성공 뒤 두 번째 late
   failure가 state를 훼손하거나, global pending promise가 logout/new sign-in 뒤 새
@@ -1010,7 +984,6 @@
 
 ### ER-20260811-003 — Refresh/logout의 token-family row-lock 직렬화
 
-- `resolutionId`: `ER-20260811-003`
 - `status`: `VERIFIED`
 - 증상/signature: 같은 raw refresh token으로 refresh와 logout이 교차하면 refresh가
   successor를 만든 뒤 logout이 revoked predecessor만 다시 처리해 204를 반환하고
@@ -1039,7 +1012,6 @@
 
 ### ER-20260811-004 — Expo Router app tree의 Jest module 오염
 
-- `resolutionId`: `ER-20260811-004`
 - `status`: `VERIFIED`
 - 증상/signature: `src/app/**` 아래 `.test.tsx`가 Expo Router route manifest와 Web
   bundle에 포함돼 browser에서 `expect is not defined`로 startup이 차단된다.
@@ -1061,7 +1033,6 @@
 
 ### ER-20260811-005 — Windows Prisma generate의 engine DLL rename `EPERM`
 
-- `resolutionId`: `ER-20260811-005`
 - `status`: `VERIFIED`
 - 증상/signature: `prisma generate`가 `query_engine-windows.dll.node.tmp<id>`를 최종 DLL로
   rename할 때 `EPERM: operation not permitted`로 실패한다. schema validate는 통과한다.
@@ -1086,7 +1057,6 @@
 
 ### ER-20260813-001 — Expo SDK patch의 stale peer lock `ERESOLVE`
 
-- `resolutionId`: `ER-20260813-001`
 - `status`: `VERIFIED`
 - 증상/signature: npm 11에서 `npx expo install --fix`가 먼저 `expo`와 root version range를
   갱신한 뒤 재진입한 두 번째 install에서 구 `expo-router`와 `@expo/log-box`를 lockfile에서
@@ -1117,7 +1087,6 @@
 
 ### ER-20260813-002 — npm hoist 차이에 따른 `expo-asset` module resolution 실패
 
-- `resolutionId`: `ER-20260813-002`
 - `status`: `VERIFIED`
 - 증상/signature: SDK patch 뒤 Jest가 `expo-font/build/FontLoader.js`에서
   `Cannot find module 'expo-asset'`로 여러 UI suite를 시작하지 못한다. lockfile에는
@@ -1148,7 +1117,6 @@
 
 ### ER-20260813-003 — Jest의 eager Nitro TurboModule import 차단
 
-- `resolutionId`: `ER-20260813-003`
 - `status`: `VERIFIED`
 - 증상/signature: Jest가 native Google package를 import할 때 `Failed to get NitroModules`와
   `TurboModuleRegistry.getEnforcing(...): 'NitroModules' could not be found`로 suite 시작 전에
@@ -1175,7 +1143,6 @@
 
 ### ER-20260813-004 — Jest callback arity 추론의 `TS2322`
 
-- `resolutionId`: `ER-20260813-004`
 - `status`: `VERIFIED`
 - 증상/signature: `jest.fn(() => false)`가 `Mock<boolean, [], unknown>`으로 추론돼
   `(error: unknown) => boolean` dependency에 할당될 때 `TS2322`가 발생한다.
@@ -1200,7 +1167,6 @@
 
 ### ER-20260813-005 — Jest mock factory의 초기화 전 함수 값 캡처
 
-- `resolutionId`: `ER-20260813-005`
 - `status`: `VERIFIED`
 - 증상/signature: UI handler는 generic failure 경로에 들어가지만 `jest.fn()`으로 만든 adapter
   operation의 호출 수는 0이다. 성공·취소 fixture도 모두 같은 generic error로 바뀐다.
@@ -1228,7 +1194,6 @@
 
 ### ER-20260813-006 — Android-only explicit Google client-ID에서 config plugin 충돌
 
-- `resolutionId`: `ER-20260813-006`
 - `status`: `VERIFIED`
 - 증상/signature: `react-native-nitro-google-signin`을 `expo.plugins`에 문자열로 추가한 뒤
   `expo config --type prebuild --json`이 exit 1하고 유효한 config JSON을 출력하지 않는다.
@@ -1261,7 +1226,6 @@
 
 ### ER-20260816-001 — ESLint 8과 React Native flat-config/plugin 해석 충돌
 
-- `resolutionId`: `ER-20260816-001`
 - `status`: `VERIFIED`
 - 증상/signature: ESLint 8.57에서 `ERR_PACKAGE_PATH_NOT_EXPORTED: eslint/config`가 발생하거나 `eslint-plugin-react-hooks`를 root에서 찾지 못한다.
 - 적용 조건: `@react-native/eslint-config@0.83.x`, ESLint 8, `FlatCompat`를 사용하는 npm install에서 plugin들이 config package 아래에 nested된 경우.
@@ -1272,23 +1236,22 @@
 - 근거: [ESLint config](../../DSM_Front/eslint.config.js)
 - `lastVerifiedAt`: `2026-08-16`
 
-### ER-20260816-002 — 이전 Jest transform cache로 native mock identity 불일치
+### ER-20260816-002 — Jest 가상 모듈 mock과 공유 resolver의 identity 불일치
 
-- `resolutionId`: `ER-20260816-002`
 - `status`: `VERIFIED`
 - 증상/signature: Keychain test는 focused fresh cache에서 11/11 통과하지만 기존 cache를 재사용한 full run에서 정상 case만 고정 storage error로 실패한다.
-- 적용 조건: Jest preset/module mapper/native mock 설정을 변경한 뒤 같은 project-local cache directory를 재사용한 경우.
-- root cause: 이전 transform/module-resolution 상태가 cache에 남아 test가 설정한 mock과 production import가 같은 identity를 보지 못했다.
-- 해결 절차: 제품 코드를 바꾸기 전에 focused fresh cache로 재현성을 분리하고, verified project-local Jest cache만 제거한 뒤 unique fresh cache로 full suite를 실행한다.
+- 적용 조건: Jest29 공유 resolver와 설치된 react-native-keychain을 virtual:true로 mock한 테스트가 함께 실행되는 경우. diskcache 비활성화만으로 해결되지 않는다.
+- root cause(2026-09-11 정정): 설치된 react-native-keychain을 virtual:true로 mock하면 Jest29의 suite간공유 resolver getModuleID cachekey가 virtualMocks를포함하지않아 이전suite의실제moduleID와현재test의virtualID가달라진다. diskcache를끄더라도재현되므로과거cache-only추론은충분하지않다.
+- 해결 절차: 설치패키지test의불필요한virtual:true만제거해mock/import의ID를통일한다. native제품방어/저장소예외처리를약화하지않는다. 캐시삭제는이원인의수정이아니다.
 - 검증: fresh cache full run에서 18 suites, 161 tests 전부 통과했다.
 - 현재 PC 재검증(2026-09-09): 동일 제품 tree의 기본 cache full run은 Keychain 정상 case 7건이 storage error로 실패했다. `npm.cmd test -- --cacheDirectory D:/DSM/.local/jest-front-resume-20260909`로 cache만 분리한 full run은 24 suites/229 tests 통과했다. 제품 코드·mock을 수정하지 않았다.
 - 재발 방지/금지: cache-only 실패를 제품의 fail-closed storage 동작을 약화해 해결하지 않는다. Windows sandbox에서는 system Temp 대신 project-local cache를 사용한다.
 - 근거: [Jest config](../../DSM_Front/jest.config.js), [Keychain tests](../../DSM_Front/src/features/auth/token-store.native.test.ts)
-- `lastVerifiedAt`: `2026-08-16`
+- 최신 검증(2026-09-11): full--no-cache538통과/7실패,focused11통과; session-context→native suite순서고정8통과/7실패. 메모리virtual:false대조15/15, 실제옵션제거후Front31suites550/550통과. 다른제품변경의테스트도포함한현재전체결과다.
+- `lastVerifiedAt`: `2026-09-11`
 
 ### ER-20260816-003 — Metro Windows cache 손상과 sandbox reset 권한 오류
 
-- `resolutionId`: `ER-20260816-003`
 - `status`: `VERIFIED`
 - 증상/signature: `Unable to deserialize cloned data` 뒤 Metro full crawl이 오래 걸리거나 `--reset-cache`가 `%LOCALAPPDATA%\Temp\metro-cache`의 `EPERM`으로 종료된다.
 - 적용 조건: React Native 0.83 Metro on Windows, sandbox가 user Temp 삭제를 제한하고 project root에 대형 test cache가 남은 경우.
@@ -1302,7 +1265,6 @@
 
 ### ER-20260817-001 — Android Studio debug signer OAuth 누락으로 Google 로그인이 `[16]`에서 중단됨
 
-- `resolutionId`: `ER-20260817-001`
 - `status`: `VERIFIED`
 - 증상/signature: Android emulator에서 Google 계정을 선택해도 Credential Manager가
   `[16] Account reauth failed`를 반환하고 앱이 Login으로 복귀한다. backend `/auth/login`과
@@ -1336,7 +1298,6 @@
 
 ### ER-20260827-001 — Prisma upgrade seed의 PostgreSQL enum literal 불일치
 
-- `resolutionId`: `ER-20260827-001`
 - `status`: `VERIFIED`
 - 증상/signature: canonical migration prefix까지 적용된 PostgreSQL에서 upgrade seed가
   `invalid input value for enum`과 psql exit `3`으로 중단되고 forward migration과 invariant probe가 실행되지 않는다.
@@ -1362,7 +1323,6 @@
 
 ### ER-20260909-001 — class-validator optional 날짜의 explicit null 차단
 
-- `resolutionId`: `ER-20260909-001`
 - `status`: `VERIFIED`
 - 증상/signature: PATCH의 optional 날짜에 `null`을 보내도 validation error가 0건이고, service의 `new Date(null)`이 Unix epoch를 만들어 유효 timestamp로 저장한다.
 - 적용 조건: NestJS ValidationPipe, class-validator 0.15의 `IsOptional`, 문자열 날짜 DTO와 service-side `Date` 변환을 함께 사용하는 경우.
@@ -1376,7 +1336,6 @@
 
 ### ER-20260909-002 — legacy data가 있는 PostgreSQL CHECK의 staged rollout
 
-- `resolutionId`: `ER-20260909-002`
 - `status`: `VERIFIED`
 - 증상/signature: 새 무결성 CHECK를 즉시 검증하면 과거 버그로 저장된 row 하나 때문에 전체 migration이 실패하지만, 기존 값을 임의 수정할 안전한 규칙은 없다.
 - 적용 조건: Prisma가 관리하는 PostgreSQL table에 soft-delete column이 있고 신규·수정 active row부터 관계 invariant를 강제해야 하는 경우.
@@ -1390,7 +1349,6 @@
 
 ### ER-20260909-003 — legacy 보존형 일일 snapshot 멱등화
 
-- `resolutionId`: `ER-20260909-003`
 - `status`: `VERIFIED`
 - 증상/signature: 인증된 snapshot 생성 endpoint를 같은 사용자가 반복 호출할 때마다 동일 period의 영구 row가 추가되고 ranking 계산도 반복된다.
 - 적용 조건: NestJS·Prisma·PostgreSQL에서 공개 create endpoint를 호환성 때문에 유지하면서, 사용자·period·UTC 날짜별 최초 상태만 보존하고 역사적 중복 row의 의미는 아직 확정하지 못한 경우.
@@ -1404,7 +1362,6 @@
 
 ### ER-20260909-004 — Microsoft OpenJDK 다운로드 checksum 주소 확인
 
-- `resolutionId`: `ER-20260909-004`
 - `status`: `VERIFIED`
 - 증상/signature: Microsoft JDK ZIP을 내려받은 뒤 `.sha256`를 붙인 URL에서 64자리 checksum을 얻지 못해 압축 해제 전 검증이 실패한다.
 - 적용 조건: Windows 새 PC에서 Microsoft OpenJDK ZIP을 직접 설치하며 SHA-256 확인을 수행하는 경우.
@@ -1418,7 +1375,6 @@
 
 ### ER-20260909-005 — Windows Metro의 native build 임시 폴더 감시 제외
 
-- `resolutionId`: `ER-20260909-005`
 - `status`: `VERIFIED`
 - 증상/signature: Android native build와 Metro를 함께 실행하면 `metro-file-map/FallbackWatcher`의 `fs.watch`가 `node_modules/.../android/.cxx/.../CMakeTmp/...`에서 `ENOENT`를 발생시키며 Metro process가 종료된다.
 - 적용 조건: Windows의 Metro fallback watcher가 React Native dependency의 Android generated build directories까지 감시하는 경우.
@@ -1432,7 +1388,6 @@
 
 ### ER-20260909-006 — 패키지 가상 환경의 Docker 설치·소켓 경로 분리
 
-- `resolutionId`: `ER-20260909-006`
 - `status`: `VERIFIED`
 - 증상/signature: Docker 4.90.0이 `sailor-ingest.sock` 또는 `dockerInference`의 rename/listener에서 `The file cannot be accessed by the system`으로 종료한다. 가상 AppData 경로의 Remove-Item·.NET·OPEN_REPARSE_POINT도 Windows 1920이며 Explorer는 그 경로를 찾지 못한다. 일반 Explorer에서 기존 앱 실행 시 Docker 설치 registry key가 없다고 표시될 수 있다.
 - 적용 조건: MSIX 패키지 앱에서 설치·실행한 Docker와 일반 Explorer의 AppData/설치 view가 다르고, 패키지의 `LocalCache\Local\Docker\run`에서 같은 파일을 찾는 경우. 모든 AF_UNIX/1920 오류에 일반화하지 않는다.
@@ -1450,7 +1405,6 @@
 
 ### ER-20260809-001 — source exposure의 exact path·reason 승인
 
-- `resolutionId`: `ER-20260809-001`
 - `status`: `VERIFIED`
 - 증상/signature: 보존 대상 application source나 unit fixture의 정상적인 credential-shaped assignment가 `credential-assignment`로 탐지돼 오프라인 학습 배치 생성이 fail-closed된다.
 - 적용 조건: 원본 소스를 그대로 보존하는 정적 학습 사이트가 reason 기반 exposure scanner와 수동 검토 gate를 함께 사용하는 경우.
@@ -1469,7 +1423,6 @@
 
 ### ER-20260809-002 — visible fixture token과 파일명 분리
 
-- `resolutionId`: `ER-20260809-002`
 - `status`: `VERIFIED`
 - 증상/signature: fixture token 노출 검사가 안전한 DTO 파일명의 일부 문자열까지 token으로 해석해 verifier를 실패시킨다.
 - 적용 조건: 정적 학습 사이트가 source path·filename metadata와 사용자에게 보이는 설명 text를 같은 HTML에 렌더링하고, 알려진 test fixture literal 노출을 차단하는 경우.
@@ -1487,7 +1440,6 @@
 
 ### ER-20260809-003 — 공백 없는 학습 메타데이터의 반응형 줄바꿈
 
-- `resolutionId`: `ER-20260809-003`
 - `status`: `VERIFIED`
 - 증상/signature: 긴 source path 링크 또는 SHA-256처럼 공백 없는 문자열이 카드 경계를 넘어가고 모바일 문서 전체에 가로 스크롤을 만든다.
 - 적용 조건: CSS grid 카드나 metadata 정의 목록 안에 source path, digest처럼 자연 줄바꿈 지점이 없는 문자열을 표시하는 정적 문서.
@@ -1503,9 +1455,10 @@
 - 근거: [Site CSS](../../tools/learning-site/assets/site.css), [Style tests](../../tools/learning-site/tests/style.test.mjs), [QA report](../../learning-site/qa-report.md)
 - `lastVerifiedAt`: `2026-08-09`
 
+## 현재 제품·검증 도우미 해결 기록
+
 ### ER-20260910-001 — Redis 목록 유실과 정상 빈 projection 구별
 
-- `resolutionId`: `ER-20260910-001`
 - `status`: `VERIFIED`
 - 증상/signature: complete marker의 entryCount=3과 entries hash 3행이 남아 있으나 leaderboard list가 사라지면 cache/service가 []를 성공 반환한다.
 - 적용 조건: immutable generation의 완료 표식과 별도 list/hash를 사용하며 빈 배열을 truthy cache hit로 취급하는 ranking reader.
@@ -1519,7 +1472,6 @@
 
 ### ER-20260910-002 — 실제 서비스 integration의 fixture/Date 정렬
 
-- `resolutionId`: `ER-20260910-002`
 - `status`: `VERIFIED`
 - 증상/signature: 고정 2026-09-08 fixture의 DAILY rank 3을 기대하지만 09-10 실행의 올바른 현재 날짜 조회는 rank 1을 반환해 전용 integration이 실패한다.
 - 적용 조건: projection에는 고정 reference를 전달하지만 공개 service는 new Date()를 쓰는 실제 PostgreSQL/Redis Jest test.
@@ -1533,7 +1485,6 @@
 
 ### ER-20260910-003 — Android 검증 helper의 명령 해석 오류
 
-- `resolutionId`: `ER-20260910-003`
 - `status`: `VERIFIED`
 - 증상/signature: adb wrapper에서 같은 로그의 파일 잠금 오류가 발생하거나, nested Activity component의 `$Control`이 사라져 `Error type 3`을 출력해도 native exit code가 0으로 남는다.
 - 적용 조건: PowerShell에서 `Adb`라는 함수를 선언한 뒤 그 안에서 `adb`를 실행하거나, `adb shell am start`에 Java nested class 이름을 전달하는 로컬 검증 helper.
@@ -1545,12 +1496,153 @@
 - 근거: [검증 보고서](../audits/20260817-release-audit-full-project/2026-09-10-android-operations-validation.md)
 - `lastVerifiedAt`: `2026-09-10`
 
-## 새 record 템플릿
+### ER-20260911-001 — production 서버 시작 전 migration 실패 차단
+
+- `status`: `VERIFIED`
+- 증상/signature: 신규/이전 schema DB에 production 앱이 먼저 시작돼 Prisma schema 불일치가 요청 중 발생할 수 있다.
+- 적용 조건: npm 기반 Node 서버, committed Prisma6 migration과 production 시작 명령은 있지만 migrate deploy 선행 단계가 없는 경우.
+- root cause: start:prod가 node만 실행하고 migration script는 개발용뿐이었다.
+- 해결 절차: prisma:migrate:deploy에 prisma migrate deploy를 정의하고 start:prod에서 성공 시에만 서버를 실행하도록 명시적 &&로 연결한다. ignore-scripts에 생략되는 prestart hook은 사용하지 않는다. Artifact에 같은 revision schema/전체 SQL/CLI를 포함하고 배포·시작을 직렬화한다.
+- 검증: 실제 npm process3개 RED→GREEN(순서·실패 차단·ignore-scripts), Backend328/build/type/lint/format. 실제 PG17의 empty8·redeploy 이력 보존·prefix6→8/User 보존·SQL P3018·실패 이력 P3009·DB 중지7관찰 PASS, 독립 reviewer2명 F-014 RECHECKED.
+- 재발 방지/금지: CLI devDependency pruning, migration 실패 무시, lock 해제·migrate reset/db push/임의 resolve 우회 금지. DB 단절 CLI 오류 코드를 P1001 하나로 가정하지 말고 실제 상태·nonzero·시작 차단을 확인한다.
+- 적용 불가/잔여 위험: 실제 production/CI·Linux·동시 replica·HTTP readiness·drift/legacy VALIDATE 미검증. 재시작에도 DB/DDL 권한·CLI가 필요하며 기존 트래픽은 별도 호환 rollout이 필요하다. DB 조회 후 marker만으로 미진입을 단정하지 않고 즉시 기록 fixture와 shell 순서를 함께 검증한다.
+- 근거: [실행 scripts](../../DSM_Back/package.json), [회귀 테스트](../../DSM_Back/test/production-start.test.cjs), [Round16 검증](../audits/20260817-release-audit-full-project/2026-09-11-production-migration-gate.md)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-002 — DB readiness 응답 제한과 동시 조회 공유
+
+- `status`: `VERIFIED`
+- 증상/signature: URL 존재만 확인하는 process health는 DB 단절에도200을 반환하며, 단순 DB ping은 지연·동시 probe 때 응답 대기와 조회 수가 늘어난다.
+- 적용 조건: Nest11/Prisma6의 process liveness를 보존하면서 DB 연결을 확인하는 별도 readiness가 필요한 경우. Redis는 선택적 cache/DB fallback이다.
+- root cause: 기존 /health는 config/process 계약이며 DB ping이 없다. 응답 timeout만 추가하고 진행 중 query를 잊으면 반복 probe가 DB work를 계속 쌓을 수 있다.
+- 해결 절차: /health/ready의 SELECT1 성공은200, 실패/1초 초과는 고정503/no-store로 응답한다. Query와 timer 결과를 공유하고 underlying query가 끝날 때만 다음 조회를 허용한다. Fast completion은 timer를 정리하고 late rejection도 처리한다. /health는 DB 의존 없이 유지한다.
+- 검증: 서비스5개 RED→GREEN(동시성·999/1000ms·late success/rejection 포함), Backend333/E2E4, PG17 실제 HTTP 정상200→DB중지503·liveness200→동일 process복구200, 동시20 HTTP 모두503. Query수1은 unit 근거이며 HTTP burst만으로 추론하지 않는다.
+- 재발 방지/금지: 응답 timeout을 query 취소로 표현하거나 DB 의존 probe를 liveness 재시작 조건으로 혼용하지 않는다. 실제 error/연결 정보를 공개하지 않는다.
+- 적용 불가/잔여 위험: F-013 UNKNOWN 유지. 실제 production probe mapping·traffic 제외/복구·전체 AppModule startup·network blackhole/OEM은 검증하지 않았다. SELECT1은 schema·쓰기·migration·전체 API 검증이 아니며 event-loop 정체는 timer도 지연시킨다. Test fixture의 Prisma/Redis override는 실제 운영 검증이 아니다.
+- 근거: [readiness 서비스](../../DSM_Back/src/health/readiness.service.ts), [회귀](../../DSM_Back/src/health/readiness.service.spec.ts), [검증 보고서](../audits/20260817-release-audit-full-project/2026-09-11-readiness-contract.md)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-003 — Task JSON boolean의 암묵적 변환 차단
+
+- `status`: `VERIFIED`
+- 증상/signature: notificationEnabled 문자열 false가 true로 변환돼 비활성화 의도와 반대로 schedule 경로로 전달된다.
+- 적용 조건: Nest11 ValidationPipe transform/enableImplicitConversion=true, class-transformer0.5.1과 class-validator0.15.1, 선택적 boolean DTO.
+- root cause: reflected Boolean 변환이 IsBoolean 검사 전에 실행되어 문자열/숫자도 boolean으로 통과했다.
+- 해결 절차: 해당 Create/Update 필드에 Type(() => Object)를 명시해 원 JSON primitive 타입을 보존하고 IsBoolean으로 거부한다. 전역 conversion을 바꾸지 않으며 IsOptional null/생략 계약을 보존한다. 다른 계약 필드는 별도 확인한다.
+- 검증: 실제 configureApp/TasksController HTTP에서 POST/PATCH 비boolean7종 거부400·양 service 호출0, false/true/null/생략 보존. 전체 E2E58/Backend333·build/type/lint/format, 독립 reviewer2명 F-041 RECHECKED. RED의 비boolean12실패와 초기 test mock lint1실패는 보존 후 정정했다.
+- 재발 방지/금지: Type(Boolean) 또는 변환 후 value를 그대로 반환하는 Transform은 문자열 false를 되돌리지 못한다. 전역 pipe를 무조건 바꾸지 말고 실제 JSON HTTP 회귀로 검증한다.
+- 잔여 위험: auth/service mock의 HTTP 경계 검증이며 기존 null의 실제 DB 처리·provider·직접 서비스 호출·운영 검증은 아니다.
+- 근거: [DTO](../../DSM_Back/src/tasks/dto/create-task.dto.ts), [HTTP 회귀](../../DSM_Back/test/task-input.e2e-spec.ts), [Round17](../audits/20260817-release-audit-full-project/2026-09-11-task-input-validation.md)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-004 — Gregorian 날짜 rollover의 mutation 진입 차단
+
+- `status`: `VERIFIED`
+- 증상/signature: 2월30일·비윤년2월29일·4월31일이 IsDateString을 통과해 new Date에서 다른 UTC 날짜로 바뀐다.
+- 적용 조건: class-validator0.15.1 기본 IsDateString 뒤에 JavaScript Date 파싱을 사용하는 Task create/update HTTP 입력.
+- root cause: 기본 ISO 형식 검사는 Gregorian 달력의 실제 존재 여부를 강제하지 않는다.
+- 해결 절차: 양쪽 DTO의 startAt/endAt 네 필드에 IsDateString({strict:true})를 적용한다. PATCH undefined 생략·null 거부와 기존 서비스 interval 검사를 유지한다. 조회 날짜·timezone suffix 정책은 별도 계약으로 다룬다.
+- 검증: POST/PATCH 양 날짜 필드에서 불가능 날짜4종·null 거부400 및 service 호출0, 윤년2000/2028·Z/+09:00/-05:00 원 필드 보존. RED 날짜16실패→전체 E2E58통과, Backend333/정적 gate·독립 reviewer2명 F-079 RECHECKED.
+- 재발 방지/금지: Date가 finite라는 사실만으로 원 달력 날짜가 유효했다고 판단하지 않는다. 엄격한 달력 검사와 interval/UTC 정책을 구분한다.
+- 잔여 위험: 정상 필드 전달은 실제 interval/PG 쓰기 성공 증거가 아니다. Pipe를 우회하는 내부 호출, query DTO, timezone 정책, 운영·기기 검증은 이번 해결 범위 밖이다.
+- 근거: [Update DTO](../../DSM_Back/src/tasks/dto/update-task.dto.ts), [HTTP 회귀](../../DSM_Back/test/task-input.e2e-spec.ts), [Round17](../audits/20260817-release-audit-full-project/2026-09-11-task-input-validation.md)
+- `lastVerifiedAt`: `2026-09-11`
+
+## 2026-09-11 전체 결함 수정 검증 기록
+
+### ER-20260911-005 — Node 지원 범위와 설치 dependency 정렬
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: Backend engines >=22이지만 설치 graph가 Node22.13 이상 및23 제외를 요구한다.
+- root cause: 프로젝트 engines의 semver 범위가 전이 dependency 교집합보다 넓다.
+- 해결 절차: package/lock/README를 ^22.13.0 || >=24.0.0로 정렬하고 현재 graph의 engine 범위를 대조한다.
+- 검증: root 경계6·독립41/20경계 및 Windows557/Linux558 dependency 검사 PASS, Docker build/runtime PASS; F088 RECHECKED.
+- 재발 방지/잔여 위험: Node major만 비교하지 않는다. 설치 graph 변경 시 재검사하며 audit 경고 해소와는 별개다.
+- 근거: [Backend package](../../DSM_Back/package.json), [전체 진행 기록](../audits/20260817-release-audit-full-project/2026-09-11-all55-progress.md)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-006 — 알림 identity의 Java hash 충돌 방지
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: Notifee9.1.8 Android notify(null, rawId.hashCode())에서 다른 문자열·유효 UUID도 정수 hash가 같을 수 있다.
+- root cause: 원문 ID의 유일성이 32bit hash 변환 뒤에는 유지되지 않는다.
+- 해결 절차: owner/reminder를 담은 전체 stable ID를 Android tag와 PendingIntent URI에 넣고 정확한 tag/hash 쌍으로 취소한다.
+- 검증: 독립 reviewer2명 source/AAR 확인, 실제 API24 충돌 ID 두 알림 동시 표시 PASS; F090 RECHECKED.
+- 재발 방지/잔여 위험: hash는 보조 int ID이며 단독 identity가 아니다. TTL/OS 실행시점은 별도 검사한다.
+- 근거: [native adapter](../../DSM_Front/src/features/notifications/notification-native.ts), [진행 기록](../audits/20260817-release-audit-full-project/2026-09-11-all55-progress.md)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-007 — 구형 Android 알림 만료와 늦은 완료 취소
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: API24/25에서 timeoutAfter가 무효여서 TTL1000 뒤2200ms에도 알림이 남는다. 예약만 추가하면 만료 이후 SDK post 또는 늦은 JS catch가 누락/잘못된 취소를 만든다.
+- root cause: pre26 OS timeout 미지원, 표시 완료와 만료/설정변경의 비동기 실행 순서 불일치.
+- 해결 절차: elapsedRealtime 절대 deadline을 bounded journal에 먼저 저장, Handler+비공개 Alarm receiver를 사용한다. 설치 SDK normalizer를 그대로 사용하고 native callback에서 authority/deadline을 검사한다. active1/총100 표시 큐와 고유 ticket으로 동일ID·동일deadline ABA를 막으며 JS 취소는 cancel(id,ticket)으로 전달한다.
+- 검증: native33·독립 실제 Controller/Storage/SDK normalizer 모형·reviewer2명 PASS. APK441tasks build, 실제 API24 TTL/충돌/교체/oldticket 보존/newticket 제거/scope 취소, background process-kill 뒤 receiver 재시작·제거 PASS; F089 RECHECKED.
+- 재발 방지/잔여 위험: relative TTL을 bridge 대기 뒤 다시 시작하지 않는다. JS catch가 무조건 같은 tag를 취소하지 않는다. 실제 SDK 강제지연·Doze/OEM·force-stop·재부팅은 미검증이고 OS의 보편적 hard deadline을 보장하지 않는다. 실제 FCM은 F015 별도 gate다.
+- 근거: [native module](../../DSM_Front/android/app/src/main/java/com/dsm/dailyup/ReminderExpiryModule.kt), [회귀](../../DSM_Front/src/features/notifications/notification-native.test.ts)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-008 — 서버 소유자 checkpoint를 이용한 미래 logical clock 복구
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 기기+1h 작업이 서버400 후 폐기돼도 lastLogicalTime이 남아 시계 보정·refresh·재시작 뒤 정상 작업도 미래 timestamp로 거절된다.
+- root cause: monotonic floor만으로 로컬 오염 시각과 서버가 이미 수락한 +4분 버전을 구분할 수 없다. 공유 client의 계정 전환 뒤 owner 없는 checkpoint는 다른 계정 floor를 잘못 적용할 수 있다.
+- 해결 절차: 인증된 owner 전체 Task/softdelete/legacy와 sync state MAX를 no-store checkpoint로 조회한다. exact userId/serverTime/logicalTime을 API·engine 양쪽에서 검증한다. ACK/enqueue/checkpoint 큐와 전용 durable writer 안에서 서버·잔존 outbox 최대값을 보존하며 floor만 재계산한다.
+- 검증: engine96/storage69, Back960/HTTP30/실제PG13, 독립 원 poison·accepted+4분·restart·실패복구·A→B no-write/no-list 프로브 PASS; R19-A2/B F091 RECHECKED.
+- 재발 방지/잔여 위험: floor를 무조건0으로 초기화하거나 pending payload/id/time을 다시 쓰지 않는다. offline/조회실패는 oldfloor와 오류를 유지한다. 승인된 discard 저장 뒤 checkpoint 실패 시 해당 outbox 삭제는 유지되며 다음 refresh/enqueue가 복구한다.
+- 근거: [sync engine](../../DSM_Front/src/features/product/task-sync.ts), [storage](../../DSM_Front/src/features/product/task-offline-storage.ts), [server](../../DSM_Back/src/tasks/tasks.service.ts)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-009 — 인증 대기 중 전역 revocation 변경의 재시도 분류
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: A logout이 전역 generation을 바꾸는 동안 B WebSocket 인증이 대기하면4003이 B의 확정폐기로 해석된다.
+- root cause: 아직 계정이 확인되지 않은 연결의 전역 변경을 해당 세션 폐기라고 단정했다.
+- 해결 절차: pending authentication의 generation 변경은1013 재시도로 종료한다. 인증된 해당 owner/sid의 실제 폐기4003과 서버 JWT/family 재검증은 보존한다.
+- 검증: gateway/adapter40·Front client/context49, 두 독립 reviewer 및 실제PG+Redis 두 Nest 통합6 PASS; F074/F075 종결 근거.
+- 재발 방지/잔여 위험: 전역 무효화 신호를 계정별 확정 logout 증거로 쓰지 않는다. 여러 instance의 일시 재연결은 가능하며 실제 운영망 검증과 구분한다.
+- 근거: [gateway](../../DSM_Back/src/realtime/realtime.gateway.ts), [PG integration](../../DSM_Back/test/realtime.pg-spec.ts)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260911-010 — 로컬 경과시간과 서버 UTC 분리
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 사용자가 기기시계를 뒤로 바꾸면 Date.now 기반 알림 dedupe/expiry와 WebSocket timeout/retry/fallback이 연장된다.
+- root cause: 서버 UTC 의미와 프로세스 경과시간을 같은 벽시계로 측정했다.
+- 해결 절차: 서버 expiresAt/응답 기준의 남은 시간을 계산한 뒤 로컬 대기는 performance.now, Android native는 elapsedRealtime 절대 deadline으로 측정한다. persisted dedupe는 서버 만료와 제한된 수명을 보존한다.
+- 검증: 알림±1h·권한 조합과 reviewer2명, realtime client/context49 및 native33/실제API24 만료 PASS.
+- 재발 방지/잔여 위험: JWT/서버날짜를 monotonic 값으로 치환하지 않는다. 프로세스 재시작·OS 절전·서버와 기기의 절대시각은 별도 계약이다.
+- 근거: [notification storage](../../DSM_Front/src/features/notifications/notification-storage.ts), [realtime client](../../DSM_Front/src/features/realtime/realtime-client.ts)
+- `lastVerifiedAt`: `2026-09-11`
+
+### ER-20260914-001 — Air의 Windows Git 실행 경로 복구
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 로컬 저장소와 Codex runtime에서는 Git이 정상인데 Air 화면에 `Failed to detect git` 또는 `Git isn't installed`가 표시되고 repository discovery가 0개·실패 1건으로 끝난다. Windows 사용자·시스템 PATH에 Air가 실행할 Git cmd 경로가 없는 환경에 적용한다.
+- root cause: Git 실행 파일이 Codex runtime 전용 경로에만 있고 Air 프로세스가 상속하는 Windows PATH에는 없어 Air frontend와 fsdaemon이 Git을 시작할 수 없었다.
+- 해결 절차: 기존 사용자 PATH 항목을 보존한 채 실제 존재하는 Git `cmd` 디렉터리를 사용자 PATH에 한 번만 추가하고 Air를 완전 종료·재시작한다. 재시작 뒤 Air 로그의 저장소 탐지 성공과 UI branch/History/Changes를 모두 확인한다.
+- 검증: Git 2.53.0.windows.3 실행, DSM `main`/`origin/main` ahead·behind 0/0. 2026-09-14 새 Air 프로세스 로그에서 DSM 저장소 1개·실패 0건과 index watcher/queue 시작을 확인했다. UI는 `DSM · main`, History의 local/remote main, Changes `All 404`와 파일 목록을 표시했고 로컬 expanded status 404파일과 일치했다.
+- 재발 방지/잔여 위험: Air UI 확인 없이 셸의 Git 성공만으로 종결하지 않는다. 현재 경로는 Codex runtime 번들에 의존하므로 해당 번들이 이동·제거되면 새 실제 경로로 사용자 PATH를 갱신하거나 안정적으로 설치된 Git 경로로 교체해야 한다.
+- 근거: [계획](./plan.md), [현재 맥락](./context.md), [공정표](./checklist.md)
+- `lastVerifiedAt`: `2026-09-14`
+
+### ER-20260914-002 — Android Modal 닫힘 뒤 TalkBack trigger focus 복원
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: React Native Android `Modal`에서 TalkBack focus를 heading으로 옮긴 뒤 Back으로 닫으면 홈 접근성 창의 첫 heading에 녹색 focus가 생긴다. 저장한 trigger ref로 `sendAccessibilityEvent(host, 'focus')`를 호출했다는 계측은 남지만 원 trigger로 돌아오지 않는 Fabric 환경에 적용한다.
+- root cause: modal visible 상태가 끝난 직후 Android 접근성 창 전환이 계속되어 320~600ms의 focus event가 홈 창 초기 focus 선택에 덮였다. legacy numeric tag API나 JS `focus()` 문제는 아니었다.
+- 해결 절차: opening마다 새 `{targetRef}` 요청을 저장하고 sheet chain 전체가 닫힌 뒤에도 같은 요청인지 확인한다. mounted host에 React Native 공식 `AccessibilityInfo.sendAccessibilityEvent(host, 'focus')`를 Android modal 창이 정리된 1.5초 뒤 보낸다. 이전 timer cleanup은 현재 요청과 identity가 같을 때만 정리해 즉시 재열기를 보존한다.
+- 검증: 같은 trigger 재열기·unmount·상세→수정 회귀를 포함한 Front 51 suites/1,156 tests, typecheck, ESLint error 0 통과. TalkBack 16을 연속 활성화한 API 36 Google APIs AVD에서 heading 진입, 배경 tree 격리, Android Back 닫힘, 원 FAB 녹색 focus 복원을 확인했고 독립 reviewer가 P0/P1/P2 없음과 F-047 RECHECKED를 판정했다.
+- 재발 방지/잔여 위험: `setAccessibilityFocus` numeric tag에 의존하지 않고 host instance API를 사용한다. timer가 실행되기 전 trigger unmount와 새 opening을 항상 검사한다. 1.5초 고정 지연은 iOS에서 느리게 느껴질 수 있고 현재 시각 증거는 Android AVD이며 물리 기기 matrix는 아니다.
+- 근거: [Task sheets](../../DSM_Front/src/components/dailyup/task-sheets.tsx), [focus 회귀](../../DSM_Front/src/components/dailyup/task-sheets.test.tsx), [잔여 gate 보고서](../audits/20260817-release-audit-full-project/2026-09-14-remaining-gates.md)
+- `lastVerifiedAt`: `2026-09-14`
+
+## 새 record 작성 형식
 
 ```md
 ### ER-YYYYMMDD-NNN — 제목
 
-- `resolutionId`: `ER-YYYYMMDD-NNN`
 - `status`: `VERIFIED | MITIGATION_ONLY | DEPRECATED`
 - 증상/signature:
 - 적용 조건:

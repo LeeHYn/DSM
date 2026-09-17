@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   type DailyScore,
   type Prisma,
@@ -6,7 +6,51 @@ import {
   TaskStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { computeDailyScore, tierForScore } from './scores.policy';
+import {
+  computeDailyScore,
+  DIFFICULTY_SCORE,
+  tierForScore,
+} from './scores.policy';
+
+const DAY_MS = 86_400_000;
+const MAX_RANGE_DAYS = 42;
+
+export interface CalendarDay {
+  date: string;
+  registeredTaskCount: number;
+  completedTaskCount: number;
+  achievementRate: number;
+  cappedScore: number;
+}
+
+export interface ScoreCalendar {
+  userId: string;
+  from: string;
+  to: string;
+  days: CalendarDay[];
+}
+
+interface CategoryAggregate {
+  categoryId: string | null;
+  name: string | null;
+  color: string | null;
+  registeredTaskCount: number;
+  completedTaskCount: number;
+  rawScore: number;
+}
+
+export interface CategoryStatistics {
+  userId: string;
+  from: string;
+  to: string;
+  categories: Array<
+    CategoryAggregate & {
+      name: string;
+      color: string;
+      achievementRate: number;
+    }
+  >;
+}
 
 @Injectable()
 export class ScoresService {
@@ -78,6 +122,125 @@ export class ScoresService {
     });
   }
 
+  async getCalendar(
+    userId: string,
+    from: string,
+    to: string,
+  ): Promise<ScoreCalendar> {
+    const { start, end } = this.parseRange(from, to);
+    const rows = await this.prisma.dailyScore.findMany({
+      where: { userId, scoreDate: { gte: start, lt: end } },
+      orderBy: { scoreDate: 'asc' },
+      take: MAX_RANGE_DAYS,
+      select: {
+        scoreDate: true,
+        registeredTaskCount: true,
+        completedTaskCount: true,
+        achievementRate: true,
+        cappedScore: true,
+      },
+    });
+    const byDate = new Map(
+      rows.map((row) => [row.scoreDate.toISOString().slice(0, 10), row]),
+    );
+    const days: CalendarDay[] = [];
+    for (
+      const day = new Date(start);
+      day < end;
+      day.setUTCDate(day.getUTCDate() + 1)
+    ) {
+      const date = day.toISOString().slice(0, 10);
+      const row = byDate.get(date);
+      days.push({
+        date,
+        registeredTaskCount: row?.registeredTaskCount ?? 0,
+        completedTaskCount: row?.completedTaskCount ?? 0,
+        achievementRate: Number(row?.achievementRate ?? 0),
+        cappedScore: row?.cappedScore ?? 0,
+      });
+    }
+    return { userId, from, to, days };
+  }
+
+  async getCategoryStatistics(
+    userId: string,
+    from: string,
+    to: string,
+  ): Promise<CategoryStatistics> {
+    const { start, end } = this.parseRange(from, to);
+    const rows = await this.prisma.$queryRaw<CategoryAggregate[]>`
+      SELECT c.id AS "categoryId", c.name, c.color,
+        COUNT(*)::integer AS "registeredTaskCount",
+        COUNT(*) FILTER (WHERE t.status = 'COMPLETED'
+          AND (t."completedAt" AT TIME ZONE 'UTC')::date =
+              (t."startAt" AT TIME ZONE 'UTC')::date
+        )::integer AS "completedTaskCount",
+        SUM(CASE WHEN t.status = 'COMPLETED'
+          AND (t."completedAt" AT TIME ZONE 'UTC')::date =
+              (t."startAt" AT TIME ZONE 'UTC')::date
+          THEN CASE t.difficulty
+            WHEN 'LOW' THEN ${DIFFICULTY_SCORE.LOW}
+            WHEN 'MEDIUM' THEN ${DIFFICULTY_SCORE.MEDIUM}
+            WHEN 'HIGH' THEN ${DIFFICULTY_SCORE.HIGH}
+          END ELSE 0 END)::integer AS "rawScore"
+      FROM "Task" t
+      LEFT JOIN "Category" c ON c.id = t."categoryId"
+        AND (c."userId" = t."userId" OR c."isDefault" = true)
+      WHERE t."userId" = ${userId} AND t."deletedAt" IS NULL
+        AND t."startAt" >= ${start} AND t."startAt" < ${end}
+      GROUP BY c.id, c.name, c.color
+      ORDER BY c.id ASC NULLS LAST
+    `;
+    return {
+      userId,
+      from,
+      to,
+      categories: rows.map((row) => ({
+        ...row,
+        name: row.name ?? '미분류',
+        color: row.color ?? '#888888',
+        achievementRate:
+          row.registeredTaskCount > 0
+            ? Math.round(
+                (row.completedTaskCount * 10000) / row.registeredTaskCount,
+              ) / 100
+            : 0,
+      })),
+    };
+  }
+
+  private parseRange(from: string, to: string): { start: Date; end: Date } {
+    const parseDay = (value: string): Date => {
+      if (
+        typeof value !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        value.startsWith('0000-')
+      ) {
+        throw new BadRequestException('Invalid score date range');
+      }
+      const day = new Date(`${value}T00:00:00.000Z`);
+      if (
+        !Number.isFinite(day.getTime()) ||
+        day.toISOString().slice(0, 10) !== value
+      ) {
+        throw new BadRequestException('Invalid score date range');
+      }
+      day.setUTCHours(0, 0, 0, 0);
+      return day;
+    };
+    const start = parseDay(from);
+    const lastDay = parseDay(to);
+    const count = (lastDay.getTime() - start.getTime()) / DAY_MS + 1;
+    if (count < 1 || count > MAX_RANGE_DAYS) {
+      throw new BadRequestException(
+        'Score date range must contain 1 to 42 days',
+      );
+    }
+    const end = new Date(lastDay);
+    end.setUTCDate(end.getUTCDate() + 1);
+    return { start, end };
+  }
+
   private async recomputeUserTotal(
     userId: string,
     client: Prisma.TransactionClient,
@@ -95,10 +258,8 @@ export class ScoresService {
   }
 
   private startOfUtcDay(reference: Date | string): Date {
-    const date =
-      typeof reference === 'string' ? new Date(reference) : reference;
-    return new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-    );
+    const date = new Date(reference);
+    date.setUTCHours(0, 0, 0, 0);
+    return date;
   }
 }

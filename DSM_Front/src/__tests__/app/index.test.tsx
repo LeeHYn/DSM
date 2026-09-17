@@ -9,6 +9,8 @@ import LoginScreen from '../../app/index';
 
 const mockShowToast = jest.fn();
 const mockAcquireIdToken = jest.fn();
+const mockAcquireKakaoToken = jest.fn();
+const mockAcquireAppleToken = jest.fn();
 const mockOpenLegalLink = jest.fn();
 const mockSignIn = jest.fn().mockResolvedValue(undefined);
 
@@ -50,6 +52,18 @@ jest.mock('@/features/auth/session-context', () => ({
   useSession: () => mockSession,
 }));
 
+jest.mock('@/features/auth/additional-sign-in', () => ({
+  kakaoSignInAdapter: { acquireToken: () => mockAcquireKakaoToken() },
+  appleSignInAdapter: { acquireToken: () => mockAcquireAppleToken() },
+  AdditionalProviderError: class extends Error {
+    kind: string;
+    constructor(kind: string) {
+      super('Social sign-in failed');
+      this.kind = kind;
+    }
+  },
+}));
+
 jest.mock('@/config/legal-links', () => ({
   openLegalLink: (kind: string) => mockOpenLegalLink(kind),
 }));
@@ -62,6 +76,8 @@ beforeEach(() => {
     state: { status: 'unauthenticated' },
   };
   mockAcquireIdToken.mockReset();
+  mockAcquireKakaoToken.mockReset();
+  mockAcquireAppleToken.mockReset();
   mockOpenLegalLink.mockReset().mockResolvedValue(true);
   mockSignIn.mockReset().mockResolvedValue(undefined);
   mockShowToast.mockReset();
@@ -87,7 +103,7 @@ it('passes one acquired Google ID token to the session', async () => {
   expect(mockSignIn).toHaveBeenCalledWith('GOOGLE', 'google-id-token');
 });
 
-it('silently restores the button after user cancellation', async () => {
+it('offers neutral retry guidance when Google returns an ambiguous cancelled result', async () => {
   mockAcquireIdToken.mockResolvedValue({ status: 'cancelled' });
   await render(<LoginScreen />);
 
@@ -97,7 +113,9 @@ it('silently restores the button after user cancellation', async () => {
   await fireEvent.press(googleButton);
 
   expect(mockSignIn).not.toHaveBeenCalled();
-  expect(mockShowToast).not.toHaveBeenCalled();
+  expect(mockShowToast).toHaveBeenCalledWith(
+    'Google 로그인이 완료되지 않았습니다. 다시 시도하고, 반복되면 Google 계정을 다시 인증해 주세요.',
+  );
   expect(googleButton).not.toBeDisabled();
 });
 
@@ -171,18 +189,51 @@ it('shows a safe message for a newly published session error', async () => {
   );
 });
 
-it('keeps Kakao as a placeholder without starting authentication', async () => {
+it.each(['Kakao', 'Apple'] as const)('passes the acquired %s token to its session provider', async (provider) => {
+  const acquire = provider === 'Kakao' ? mockAcquireKakaoToken : mockAcquireAppleToken;
+  acquire.mockResolvedValue({ status: 'success', token: 'synthetic-provider-token' });
   await render(<LoginScreen />);
-
-  await fireEvent.press(
-    screen.getByRole('button', { name: 'Kakao로 계속하기' }),
-  );
-
-  expect(mockShowToast).toHaveBeenCalledWith(
-    '소셜 로그인 연결은 다음 단계에서 제공됩니다.',
-  );
+  await fireEvent.press(screen.getByRole('button', { name: `${provider}로 계속하기` }));
+  expect(acquire).toHaveBeenCalledTimes(1);
+  expect(mockSignIn).toHaveBeenCalledWith(provider.toUpperCase(), 'synthetic-provider-token');
   expect(mockAcquireIdToken).not.toHaveBeenCalled();
+});
+
+it.each(['Kakao', 'Apple'] as const)('does not exchange a cancelled %s acquisition', async (provider) => {
+  const acquire = provider === 'Kakao' ? mockAcquireKakaoToken : mockAcquireAppleToken;
+  acquire.mockResolvedValue({ status: 'cancelled' });
+  await render(<LoginScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: `${provider}로 계속하기` }));
+  expect(acquire).toHaveBeenCalledTimes(1);
   expect(mockSignIn).not.toHaveBeenCalled();
+  expect(mockShowToast).not.toHaveBeenCalled();
+});
+
+it('blocks all providers through acquisition and backend exchange', async () => {
+  let resolveExchange!: () => void;
+  mockAcquireKakaoToken.mockResolvedValue({ status: 'success', token: 'synthetic-kakao' });
+  mockSignIn.mockReturnValue(new Promise<void>(resolve => { resolveExchange = resolve; }));
+  await render(<LoginScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Kakao로 계속하기' }));
+  for (const provider of ['Kakao', 'Apple', 'Google']) {
+    const button = screen.getByRole('button', { name: `${provider}로 계속하기` });
+    expect(button).toBeDisabled();
+    await fireEvent.press(button);
+  }
+  expect(mockAcquireKakaoToken).toHaveBeenCalledTimes(1);
+  expect(mockAcquireAppleToken).not.toHaveBeenCalled();
+  expect(mockAcquireIdToken).not.toHaveBeenCalled();
+  resolveExchange();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Kakao로 계속하기' })).not.toBeDisabled());
+});
+
+it('shows safe additional provider failure feedback and permits retry', async () => {
+  mockAcquireAppleToken.mockRejectedValue(new Error('provider-private-details'));
+  await render(<LoginScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Apple로 계속하기' }));
+  expect(mockShowToast).toHaveBeenCalledWith('Apple 로그인에 실패했습니다. 다시 시도해 주세요.');
+  expect(JSON.stringify(mockShowToast.mock.calls)).not.toContain('provider-private-details');
+  expect(screen.getByRole('button', { name: 'Apple로 계속하기' })).not.toBeDisabled();
 });
 
 it('opens the configured privacy policy from the login screen', async () => {

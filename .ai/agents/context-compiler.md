@@ -6,8 +6,7 @@ codex_modules:
   - filesystem.read
   - filesystem.search
   - shell.inspect
-codex_model: gpt-5
-codex_model_fallback: inherit
+codex_model: inherit
 ---
 
 # Context Compiler 역할 계약

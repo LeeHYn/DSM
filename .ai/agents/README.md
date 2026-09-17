@@ -14,7 +14,7 @@
 | [`context-compiler`](./context-compiler.md) | 프롬프트·문서를 영어 Markdown 프롬프트, 필수 Markdown 읽기 목록과 `AgentEnvelope v1.1` JSON으로 컴파일하거나 구조화 결과를 사람용 보고로 복원하는 읽기 전용 역할 | `none` — 모든 파일 수정·생성·삭제 금지 |
 | [`planner`](./planner.md) | 근거 기반 구현 계획을 작성하는 plan-only 역할 | 승인되고 allowlist에 정확히 명시된 `.ai/memory/plan.md` 또는 단일 `.ai/docs/<exact-plan-file>.md`만 |
 | [`backend-developer`](./backend-developer.md) | 승인된 NestJS 백엔드 구현 역할 | allowlist에 정확히 명시된 `DSM_Back/` 아래 파일 1~2개만 |
-| [`frontend-developer`](./frontend-developer.md) | 승인된 React Native·Expo Router 구현 역할 | allowlist에 정확히 명시된 `DSM_Front/` 아래 파일 1~2개만. `DSM_Front/AGENTS.md`와 Expo SDK 55 공식 문서 확인 필수 |
+| [`frontend-developer`](./frontend-developer.md) | 승인된 React Native Community CLI Android 구현 역할 | allowlist에 정확히 명시된 `DSM_Front/` 아래 파일 1~2개만. `DSM_Front/AGENTS.md`와 React Native 0.83 및 관련 Android 공식 문서 확인 |
 | [`reviewer`](./reviewer.md) | 소스와 diff를 검토하고 독립 반박 검증·수정 후 재검증을 수행하는 review-only 역할 | 기본 `none`; 선택적으로 allowlist에 정확히 명시된 단일 `.ai/codeReview/<exact-report-file>.md`만 |
 
 역할 문서가 없거나 목표와 역할이 일치하지 않으면 메인 에이전트는 서브 에이전트를 생성하지 않습니다. 생성 후 불일치가 발견되면 서브 에이전트는 즉시 중단하고 메인 에이전트에 보고합니다.
@@ -33,9 +33,15 @@
 
 작업 대상 파일의 상위 디렉터리 또는 하위 디렉터리에 `AGENTS.md`가 있으면 해당 범위의 규칙도 함께 적용합니다. 중첩된 `AGENTS.md`와 이 계약이 충돌하면 지침 우선순위와 더 제한적인 규칙을 따릅니다.
 
+## 실행 프로파일과 승인 재사용
+
+역할 파일의 `codex_model: inherit`는 기본적으로 부모 실행 설정을 유지한다는 프로젝트 메타데이터다. 이 필드 자체가 도구의 모델 설정이나 권한을 바꾸지는 않는다. 실제 호출은 승인된 프로파일과 현재 런타임 지원을 확인하고 명시적 전환 승인이 없으면 기본 설정을 유지한다. 특정 모델이나 공급자 간 effort 동등성을 추정하지 않는다.
+
+기존 사용자 승인이 역할·작업 범위·도구 행동을 이미 포함하면 승인 근거와 프로파일 ID를 assignment에 참조한다. 1~2파일로 단계를 나누는 이유만으로 같은 승인을 반복 요청하지 않는다. 새 파일도 승인된 전체 범위 안이면 메인이 정확한 assignment를 갱신할 수 있다. 전체 승인 범위 밖의 확장, 미승인 데이터 변경·외부 조치는 해당 승인 전 실행하지 않는다.
+
 ## 2. 작업 시작 절차
 
-모든 서브 에이전트는 다음 절차를 완료한 뒤 작업합니다.
+새 서브 에이전트는 다음 필수 원문 확인을 완료한 뒤 작업합니다. 같은 에이전트의 후속 작업에서는 이미 확인한 문서를 재사용하고 변경·새 지시·불확실성이 있는 부분만 다시 확인합니다. 필수 제약의 확인을 생략하는 규칙은 아닙니다.
 
 1. `.ai/system_prompt.md`를 읽습니다.
 2. `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`를 읽어 현재 계획, 결정, 진행 상태를 확인합니다.
@@ -58,6 +64,8 @@
 - `forbidden scope`: 명시적으로 다루지 않을 경로, 기능, 작업
 - `verification`: 허용된 검증 명령과 확인 항목
 - `done condition`: 완료로 판단할 구체적인 결과와 보고 요건
+
+승인된 실행 프로파일 ID와 승인 근거를 함께 전달하고 달라진 조건만 설명합니다. 필수 필드를 프로파일의 구체적인 경로·절로 참조할 수 있지만 실제 읽기·쓰기 범위가 모호해지면 안 됩니다.
 
 필수 필드가 하나라도 빠졌거나 서로 모순되면 서브 에이전트는 작업을 시작하지 않고 누락 내용을 보고합니다.
 
@@ -102,7 +110,7 @@
 1. 현재 작업을 안전한 상태에서 중단합니다.
 2. 필요한 추가 파일 또는 작업을 정확히 나열합니다.
 3. 확장이 필요한 이유, 확장하지 않을 때의 영향, 예상 검증 방법을 보고합니다.
-4. 메인 에이전트가 task assignment의 allowlist 또는 범위를 명시적으로 갱신할 때까지 기다립니다.
+4. 메인 에이전트가 전체 승인 범위와 대조해 정확한 assignment를 갱신할 때까지 기다립니다. 전체 승인 범위를 벗어나면 사용자 승인을 요청하며 이미 승인된 범위 안에서는 같은 승인을 반복하지 않습니다.
 
 ## 6. 승인 없이는 금지되는 작업
 

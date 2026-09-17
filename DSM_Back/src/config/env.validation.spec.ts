@@ -11,6 +11,26 @@ const validConfig = {
 };
 
 describe('validateEnv', () => {
+  it('preserves an optional Apple audience through the whitelist', () => {
+    expect(
+      validateEnv({ ...validConfig, APPLE_CLIENT_ID: 'com.example.dailyup' }),
+    ).toHaveProperty('APPLE_CLIENT_ID', 'com.example.dailyup');
+    expect(validateEnv(validConfig).APPLE_CLIENT_ID).toBeUndefined();
+    expect(validateEnv({ ...validConfig, APPLE_CLIENT_ID: '' })).toHaveProperty(
+      'APPLE_CLIENT_ID',
+      '',
+    );
+  });
+
+  it.each([123, true, {}, 'x'.repeat(256)])(
+    'rejects malformed Apple audience %p',
+    (APPLE_CLIENT_ID) => {
+      expect(() => validateEnv({ ...validConfig, APPLE_CLIENT_ID })).toThrow(
+        /APPLE_CLIENT_ID/,
+      );
+    },
+  );
+
   it('converts and returns a valid environment config', () => {
     const config = validateEnv(validConfig);
 

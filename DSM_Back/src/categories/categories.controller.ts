@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import type { Category } from '@prisma/client';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CategoryQueryDto } from './dto/category-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/types/jwt-payload.type';
 
@@ -35,8 +37,11 @@ export class CategoriesController {
   }
 
   @Get()
-  findAll(@Req() req: AuthRequest): Promise<Category[]> {
-    return this.categoriesService.findAll(req.user.sub);
+  findAll(
+    @Req() req: AuthRequest,
+    @Query() query: CategoryQueryDto = {},
+  ): Promise<Category[]> {
+    return this.categoriesService.findAll(req.user.sub, query);
   }
 
   @Get(':id')

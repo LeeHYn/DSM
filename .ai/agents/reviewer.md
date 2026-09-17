@@ -8,8 +8,7 @@ codex_modules:
   - shell.verify_readonly
   - git.diff_readonly
   - code_review.write
-codex_model: gpt-5
-codex_model_fallback: inherit
+codex_model: inherit
 ---
 
 # Reviewer 역할 계약

@@ -12,9 +12,13 @@ import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { FirebaseMessagingProvider } from './notifications/firebase-messaging.provider';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProfilesModule } from './profiles/profiles.module';
 import { RankingsModule } from './rankings/rankings.module';
 import { ScoresModule } from './scores/scores.module';
 import { TasksModule } from './tasks/tasks.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { RealtimeBusService } from './realtime/realtime-bus.service';
+import { RealtimeGateway } from './realtime/realtime.gateway';
 
 jest.mock('firebase-admin/app', () => ({
   applicationDefault: jest.fn(),
@@ -63,6 +67,8 @@ describe('AppModule', () => {
       ScoresModule,
       RankingsModule,
       NotificationsModule,
+      ProfilesModule,
+      RealtimeModule,
     ]);
     expect(
       imports.filter((entry) => entry === NotificationsModule),
@@ -77,6 +83,12 @@ describe('AppModule', () => {
 
     try {
       const configService = moduleFixture.get(ConfigService);
+      expect(moduleFixture.get(RealtimeGateway)).toBeInstanceOf(
+        RealtimeGateway,
+      );
+      expect(moduleFixture.get(RealtimeBusService)).toBeInstanceOf(
+        RealtimeBusService,
+      );
 
       expect(configService.get<boolean>('FCM_DISPATCH_ENABLED')).toBe(false);
       expect(getApps).not.toHaveBeenCalled();

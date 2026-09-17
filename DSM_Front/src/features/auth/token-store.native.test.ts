@@ -12,7 +12,6 @@ jest.mock(
     resetGenericPassword: jest.fn(),
     setGenericPassword: jest.fn(),
   }),
-  { virtual: true },
 );
 
 const mockGetGenericPassword = jest.mocked(Keychain.getGenericPassword);

@@ -29,6 +29,11 @@ import {
 import { useSession } from '@/features/auth/session-context';
 import { usePrototype } from '@/features/prototype/prototype-context';
 import { useProduct } from '@/features/product/product-context';
+import { StatisticsPanel } from '@/components/dailyup/statistics-panel';
+import { ProfilePanel } from '@/components/dailyup/profile-panel';
+import { NotificationPanel } from '@/components/dailyup/notification-panel';
+import { useNotifications } from '@/features/notifications/notification-context';
+import { utcDay } from '@/features/product/product-contracts';
 
 type MenuItem = {
   icon: DailyupIconName;
@@ -37,16 +42,6 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  {
-    icon: 'bell-outline',
-    label: '알림 설정',
-    message: '알림 설정은 준비 중입니다.',
-  },
-  {
-    icon: 'chart-box-outline',
-    label: '나의 통계',
-    message: '나의 통계는 준비 중입니다.',
-  },
   {
     icon: 'help-circle-outline',
     label: '도움말 · 규칙',
@@ -91,6 +86,9 @@ export default function MyPageScreen() {
   const { action, deleteAccount, logout } = useSession();
   const { snapshot, store } = useProduct();
   const [deletionPending, setDeletionPending] = useState(false);
+  const [showStatistics, setShowStatistics] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifications = useNotifications();
   const [openingLegalLink, setOpeningLegalLink] =
     useState<LegalLinkKind | null>(null);
   const deletionRequestInFlightRef = useRef(false);
@@ -208,9 +206,6 @@ export default function MyPageScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         <View style={styles.profile}>
-          <View style={[styles.profileAvatar, { backgroundColor: palette.surfaceRaised }]}>
-            <Icon name="account" size={32} />
-          </View>
           <AppText style={styles.nickname} variant="sectionTitle">
             내 계정
           </AppText>
@@ -224,6 +219,8 @@ export default function MyPageScreen() {
           {snapshot.summary.status === 'loading' ? <AppText>계정 점수 조회 중…</AppText> : null}
           <AppButton onPress={() => { void store.loadHome(); }} variant="ghost">계정 점수 새로고침</AppButton>
         </View>
+
+        <ProfilePanel userId={store.userId} />
 
         <Divider />
 
@@ -246,6 +243,18 @@ export default function MyPageScreen() {
             </View>
           </View>
 
+          <Divider />
+          <SettingsRow label={showStatistics ? '통계 접기' : '나의 통계'} onPress={() => setShowStatistics(value => !value)} />
+          {showStatistics ? <StatisticsPanel userId={store.userId} date={utcDay()} refreshKey={snapshot.summary.data} /> : null}
+          <Divider />
+          <SettingsRow label={showNotifications ? '알림 설정 접기' : '알림 설정'} onPress={() => setShowNotifications(value => !value)} />
+          {showNotifications ? <>
+            {notifications?.error ? <>
+              <AppText accessibilityRole="alert">{notifications.error}</AppText>
+              <AppButton onPress={() => { notifications.retry().catch(() => undefined); }}>알림 연결 다시 시도</AppButton>
+            </> : null}
+            <NotificationPanel controller={notifications?.controller ?? null} />
+          </> : null}
           {MENU_ITEMS.map((item) => (
             <React.Fragment key={item.label}>
               <Divider />

@@ -9,8 +9,49 @@ import crypto from 'node:crypto';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoresService } from '../scores/scores.service';
+import { RealtimeBusService } from '../realtime/realtime-bus.service';
+import {
+  hashSyncOperation,
+  parseSyncOperation,
+  type SyncTaskOperation,
+} from './task-sync.policy';
 
 const CLIENT_MUTATION_ID = '0cfe1042-769f-4d19-88bc-7a0d710553ca';
+
+describe('owner-wide sync clock checkpoint', () => {
+  const raw = jest.fn();
+  const service = new TasksService(
+    { $queryRaw: raw } as unknown as PrismaService,
+    {} as ScoresService,
+  );
+  beforeEach(() => raw.mockReset());
+
+  it('returns zero logical floor for an owner without tasks and a current server clock', async () => {
+    raw.mockResolvedValue([{ logicalTime: null }]);
+    const before = Date.now();
+    const result = await service.getSyncClock('clock-owner');
+    expect(result.logicalTime).toBe(0);
+    expect(Date.parse(result.serverTime)).toBeGreaterThanOrEqual(before);
+    expect(Date.parse(result.serverTime)).toBeLessThanOrEqual(Date.now());
+    expect((raw.mock.calls as unknown[][])[0].slice(1)).toEqual([
+      'clock-owner',
+    ]);
+    expect(result.userId).toBe('clock-owner');
+  });
+
+  it('preserves the full accepted future logical floor', async () => {
+    const accepted = new Date(Date.now() + 240000);
+    raw.mockResolvedValue([{ logicalTime: accepted }]);
+    expect((await service.getSyncClock('clock-owner')).logicalTime).toBe(
+      accepted.getTime(),
+    );
+  });
+
+  it('never converts a database failure into an unsafe zero checkpoint', async () => {
+    raw.mockRejectedValue(new Error('database unavailable'));
+    await expect(service.getSyncClock('clock-owner')).rejects.toThrow();
+  });
+});
 const SECOND_CLIENT_MUTATION_ID = 'b6bcc7b5-a5d1-4ddd-ae80-b9d6be5193cf';
 
 type CreateTaskFixture = {
@@ -83,6 +124,12 @@ const CREATE_CONFLICT_CASES: Array<
 ];
 
 const makeClientMock = () => ({
+  taskSyncState: {
+    findUnique: jest.fn().mockResolvedValue(null),
+    findMany: jest.fn().mockResolvedValue([]),
+    update: jest.fn(),
+    upsert: jest.fn(),
+  },
   task: {
     count: jest.fn(),
     create: jest.fn(),
@@ -123,6 +170,7 @@ describe('TasksService', () => {
   let prismaMock: ReturnType<typeof makePrismaMock>;
   let transactionMock: ClientMock;
   let scoresMock: { recompute: jest.Mock };
+  const signal = { publishInvalidation: jest.fn() };
 
   beforeEach(async () => {
     transactionMock = makeClientMock();
@@ -131,21 +179,482 @@ describe('TasksService', () => {
     prismaMock = makePrismaMock(transactionMock);
     prismaMock.task.findUnique.mockResolvedValue(null);
     scoresMock = { recompute: jest.fn().mockResolvedValue(undefined) };
+    signal.publishInvalidation.mockReset().mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: ScoresService, useValue: scoresMock },
+        { provide: RealtimeBusService, useValue: signal },
       ],
     }).compile();
 
     service = module.get<TasksService>(TasksService);
   });
 
+  it.each(['create', 'update', 'remove', 'complete', 'sync'] as const)(
+    'publishes %s invalidation only after transaction commit',
+    async (kind) => {
+      let commit!: (value: unknown) => void;
+      prismaMock.$transaction.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            commit = resolve;
+          }),
+      );
+      const operation =
+        kind === 'create'
+          ? service.create('owner', makeCreateTaskDto())
+          : kind === 'update'
+            ? service.update('owner', MOCK_TASK.id, { title: 'new' })
+            : kind === 'remove'
+              ? service.remove('owner', MOCK_TASK.id)
+              : kind === 'complete'
+                ? service.complete('owner', MOCK_TASK.id)
+                : service.sync('owner', {
+                    kind: 'delete',
+                    taskId: CLIENT_MUTATION_ID,
+                    mutationId: SECOND_CLIENT_MUTATION_ID,
+                    updatedAt: new Date().toISOString(),
+                  });
+      expect(signal.publishInvalidation).not.toHaveBeenCalled();
+      commit(MOCK_TASK);
+      await operation;
+      expect(signal.publishInvalidation).toHaveBeenCalledTimes(1);
+      expect(signal.publishInvalidation).toHaveBeenCalledWith(
+        { kind: 'user', userId: 'owner' },
+        ['scores', 'reminders'],
+      );
+    },
+  );
+
+  it('never signals a rollback and preserves committed success if the bus fails', async () => {
+    prismaMock.$transaction.mockRejectedValueOnce(new Error('rollback'));
+    await expect(service.complete('owner', MOCK_TASK.id)).rejects.toThrow(
+      'rollback',
+    );
+    expect(signal.publishInvalidation).not.toHaveBeenCalled();
+    prismaMock.$transaction.mockResolvedValueOnce(MOCK_TASK);
+    signal.publishInvalidation.mockRejectedValueOnce(
+      new Error('bus unavailable'),
+    );
+    await expect(service.complete('owner', MOCK_TASK.id)).resolves.toEqual(
+      MOCK_TASK,
+    );
+  });
+
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
+  });
+
+  describe('offline sync', () => {
+    const now = new Date('2026-06-02T12:00:00.000Z');
+    const fields = {
+      title: 'Morning run',
+      description: null,
+      startAt: '2026-06-03T06:00:00.000Z',
+      endAt: '2026-06-03T07:00:00.000Z',
+      difficulty: 'MEDIUM',
+      status: 'PENDING',
+      categoryId: null,
+      notificationEnabled: true,
+    };
+    const op = (changes: Record<string, unknown> = {}): SyncTaskOperation =>
+      parseSyncOperation(
+        {
+          kind: 'create',
+          mutationId: CLIENT_MUTATION_ID,
+          taskId: CLIENT_MUTATION_ID,
+          updatedAt: now.toISOString(),
+          task: fields,
+          ...changes,
+        },
+        now,
+      );
+    const existing = (): Task => ({
+      ...MOCK_TASK,
+      id: CLIENT_MUTATION_ID,
+      updatedAt: new Date('2026-06-01T00:00:00Z'),
+    });
+    const state = (operation: SyncTaskOperation) => ({
+      taskId: CLIENT_MUTATION_ID,
+      updatedAt: new Date(operation.updatedAt),
+      mutationId: operation.mutationId,
+      mutationHash: hashSyncOperation(operation),
+      createHash:
+        operation.kind === 'create' ? hashSyncOperation(operation) : null,
+    });
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(now);
+      transactionMock.task.create.mockResolvedValue(existing());
+      transactionMock.task.update.mockImplementation(
+        (args: { data: Partial<Task> }) =>
+          Promise.resolve({ ...existing(), ...args.data }),
+      );
+    });
+
+    it('creates and stores immutable sync metadata in the same scoring/scheduling transaction', async () => {
+      const operation = op();
+      await expect(
+        service.sync(MOCK_TASK.userId, operation),
+      ).resolves.toMatchObject({
+        mutationId: CLIENT_MUTATION_ID,
+        outcome: 'applied',
+        task: { id: CLIENT_MUTATION_ID },
+        serverTime: now.toISOString(),
+      });
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expect(transactionMock.taskSyncState.upsert).toHaveBeenCalledWith({
+        where: { taskId: CLIENT_MUTATION_ID },
+        create: state(operation),
+        update: {
+          updatedAt: now,
+          mutationId: CLIENT_MUTATION_ID,
+          mutationHash: hashSyncOperation(operation),
+        },
+      });
+      expect(scoresMock.recompute).toHaveBeenCalledWith(
+        MOCK_TASK.userId,
+        MOCK_TASK.startAt,
+        transactionMock,
+      );
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(1);
+      expect(prismaMock.task.create).not.toHaveBeenCalled();
+    });
+    it.each([false, true])(
+      'reconciles lost create ACK after later edit/deletion %s without another write',
+      async (deleted) => {
+        const operation = op();
+        const saved = {
+          ...existing(),
+          title: 'newer edit',
+          deletedAt: deleted ? now : null,
+        };
+        transactionMock.task.findUnique.mockResolvedValue(saved);
+        transactionMock.taskSyncState.findUnique.mockResolvedValue({
+          ...state(operation),
+          mutationId: SECOND_CLIENT_MUTATION_ID,
+          mutationHash: 'new-hash',
+        });
+        const result = await service.sync(MOCK_TASK.userId, operation);
+        expect(result.outcome).toBe(deleted ? 'deleted' : 'superseded');
+        expect(result.task.title).toBe('newer edit');
+        expect(transactionMock.task.create).not.toHaveBeenCalled();
+        expect(transactionMock.task.update).not.toHaveBeenCalled();
+        expect(transactionMock.taskSyncState.upsert).not.toHaveBeenCalled();
+        expect(scoresMock.recompute).not.toHaveBeenCalled();
+        expect(
+          transactionMock.notificationSchedule.updateMany,
+        ).not.toHaveBeenCalled();
+      },
+    );
+    it('returns 409 for a changed create payload using the same ID', async () => {
+      transactionMock.task.findUnique.mockResolvedValue(existing());
+      transactionMock.taskSyncState.findUnique.mockResolvedValue(state(op()));
+      await expect(
+        service.sync(
+          MOCK_TASK.userId,
+          op({ task: { ...fields, title: 'changed' } }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+    });
+    it.each(['create', 'replace', 'delete'])(
+      'hides foreign owner %s before reading its sync metadata',
+      async (kind) => {
+        transactionMock.task.findUnique.mockResolvedValue({
+          ...existing(),
+          userId: 'foreign',
+        });
+        const operation: Record<string, unknown> = { ...op(), kind };
+        if (kind === 'delete') delete operation.task;
+        await expect(
+          service.sync(MOCK_TASK.userId, operation),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(transactionMock.taskSyncState.findUnique).not.toHaveBeenCalled();
+        expect(scoresMock.recompute).not.toHaveBeenCalled();
+      },
+    );
+    it.each(['replace', 'delete'])(
+      'never upserts a missing %s target',
+      async (kind) => {
+        const raw: Record<string, unknown> = { ...op(), kind };
+        if (kind === 'delete') delete raw.task;
+        await expect(
+          service.sync(MOCK_TASK.userId, raw),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(transactionMock.task.create).not.toHaveBeenCalled();
+      },
+    );
+    it('rejects malformed input before opening a transaction', async () => {
+      await expect(
+        service.sync(MOCK_TASK.userId, { ...op(), userId: 'forged' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+    it('suppresses stale replacement side effects and detects same-version payload reuse', async () => {
+      const operation = op({ kind: 'replace' });
+      transactionMock.task.findUnique.mockResolvedValue(existing());
+      transactionMock.taskSyncState.findUnique.mockResolvedValue(
+        state(operation),
+      );
+      await expect(
+        service.sync(
+          MOCK_TASK.userId,
+          op({ kind: 'replace', updatedAt: '2026-06-02T11:59:59.999Z' }),
+        ),
+      ).resolves.toMatchObject({ outcome: 'superseded' });
+      await expect(
+        service.sync(
+          MOCK_TASK.userId,
+          op({ kind: 'replace', task: { ...fields, title: 'different' } }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+      expect(transactionMock.taskSyncState.upsert).not.toHaveBeenCalled();
+    });
+    it('applies a later UUID tie, clears nullable fields, and stamps completion on the server', async () => {
+      const operation = op({
+        kind: 'replace',
+        mutationId: SECOND_CLIENT_MUTATION_ID,
+        task: { ...fields, status: 'COMPLETED' },
+      });
+      transactionMock.task.findUnique.mockResolvedValue({
+        ...existing(),
+        categoryId: 'old-category',
+        description: 'old',
+      });
+      transactionMock.taskSyncState.findUnique.mockResolvedValue(
+        state(op({ kind: 'replace' })),
+      );
+      await expect(
+        service.sync(MOCK_TASK.userId, operation),
+      ).resolves.toMatchObject({
+        outcome: 'applied',
+        task: {
+          status: 'COMPLETED',
+          completedAt: now,
+          categoryId: null,
+          description: null,
+        },
+      });
+      expect(transactionMock.category.findFirst).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationSchedule.updateMany,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).toHaveBeenCalledTimes(1);
+      expect(transactionMock.taskSyncState.upsert).toHaveBeenCalledTimes(1);
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(1);
+    });
+    it('deletes despite an older timestamp and never resurrects on later replacement', async () => {
+      const deletion = {
+        kind: 'delete',
+        mutationId: SECOND_CLIENT_MUTATION_ID,
+        taskId: CLIENT_MUTATION_ID,
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      };
+      transactionMock.task.findUnique.mockResolvedValue(existing());
+      transactionMock.taskSyncState.findUnique.mockResolvedValue(
+        state(op({ kind: 'replace' })),
+      );
+      await expect(
+        service.sync(MOCK_TASK.userId, deletion),
+      ).resolves.toMatchObject({
+        outcome: 'deleted',
+        task: { deletedAt: now },
+      });
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(1);
+      transactionMock.task.findUnique.mockResolvedValue({
+        ...existing(),
+        deletedAt: now,
+      });
+      await expect(
+        service.sync(
+          MOCK_TASK.userId,
+          op({ kind: 'replace', updatedAt: '2026-06-02T12:01:00.000Z' }),
+        ),
+      ).resolves.toMatchObject({ outcome: 'deleted' });
+      expect(transactionMock.task.update).toHaveBeenCalledTimes(1);
+    });
+    it('keeps capacity rejection atomic before sync state creation', async () => {
+      transactionMock.task.count.mockResolvedValue(20);
+      await expect(service.sync(MOCK_TASK.userId, op())).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(transactionMock.task.create).not.toHaveBeenCalled();
+      expect(transactionMock.taskSyncState.upsert).not.toHaveBeenCalled();
+    });
+    it('retries the whole transaction after a serialization conflict', async () => {
+      transactionMock.task.create
+        .mockRejectedValueOnce(makeTransactionConflict())
+        .mockResolvedValue(existing());
+      await expect(service.sync(MOCK_TASK.userId, op())).resolves.toMatchObject(
+        { outcome: 'applied' },
+      );
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(2);
+      expect(transactionMock.taskSyncState.upsert).toHaveBeenCalledTimes(1);
+      expect(scoresMock.recompute).toHaveBeenCalledTimes(1);
+    });
+    it('returns the same successful ACK without repeating a matching replacement', async () => {
+      const operation = op({
+        kind: 'replace',
+        task: { ...fields, status: 'COMPLETED' },
+      });
+      const completedAt = new Date('2026-06-02T11:00:00.000Z');
+      transactionMock.task.findUnique.mockResolvedValue({
+        ...existing(),
+        status: TaskStatus.COMPLETED,
+        completedAt,
+      });
+      transactionMock.taskSyncState.findUnique.mockResolvedValue(
+        state(operation),
+      );
+      await expect(
+        service.sync(MOCK_TASK.userId, operation),
+      ).resolves.toMatchObject({
+        outcome: 'applied',
+        task: {
+          completedAt,
+          syncUpdatedAt: operation.updatedAt,
+          syncMutationId: operation.mutationId,
+        },
+      });
+      expect(transactionMock.task.update).not.toHaveBeenCalled();
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+      expect(
+        transactionMock.notificationDelivery.updateMany,
+      ).not.toHaveBeenCalled();
+    });
+    it('recovers a concurrent create primary-key winner inside a new transaction', async () => {
+      const operation = op();
+      transactionMock.task.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(existing());
+      transactionMock.task.create.mockRejectedValueOnce(
+        makeUniqueConstraintConflict(),
+      );
+      transactionMock.taskSyncState.findUnique.mockResolvedValue(
+        state(operation),
+      );
+      await expect(
+        service.sync(MOCK_TASK.userId, operation),
+      ).resolves.toMatchObject({ outcome: 'applied' });
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(2);
+      expect(transactionMock.task.create).toHaveBeenCalledTimes(1);
+      expect(scoresMock.recompute).not.toHaveBeenCalled();
+      expect(prismaMock.task.findUnique).not.toHaveBeenCalled();
+    });
+    it('bounds sync transaction retries to three total attempts', async () => {
+      const conflict = makeTransactionConflict();
+      transactionMock.task.create.mockRejectedValue(conflict);
+      await expect(service.sync(MOCK_TASK.userId, op())).rejects.toBe(conflict);
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(3);
+      expect(transactionMock.taskSyncState.upsert).not.toHaveBeenCalled();
+    });
+    it('propagates sync metadata write failure through the mutation transaction', async () => {
+      const failure = new Error('state persistence failed');
+      transactionMock.taskSyncState.upsert.mockRejectedValue(failure);
+      await expect(service.sync(MOCK_TASK.userId, op())).rejects.toBe(failure);
+      expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expect(prismaMock.taskSyncState.upsert).not.toHaveBeenCalled();
+    });
+    it('projects only the owned page metadata without changing legacy responses', async () => {
+      const first = existing();
+      const second = { ...existing(), id: SECOND_CLIENT_MUTATION_ID };
+      prismaMock.task.findMany.mockResolvedValue([first, second]);
+      const version = {
+        ...state(op()),
+        updatedAt: new Date('2026-06-02T11:58:00.000Z'),
+      };
+      prismaMock.taskSyncState.findMany.mockResolvedValue([version]);
+      const result = await service.findAllForSync(MOCK_TASK.userId, {
+        limit: 100,
+      });
+      expect(result[0]).toMatchObject({
+        id: first.id,
+        syncUpdatedAt: version.updatedAt.toISOString(),
+        syncMutationId: CLIENT_MUTATION_ID,
+      });
+      expect(result[1]).toMatchObject({
+        id: second.id,
+        syncUpdatedAt: second.updatedAt.toISOString(),
+        syncMutationId: '',
+      });
+      expect(prismaMock.taskSyncState.findMany).toHaveBeenCalledWith({
+        where: { taskId: { in: [first.id, second.id] } },
+        take: 100,
+      });
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: { userId: MOCK_TASK.userId, deletedAt: null },
+        orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+        take: 100,
+      });
+      expect(first).not.toHaveProperty('syncUpdatedAt');
+      await expect(service.findAll(MOCK_TASK.userId, {})).resolves.toEqual([
+        first,
+        second,
+      ]);
+    });
+    it('skips sync metadata reads for an empty page', async () => {
+      prismaMock.task.findMany.mockResolvedValue([]);
+      await expect(
+        service.findAllForSync(MOCK_TASK.userId, {}),
+      ).resolves.toEqual([]);
+      expect(prismaMock.taskSyncState.findMany).not.toHaveBeenCalled();
+    });
+    it.each(['update', 'complete', 'remove'] as const)(
+      'advances existing metadata for legacy %s without overwriting the create fingerprint',
+      async (method) => {
+        const saved = state(op());
+        saved.updatedAt = new Date(now.getTime() + 1000);
+        transactionMock.task.findFirst.mockResolvedValue(existing());
+        transactionMock.taskSyncState.findUnique.mockResolvedValue(saved);
+        if (method === 'update')
+          await service.update(MOCK_TASK.userId, CLIENT_MUTATION_ID, {
+            title: 'new title',
+          });
+        else await service[method](MOCK_TASK.userId, CLIENT_MUTATION_ID);
+        const [args] = transactionMock.taskSyncState.update.mock.calls[0] as [
+          {
+            where: { taskId: string };
+            data: {
+              updatedAt: Date;
+              mutationId: string;
+              mutationHash: string;
+              createHash?: string;
+            };
+          },
+        ];
+        expect(args.where.taskId).toBe(CLIENT_MUTATION_ID);
+        expect(args.data.updatedAt.getTime()).toBe(now.getTime() + 1001);
+        expect(args.data.mutationId).toMatch(/^[0-9a-f-]{36}$/);
+        expect(args.data.mutationHash).toMatch(/^[0-9a-f]{64}$/);
+        expect(args.data).not.toHaveProperty('createHash');
+        expect(prismaMock.taskSyncState.update).not.toHaveBeenCalled();
+      },
+    );
+    it('counts year 0099 tasks in year 0099 instead of 1999', async () => {
+      await service.create(
+        MOCK_TASK.userId,
+        makeCreateTaskDto({
+          startAt: '0099-01-02T12:00:00.000Z',
+          endAt: '0099-01-02T13:00:00.000Z',
+        }),
+      );
+      const [args] = transactionMock.task.count.mock.calls[0] as [
+        { where: { startAt: { gte: Date; lt: Date } } },
+      ];
+      expect(args.where.startAt.gte.toISOString()).toBe(
+        '0099-01-02T00:00:00.000Z',
+      );
+      expect(args.where.startAt.lt.toISOString()).toBe(
+        '0099-01-03T00:00:00.000Z',
+      );
+    });
   });
 
   describe('issueClientMutationId', () => {
@@ -644,32 +1153,198 @@ describe('TasksService', () => {
   });
 
   describe('findAll', () => {
-    it('returns tasks ordered by startAt', async () => {
+    it('returns a bounded all-history page when date is omitted', async () => {
       prismaMock.task.findMany.mockResolvedValue([MOCK_TASK]);
 
       const result = await service.findAll('user-uuid-1', {});
 
       expect(result).toEqual([MOCK_TASK]);
-      expect(prismaMock.task.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ orderBy: { startAt: 'asc' } }),
-      );
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: { userId: 'user-uuid-1', deletedAt: null },
+        orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+        take: 100,
+      });
     });
 
-    it('filters by date when provided', async () => {
-      prismaMock.task.findMany.mockResolvedValue([MOCK_TASK]);
+    it.each([
+      ['2026-06-03', '2026-06-03', '2026-06-04'],
+      ['2026-06-03T12:34:56.789Z', '2026-06-03', '2026-06-04'],
+      ['2026-06-03T21:34:56.789+09:00', '2026-06-03', '2026-06-04'],
+      ['2026-06-04T00:30:00+09:00', '2026-06-03', '2026-06-04'],
+      ['2026-06-02T23:30:00-03:00', '2026-06-03', '2026-06-04'],
+      ['2026-06-03T23:59:59.999Z', '2026-06-03', '2026-06-04'],
+      ['2026-06-04T00:00:00Z', '2026-06-04', '2026-06-05'],
+      ['2026-12-31T12:00:00Z', '2026-12-31', '2027-01-01'],
+      ['2028-02-29T12:00:00Z', '2028-02-29', '2028-03-01'],
+      ['0099-12-31', '0099-12-31', '0100-01-01'],
+    ])(
+      'queries the complete UTC day of %s with an exclusive next midnight',
+      async (date, dayStart, nextDay) => {
+        prismaMock.task.findMany.mockResolvedValue([MOCK_TASK]);
 
-      await service.findAll('user-uuid-1', { date: '2026-06-03' });
+        await service.findAll('user-uuid-1', { date });
 
-      expect(prismaMock.task.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          where: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            startAt: expect.objectContaining({ gte: expect.any(Date) }),
-          }),
+        expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+          where: {
+            userId: 'user-uuid-1',
+            deletedAt: null,
+            startAt: {
+              gte: new Date(`${dayStart}T00:00:00.000Z`),
+              lt: new Date(`${nextDay}T00:00:00.000Z`),
+            },
+          },
+          orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+          take: 100,
+        });
+      },
+    );
+
+    it.each([
+      [undefined, 100],
+      [1, 1],
+      [25, 25],
+      [100, 100],
+      [101, 100],
+      [1_000_000, 100],
+      [0, 1],
+      [-1, 1],
+      [NaN, 100],
+      [Infinity, 100],
+      [1.5, 100],
+    ])('bounds a direct service limit of %s to %s', async (limit, expected) => {
+      prismaMock.task.findMany.mockResolvedValue([]);
+
+      await expect(service.findAll('user-uuid-1', { limit })).resolves.toEqual(
+        [],
+      );
+
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: { userId: 'user-uuid-1', deletedAt: null },
+        orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+        take: expected,
+      });
+      expect(prismaMock.task.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('uses a native cursor with stable startAt and id ordering for equal-time tasks', async () => {
+      const startAt = new Date('2026-06-03T06:00:00.000Z');
+      prismaMock.task.findFirst.mockResolvedValue({
+        id: CLIENT_MUTATION_ID,
+        startAt,
+      });
+      const nextTask = { ...MOCK_TASK, id: SECOND_CLIENT_MUTATION_ID, startAt };
+      prismaMock.task.findMany.mockResolvedValue([nextTask]);
+
+      await expect(
+        service.findAll('user-uuid-1', {
+          cursor: CLIENT_MUTATION_ID,
+          limit: 1,
         }),
-      );
+      ).resolves.toEqual([nextTask]);
+
+      expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+          id: CLIENT_MUTATION_ID,
+        },
+        select: { id: true },
+      });
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+        },
+        orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+        take: 1,
+        cursor: { id: CLIENT_MUTATION_ID },
+        skip: 1,
+      });
     });
+
+    it('keeps the normalized date bounds on the cursor lookup and the next page', async () => {
+      const startAt = new Date('2026-06-03T06:00:00.000Z');
+      const dateRange = {
+        gte: new Date('2026-06-03T00:00:00.000Z'),
+        lt: new Date('2026-06-04T00:00:00.000Z'),
+      };
+      prismaMock.task.findFirst.mockResolvedValue({
+        id: CLIENT_MUTATION_ID,
+        startAt,
+      });
+      prismaMock.task.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.findAll('user-uuid-1', {
+          date: '2026-06-04T00:30:00+09:00',
+          cursor: CLIENT_MUTATION_ID,
+        }),
+      ).resolves.toEqual([]);
+
+      expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+          startAt: dateRange,
+          id: CLIENT_MUTATION_ID,
+        },
+        select: { id: true },
+      });
+      expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-uuid-1',
+          deletedAt: null,
+          startAt: dateRange,
+        },
+        orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+        take: 100,
+        cursor: { id: CLIENT_MUTATION_ID },
+        skip: 1,
+      });
+    });
+
+    it.each([
+      ['missing', null],
+      ['foreign', { ...MOCK_TASK, userId: 'other-user' }],
+      ['deleted', { ...MOCK_TASK, deletedAt: new Date() }],
+      [
+        'another day',
+        { ...MOCK_TASK, startAt: new Date('2026-06-04T00:00:00Z') },
+      ],
+    ])(
+      'rejects a %s cursor through the scoped lookup before reading a page',
+      async (_, cursor) => {
+        prismaMock.task.findFirst.mockImplementation(
+          ({ where }: { where: Prisma.TaskWhereInput }) => {
+            expect(where).toEqual({
+              id: CLIENT_MUTATION_ID,
+              userId: 'user-uuid-1',
+              deletedAt: null,
+              startAt: {
+                gte: new Date('2026-06-03T00:00:00Z'),
+                lt: new Date('2026-06-04T00:00:00Z'),
+              },
+            });
+            // These fixture rows are excluded by that Prisma lookup predicate.
+            expect(
+              cursor === null ||
+                cursor.userId !== where.userId ||
+                cursor.deletedAt !== null ||
+                cursor.startAt >= new Date('2026-06-04T00:00:00Z'),
+            ).toBe(true);
+            return Promise.resolve(null);
+          },
+        );
+
+        await expect(
+          service.findAll('user-uuid-1', {
+            date: '2026-06-03',
+            cursor: CLIENT_MUTATION_ID,
+          }),
+        ).rejects.toThrow(NotFoundException);
+        expect(prismaMock.task.findMany).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('findOne', () => {

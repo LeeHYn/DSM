@@ -9,6 +9,7 @@ import {
   IsString,
   Min,
   MinLength,
+  MaxLength,
   ValidateIf,
   validateSync,
 } from 'class-validator';
@@ -43,6 +44,12 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GOOGLE_CLIENT_ID!: string;
+
+  @IsOptional()
+  @Type(() => Object)
+  @IsString()
+  @MaxLength(255)
+  APPLE_CLIENT_ID?: string;
 
   @IsArray()
   @IsString({ each: true })

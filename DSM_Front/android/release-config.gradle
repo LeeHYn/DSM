@@ -14,6 +14,12 @@ return { Map input ->
         errors << 'Missing canonical .env.release.local'
     }
     if (input.override) errors << 'ENVFILE overrides are forbidden for release'
+    def architectures = input.architectures?.toString()?.split(',', -1)?.toList() ?: []
+    def supportedArchitectures = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64']
+    if (!architectures.contains('arm64-v8a') ||
+        architectures.any { !supportedArchitectures.contains(it) }) {
+        errors << 'reactNativeArchitectures must include arm64-v8a and only supported Android ABIs'
+    }
     def tasks = input.tasks ?: []
     def firstVariant = tasks.collect { task ->
         def match = task =~ /(?:.*:)*[a-z]+([A-Z][A-Za-z0-9]+)/
@@ -25,10 +31,12 @@ return { Map input ->
     def url = input.env?.API_BASE_URL?.toString()
     try {
         def uri = new URI(url ?: '')
-        if (uri.scheme != 'https' || !uri.host || uri.userInfo != null ||
+        def host = uri.host?.toLowerCase()?.replaceAll(/\.$/, '')
+        if (uri.scheme != 'https' || !host || uri.userInfo != null ||
+            host == 'invalid' || host.endsWith('.invalid') ||
             uri.rawQuery != null || uri.rawFragment != null) throw new IllegalArgumentException()
     } catch (Exception ignored) {
-        errors << 'API_BASE_URL must be HTTPS with a host, without credentials, query or fragment'
+        errors << 'API_BASE_URL must be HTTPS with a non-placeholder host, without credentials, query or fragment'
     }
     if (!input.env?.GOOGLE_WEB_CLIENT_ID?.toString()?.trim()) errors << 'Missing GOOGLE_WEB_CLIENT_ID'
     ['PRIVACY_POLICY_URL', 'ACCOUNT_DELETION_URL'].each { key ->

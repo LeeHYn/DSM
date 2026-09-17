@@ -4,6 +4,40 @@ import { createProductApi } from './product-api';
 
 const clientMutationId = '123e4567-e89b-42d3-a456-426614174000';
 
+describe('bounded list traversal', () => {
+  const page = Array.from({ length: 100 }, (_, index) => ({
+    id: `category-${index}`, name: `Category ${index}`, color: '#FFFFFF',
+    isDefault: false, userId: 'u',
+  }));
+  function setup(bodies: unknown[]) {
+    const fetchImpl = jest.fn(async (_input: RequestInfo | URL) => ({
+      ok: true, status: 200,
+      text: async () => JSON.stringify(bodies.shift() ?? []),
+    }) as Response);
+    return { fetchImpl, api: createProductApi(createHttpClient({
+      baseUrl: 'https://api.example.invalid', fetchImpl,
+    })) };
+  }
+  it('joins complete pages and a final partial page', async () => {
+    const tail = { ...page[0], id: 'last' };
+    const { api, fetchImpl } = setup([page, [tail]]);
+    await expect(api.categories()).resolves.toHaveLength(101);
+    expect(fetchImpl.mock.calls.map(call => call[0])).toEqual([
+      'https://api.example.invalid/categories?limit=100',
+      'https://api.example.invalid/categories?limit=100&cursor=category-99',
+    ]);
+  });
+  it('rejects repeating pages instead of looping or publishing a partial result', async () => {
+    const { api, fetchImpl } = setup([page, page]);
+    await expect(api.categories()).rejects.toMatchObject({ kind: 'protocol' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+  it('rejects a server page exceeding the negotiated bound', async () => {
+    const { api } = setup([[...page, { ...page[0], id: 'overflow' }]]);
+    await expect(api.categories()).rejects.toMatchObject({ kind: 'protocol' });
+  });
+});
+
 test('uses authenticated REST requests, UTC date keys and empty DELETE responses', async () => {
   const fetchImpl = jest.fn(
     async () => ({ ok: true, status: 200, text: async () => '[]' }) as Response,
@@ -19,7 +53,7 @@ test('uses authenticated REST requests, UTC date keys and empty DELETE responses
   const api = createProductApi(client);
   await api.tasks('2026-09-04');
   expect(fetchImpl).toHaveBeenLastCalledWith(
-    'https://api.example.invalid/tasks?date=2026-09-04',
+    'https://api.example.invalid/tasks?date=2026-09-04&limit=100',
     expect.objectContaining({
       headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
     }),

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Pressable,
-  ScrollView,
+  FlatList,
   StyleSheet,
   View,
 } from 'react-native';
@@ -18,6 +18,7 @@ import {
   dailyupSpacing,
 } from '@/constants/dailyup-theme';
 import { useProduct } from '@/features/product/product-context';
+import { useRealtime } from '@/features/realtime/realtime-context';
 import type { Leader as RankingEntry, Period as RankingPeriod } from '@/features/product/product-contracts';
 
 const PERIODS: RankingPeriod[] = ['DAILY', 'WEEKLY', 'TOTAL'];
@@ -89,14 +90,20 @@ function MyRankCard() {
   );
 }
 
-function RankingRow({ entry }: { entry: RankingEntry }) {
+function RankingRow({ entry, isCurrentUser }: { entry: RankingEntry; isCurrentUser: boolean }) {
   const palette = useDailyupPalette();
   const rankColor = entry.rank <= 3 ? palette.gold : palette.muted;
   const tierColor =
     entry.tier === 'MASTER' || entry.tier === 'GOLD' ? palette.gold : palette.muted;
 
   return (
-    <SurfaceCard style={styles.rankingRow}>
+    <SurfaceCard
+      accessible
+      accessibilityLabel={`${entry.rank}위, ${entry.nickname}, ${isCurrentUser ? '나, ' : ''}${entry.tier}, ${entry.score.toLocaleString('ko-KR')}점`}
+      style={[
+        styles.rankingRow,
+        isCurrentUser && { backgroundColor: palette.limeTint, borderColor: palette.lime },
+      ]}>
       <AppText color={rankColor} style={styles.rankNumber} variant="sectionTitle">
         {entry.rank}
       </AppText>
@@ -113,6 +120,7 @@ function RankingRow({ entry }: { entry: RankingEntry }) {
           {entry.tier}
         </AppText>
       </View>
+      {isCurrentUser ? <AppText color={palette.lime} variant="caption">나</AppText> : null}
       <AppText style={styles.rowScore} variant="label">
         {entry.score.toLocaleString('ko-KR')}점
       </AppText>
@@ -120,17 +128,36 @@ function RankingRow({ entry }: { entry: RankingEntry }) {
   );
 }
 
+function RankingSeparator() {
+  return <View style={styles.separator} />;
+}
+
+function rankingKey(entry: RankingEntry) {
+  return entry.userId;
+}
+
 export default function RankingScreen() {
   const palette = useDailyupPalette();
+  const realtime = useRealtime();
   const { snapshot, store } = useProduct();
   const { period } = snapshot;
   const entries = snapshot.leaderboard.data ?? [];
 
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
-      <ScrollView
+      <FlatList
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
+        data={entries}
+        extraData={store.userId}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        keyExtractor={rankingKey}
+        ItemSeparatorComponent={RankingSeparator}
+        renderItem={({ item }) => <RankingRow entry={item} isCurrentUser={item.userId === store.userId} />}
+        ListEmptyComponent={snapshot.leaderboard.status === 'ready' ? <AppText>표시할 순위가 없습니다.</AppText> : null}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<>
         <AppText style={styles.title} variant="screenTitle">
           랭킹
         </AppText>
@@ -141,15 +168,13 @@ export default function RankingScreen() {
         {snapshot.ranking.status === 'loading' || snapshot.leaderboard.status === 'loading' ? <AppText>랭킹 조회 중…</AppText> : null}
         <AppButton disabled={snapshot.mutating} onPress={() => { void store.loadRanking(); }} variant="ghost">랭킹 새로고침</AppButton>
         <AppText color={palette.muted} style={styles.realtimeCopy} variant="caption">
-          실시간 갱신은 준비 중입니다 · 새로고침으로 최신 순위를 확인하세요
+          {realtime?.restFailed ? '최신 순위를 가져오지 못했습니다 · 새로고침해 주세요'
+            : realtime?.status === 'connected' ? '자동 갱신 연결됨 · 순위 반영에는 약 1분이 걸릴 수 있습니다'
+            : realtime?.status === 'paused' || realtime?.status === 'stopped' || !realtime ? '자동 갱신 대기 중 · 새로고침으로 최신 순위를 확인하세요'
+            : '자동 갱신 재연결 중 · 새로고침으로 최신 순위를 확인하세요'}
         </AppText>
-        <View style={styles.list}>
-          {snapshot.leaderboard.status === 'ready' && entries.length === 0 ? <AppText>표시할 순위가 없습니다.</AppText> : null}
-          {entries.map((entry) => (
-            <RankingRow entry={entry} key={`${period}-${entry.userId}`} />
-          ))}
-        </View>
-      </ScrollView>
+        </>}
+      />
     </View>
   );
 }
@@ -170,8 +195,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 14,
   },
-  list: {
-    gap: dailyupSpacing.two,
+  separator: {
+    height: dailyupSpacing.two,
   },
   myRank: {
     alignItems: 'center',

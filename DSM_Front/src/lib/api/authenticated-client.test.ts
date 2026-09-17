@@ -8,6 +8,36 @@ type Deferred<T> = {
   reject(reason: unknown): void;
 };
 
+it('does not refresh a new account switched between 401 processing and its refresh microtask', async () => {
+  const initial = createDeferred<never>();
+  let token = 'account-a';
+  const request = jest.fn().mockReturnValueOnce(initial.promise).mockResolvedValue('wrong-account');
+  const refreshAccessToken = jest.fn(async () => { token = 'rotated-b'; return token; });
+  const client = createAuthenticatedClient({ request }, { getAccessToken: () => token, refreshAccessToken, onUnauthorized: jest.fn() });
+  const response = client.request({ path: '/notifications/reminders' }).catch(error => error);
+  initial.reject(new ApiError('unauthorized', 'expired'));
+  queueMicrotask(() => { token = 'account-b'; });
+  expect(await response).toBeInstanceOf(ApiError);
+  expect(refreshAccessToken).not.toHaveBeenCalled();
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
+it('fences a request predicate before replay and before unauthorized cleanup', async () => {
+  let current = true;
+  let token = 'old';
+  const replay = createDeferred<never>();
+  const started = createDeferred<void>();
+  const request = jest.fn().mockRejectedValueOnce(new ApiError('unauthorized', 'expired')).mockImplementationOnce(() => { started.resolve(); return replay.promise; });
+  const onUnauthorized = jest.fn();
+  const client = createAuthenticatedClient({ request }, { getAccessToken: () => token, refreshAccessToken: async () => { token = 'new'; return token; }, onUnauthorized });
+  const result = client.request({ path: '/tasks' }, () => current).catch(error => error);
+  await started.promise;
+  current = false;
+  replay.reject(new ApiError('unauthorized', 'revoked'));
+  expect(await result).toBeInstanceOf(ApiError);
+  expect(onUnauthorized).not.toHaveBeenCalled();
+});
+
 function createDeferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;
@@ -184,6 +214,99 @@ it('awaits session end and rethrows when the single replay also returns 401', as
   sessionEnd.resolve();
 
   await expect(outcome).rejects.toBe(replayError);
+});
+
+it.each([
+  ['account switch', 'account-b-token'],
+  ['logout', null],
+] as const)('preserves the current session after %s and a late replay 401', async (_, nextToken) => {
+  const replay = createDeferred<never>();
+  const replayStarted = createDeferred<void>();
+  const initialError = new ApiError('unauthorized', 'Expired', { status: 401 });
+  const replayError = new ApiError('unauthorized', 'Revoked', { status: 401 });
+  let currentAccessToken: string | null = 'account-a-token';
+  const request = jest.fn()
+    .mockRejectedValueOnce(initialError)
+    .mockImplementationOnce(() => {
+      replayStarted.resolve();
+      return replay.promise;
+    });
+  const refreshAccessToken = jest.fn(async () => {
+    currentAccessToken = 'account-a-refreshed-token';
+    return currentAccessToken;
+  });
+  const onUnauthorized = jest.fn(() => {
+    currentAccessToken = null;
+  });
+  const client = createAuthenticatedClient({ request }, {
+    getAccessToken: () => currentAccessToken,
+    refreshAccessToken,
+    onUnauthorized,
+  });
+
+  const outcome = client.request({ path: '/account-a-operation' });
+  await replayStarted.promise;
+  expect(request).toHaveBeenLastCalledWith({
+    path: '/account-a-operation',
+    accessToken: 'account-a-refreshed-token',
+  });
+  currentAccessToken = nextToken;
+  replay.reject(replayError);
+
+  await expect(outcome).rejects.toBe(replayError);
+  expect(currentAccessToken).toBe(nextToken);
+  expect(onUnauthorized).not.toHaveBeenCalled();
+  expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+  expect(request).toHaveBeenCalledTimes(2);
+});
+
+it('preserves a later successful rotation when an older replay returns 401', async () => {
+  const replay = createDeferred<never>();
+  const replayStarted = createDeferred<void>();
+  const expired = new ApiError('unauthorized', 'Expired', { status: 401 });
+  const replayError = new ApiError('unauthorized', 'Old replay revoked', {
+    status: 401,
+  });
+  let currentAccessToken: string | null = 'expired-token';
+  const request = jest.fn();
+  request.mockImplementation((httpRequest: HttpRequest<unknown>) => {
+    if (
+      httpRequest.path === '/slow' &&
+      httpRequest.accessToken === 'rotated-once'
+    ) {
+      replayStarted.resolve();
+      return replay.promise;
+    }
+    if (httpRequest.accessToken === 'rotated-twice') {
+      return Promise.resolve({ ok: true });
+    }
+    return Promise.reject(expired);
+  });
+  const refreshAccessToken = jest.fn(async () => {
+    currentAccessToken = currentAccessToken === 'expired-token'
+      ? 'rotated-once'
+      : 'rotated-twice';
+    return currentAccessToken;
+  });
+  const onUnauthorized = jest.fn(() => {
+    currentAccessToken = null;
+  });
+  const client = createAuthenticatedClient({ request }, {
+    getAccessToken: () => currentAccessToken,
+    refreshAccessToken,
+    onUnauthorized,
+  });
+
+  const oldRequest = client.request({ path: '/slow' });
+  await replayStarted.promise;
+  await expect(client.request({ path: '/later' })).resolves.toEqual({ ok: true });
+  replay.reject(replayError);
+
+  await expect(oldRequest).rejects.toBe(replayError);
+  expect(currentAccessToken).toBe('rotated-twice');
+  expect(onUnauthorized).not.toHaveBeenCalled();
+  expect(refreshAccessToken).toHaveBeenCalledTimes(2);
+  expect(request).toHaveBeenCalledTimes(4);
 });
 
 it.each([

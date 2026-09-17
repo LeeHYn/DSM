@@ -4,7 +4,15 @@ Android Studio와 React Native Community CLI로 개발하는 Android 전용 앱�
 
 ## 필수 도구
 
-- Node.js `>=20.19.4 <21` 또는 `>=22`
+### Kakao·Apple과 프로필 설정
+
+공개 설정 예시에 선택 공급자 항목을 추가했습니다. Kakao는 `KAKAO_NATIVE_APP_KEY`에32자리16진 native app key를 설정하고 개발자 콘솔에 앱 package와 실제 빌드의 key hash를 등록합니다. Gradle은 올바른 key가 있을 때만 OAuth callback activity를 활성화합니다. Apple은 Services ID인 `APPLE_CLIENT_ID`를 backend와 맞추고 `APPLE_REDIRECT_URI`를 Apple에 등록한 HTTPS return URL로 지정합니다. 설정 변경 후 native APK를 다시 빌드합니다. 개인키·client secret·접근 토큰을 env 예시나 앱에 넣지 않습니다.
+
+각 로그인 버튼은 native token 획득 후 기존 서버 세션 교환으로 연결됩니다. 동시에 한 공급자만 실행하며 미설정은 안전한 설정 안내를 표시합니다. 실제 공급자 계정·서명 빌드·redirect 도달과 Apple nonce claim의 종단 검증은 아직 별도 검증 대상입니다.
+
+마이페이지 프로필 설정에서 닉네임·갤러리 사진을 수정할 수 있습니다. 선택 이미지는128px·JPEG/PNG·48KiB 이하로 준비하고 서버가 다시 decode/축소·메타데이터 제거합니다. 저장 실패 시 입력을 보존합니다. 카메라 권한을 요청하지 않는 gallery picker를 사용합니다.
+
+- Node.js `^22.13.0` 또는 `>=24.0.0` (테스트 도구를 포함한 프로젝트 요구 범위)
 - Microsoft OpenJDK 17 또는 동등한 JDK 17
 - Android Studio
 - Android SDK Platform 36, Build Tools 36.0.0, Platform Tools

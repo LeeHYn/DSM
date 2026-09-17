@@ -7,8 +7,7 @@ codex_modules:
   - filesystem.search
   - shell.inspect
   - git.diff_readonly
-codex_model: gpt-5
-codex_model_fallback: inherit
+codex_model: inherit
 ---
 
 # Investigator 역할 계약

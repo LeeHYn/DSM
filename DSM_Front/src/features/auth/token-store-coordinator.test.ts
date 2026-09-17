@@ -99,3 +99,20 @@ it('continues after a queued operation rejects', async () => {
   await expect(coordinator.read()).resolves.toBe('record.secret');
   expect(store.read).toHaveBeenCalledTimes(2);
 });
+it('never clears a newer epoch from a stale queued cleanup', async () => {
+  let epoch = 1;
+  const store = { read: jest.fn(async () => 'new-token'), write: jest.fn(async () => {}), clear: jest.fn(async () => {}) };
+  const coordinator = new TokenStoreCoordinator(store, () => epoch);
+  const cleanup = coordinator.readAndClear(1);
+  epoch = 2;
+  expect(await cleanup).toBeNull();
+  expect(store.read).not.toHaveBeenCalled();
+  expect(store.clear).not.toHaveBeenCalled();
+});
+it('rechecks ownership after a pending native read before clearing', async () => {
+  let epoch = 1;
+  const store = { read: jest.fn(async () => { epoch = 2; return 'new-token'; }), write: jest.fn(async () => {}), clear: jest.fn(async () => {}) };
+  const coordinator = new TokenStoreCoordinator(store, () => epoch);
+  expect(await coordinator.readAndClear(1)).toBeNull();
+  expect(store.clear).not.toHaveBeenCalled();
+});

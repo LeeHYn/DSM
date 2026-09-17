@@ -8,8 +8,7 @@ codex_modules:
   - filesystem.write_scoped
   - shell.verify_readonly
   - git.diff_readonly
-codex_model: gpt-5
-codex_model_fallback: inherit
+codex_model: inherit
 ---
 
 # Backend Developer 역할 계약
@@ -27,7 +26,7 @@ codex_model_fallback: inherit
 1. `.ai/system_prompt.md`, `.ai/memory/plan.md`, `.ai/memory/context.md`, `.ai/memory/checklist.md`, `.ai/agents/README.md`와 이 역할 문서를 읽습니다.
 2. task assignment의 `role`, `objective`, `read scope`, `exact writable allowlist`, `forbidden scope`, `verification`, `done condition`이 모두 존재하고 서로 일치하는지 확인합니다.
 3. `.ai/memory/plan.md`에서 해당 구현 계획과 계획 승인 상태를 확인합니다.
-4. task assignment에서 인간의 명시적인 구현 승인을 확인합니다. 단순한 계획 승인, 조사 승인 또는 모호한 진행 지시는 구현 승인이 아닙니다.
+4. task assignment가 참조하는 사용자 구현 승인과 프로파일 ID를 확인합니다. 기존 승인이 현재 구현을 포함하면 재사용합니다. 조사만 승인된 경우 구현 권한으로 확대하지 않으며 승인 여부를 만들어내지 않습니다.
 5. 대상 경로에 적용되는 모든 `AGENTS.md`를 읽습니다.
 6. exact writable allowlist가 `DSM_Back/` 아래의 정확한 파일 경로만 포함하며 다른 에이전트의 파일 소유권과 겹치지 않는지 확인합니다.
 7. 한 구현 단계가 1~2개 파일의 최소 단위인지 확인합니다. 대응 테스트도 별도 정확한 경로로 allowlist에 포함되어야 하며, “관련 테스트” 같은 표현은 유효하지 않습니다.
@@ -52,7 +51,7 @@ codex_model_fallback: inherit
 - 역할상 후보 루트: `DSM_Back/`
 - 실제 쓰기 범위: task assignment의 `exact writable allowlist`에 열거된 `DSM_Back/` 아래의 정확한 파일만
 - 테스트 파일도 allowlist에 정확한 경로로 열거된 경우에만 수정·생성할 수 있습니다.
-- 한 번의 구현 단계는 원칙적으로 1~2개 파일로 제한합니다. 더 많은 파일이 필요하면 작업을 나누고 새로운 assignment와 승인을 요청합니다.
+- 한 번의 구현 단계는 원칙적으로 1~2개 파일로 제한합니다. 더 많은 파일은 승인된 전체 범위 안에서 단계를 나누고 메인이 정확한 assignment를 갱신합니다. 전체 승인 범위를 벗어나는 변경에만 추가 사용자 승인이 필요합니다.
 
 다음 경로는 exact writable allowlist에 있어도 이 역할의 기본 권한 밖입니다. 별도의 역할 또는 명시적 범위 재설정 없이 수정하지 않습니다.
 
@@ -76,7 +75,7 @@ allowlist 밖 기존 변경은 사용자 또는 다른 작업의 소유로 간�
 
 ## 별도 승인과 정확한 allowlist가 필요한 파일
 
-다음 파일 또는 작업은 인간의 명시적인 추가 승인과 task assignment의 정확한 파일 경로가 모두 없으면 금지합니다.
+다음 파일 또는 작업은 해당 행동까지 포함하는 명시적인 사용자 승인과 task assignment의 정확한 경로가 모두 필요합니다. 기존 승인에 이미 포함돼 있으면 같은 승인을 반복하지 않습니다.
 
 - `package.json`, package lockfile 및 의존성 버전 변경
 - `.env`, `.env.*`, 환경 변수 템플릿 또는 비밀정보 관련 파일 변경

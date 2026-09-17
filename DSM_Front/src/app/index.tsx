@@ -18,6 +18,11 @@ import {
   isGoogleProviderError,
 } from '@/features/auth/google-sign-in';
 import { useSession } from '@/features/auth/session-context';
+import {
+  AdditionalProviderError,
+  appleSignInAdapter,
+  kakaoSignInAdapter,
+} from '@/features/auth/additional-sign-in';
 import { usePrototype } from '@/features/prototype/prototype-context';
 
 function SocialButton({
@@ -73,13 +78,13 @@ export default function LoginScreen() {
   const palette = useDailyupPalette();
   const { showToast } = usePrototype();
   const { action, error, signIn } = useSession();
-  const [isGooglePending, setIsGooglePending] = useState(false);
+  const [isProviderPending, setIsProviderPending] = useState(false);
   const [isPrivacyPending, setIsPrivacyPending] = useState(false);
-  const googleRequestInFlightRef = useRef(false);
+  const providerRequestInFlightRef = useRef(false);
   const privacyRequestInFlightRef = useRef(false);
   const lastSessionErrorRef = useRef<unknown>(null);
   const providerButtonsDisabled =
-    isGooglePending || action === 'signing-in';
+    isProviderPending || action === 'signing-in';
 
   useEffect(() => {
     if (error === null) {
@@ -95,16 +100,20 @@ export default function LoginScreen() {
   }, [error, showToast]);
 
   const handleGooglePress = async () => {
-    if (googleRequestInFlightRef.current || action === 'signing-in') {
+    if (providerRequestInFlightRef.current || action === 'signing-in') {
       return;
     }
 
-    googleRequestInFlightRef.current = true;
-    setIsGooglePending(true);
+    providerRequestInFlightRef.current = true;
+    setIsProviderPending(true);
     try {
       const result = await googleSignInAdapter.acquireIdToken();
       if (result.status === 'success') {
         await signIn('GOOGLE', result.idToken);
+      } else {
+        showToast(
+          'Google 로그인이 완료되지 않았습니다. 다시 시도하고, 반복되면 Google 계정을 다시 인증해 주세요.',
+        );
       }
     } catch (providerError) {
       const message =
@@ -114,13 +123,30 @@ export default function LoginScreen() {
           : 'Google 로그인에 실패했습니다. 다시 시도해 주세요.';
       showToast(message);
     } finally {
-      googleRequestInFlightRef.current = false;
-      setIsGooglePending(false);
+      providerRequestInFlightRef.current = false;
+      setIsProviderPending(false);
     }
   };
 
-  const explainProviderStep = () => {
-    showToast('소셜 로그인 연결은 다음 단계에서 제공됩니다.');
+  const handleAdditionalPress = async (provider: 'KAKAO' | 'APPLE') => {
+    if (providerRequestInFlightRef.current || action === 'signing-in') return;
+    providerRequestInFlightRef.current = true;
+    setIsProviderPending(true);
+    const label = provider === 'KAKAO' ? 'Kakao' : 'Apple';
+    try {
+      const adapter = provider === 'KAKAO' ? kakaoSignInAdapter : appleSignInAdapter;
+      const result = await adapter.acquireToken();
+      if (result.status === 'success') await signIn(provider, result.token);
+    } catch (providerError) {
+      showToast(
+        providerError instanceof AdditionalProviderError && providerError.kind === 'configuration'
+          ? `${label} 로그인 설정이 필요합니다.`
+          : `${label} 로그인에 실패했습니다. 다시 시도해 주세요.`,
+      );
+    } finally {
+      providerRequestInFlightRef.current = false;
+      setIsProviderPending(false);
+    }
   };
 
   const handlePrivacyPress = async () => {
@@ -170,13 +196,13 @@ export default function LoginScreen() {
           <SocialButton
             disabled={providerButtonsDisabled}
             label="Kakao로 계속하기"
-            onPress={explainProviderStep}
+            onPress={() => void handleAdditionalPress('KAKAO')}
             provider="kakao"
           />
           <SocialButton
-            disabled
-            label="Apple로 계속하기 · 준비 중"
-            onPress={() => undefined}
+            disabled={providerButtonsDisabled}
+            label="Apple로 계속하기"
+            onPress={() => void handleAdditionalPress('APPLE')}
             provider="apple"
           />
         </View>

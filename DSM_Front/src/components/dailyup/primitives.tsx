@@ -233,6 +233,7 @@ export function IconButton({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -285,19 +286,22 @@ export function AppToggle({
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       onPress={() => onValueChange(!value)}
-      style={[
-        styles.toggle,
-        { backgroundColor: value ? palette.lime : palette.surfaceRaised },
-      ]}>
+      style={styles.toggleTarget}>
       <View
         style={[
-          styles.toggleThumb,
-          {
-            backgroundColor: value ? palette.textOnLime : palette.muted,
-            transform: [{ translateX: value ? 15 : 0 }],
-          },
-        ]}
-      />
+          styles.toggle,
+          { backgroundColor: value ? palette.lime : palette.surfaceRaised },
+        ]}>
+        <View
+          style={[
+            styles.toggleThumb,
+            {
+              backgroundColor: value ? palette.textOnLime : palette.muted,
+              transform: [{ translateX: value ? 15 : 0 }],
+            },
+          ]}
+        />
+      </View>
     </Pressable>
   );
 }
@@ -496,9 +500,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: dailyupRadius.round,
     borderWidth: 1,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   safeContent: {
     flex: 1,
@@ -550,6 +554,12 @@ const styles = StyleSheet.create({
   },
   toastText: {
     textAlign: 'center',
+  },
+  toggleTarget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 44,
+    width: 44,
   },
   toggle: {
     borderRadius: dailyupRadius.round,

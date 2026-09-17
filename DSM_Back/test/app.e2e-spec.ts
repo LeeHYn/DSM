@@ -4,14 +4,23 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { configureApp } from './../src/app.bootstrap';
 import { AppModule } from './../src/app.module';
+import { PrismaService } from './../src/prisma/prisma.service';
+import { RankingCacheService } from './../src/rankings/ranking-cache.service';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
+  const query = jest.fn();
 
   beforeEach(async () => {
+    query.mockReset().mockResolvedValue([{ value: 1 }]);
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({ $queryRaw: query })
+      .overrideProvider(RankingCacheService)
+      .useValue({ isConfigured: () => false })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     configureApp(app);
@@ -51,6 +60,31 @@ describe('AppController (e2e)', () => {
           message: 'Cannot GET /missing-route',
         });
       });
+  });
+
+  it('/health/ready succeeds after a database query and disables caching', async () => {
+    await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(200)
+      .expect('Cache-Control', 'no-store')
+      .expect({ status: 'ready' });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('/health/ready returns a sanitized 503 when the database fails', async () => {
+    query.mockRejectedValue(new Error('private database connection detail'));
+    const response = await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(503)
+      .expect('Cache-Control', 'no-store');
+    expect(response.body).toMatchObject({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message: 'Database is not ready',
+    });
+    expect(response.text).not.toContain('private database');
+    await request(app.getHttpServer()).get('/health').expect(200);
+    expect(query).toHaveBeenCalledTimes(1);
   });
 
   afterEach(async () => {

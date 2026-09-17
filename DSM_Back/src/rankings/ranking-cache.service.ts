@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  Optional,
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { RankingPeriod, Tier } from '@prisma/client';
 import { createClient } from '@redis/client';
 import { randomUUID } from 'node:crypto';
+import { RealtimeBusService } from '../realtime/realtime-bus.service';
 import { startOfUtcDay, weeklyRange } from './rankings.policy';
 import type {
   LeaderboardEntry,
@@ -52,7 +54,10 @@ export class RankingCacheService implements OnModuleInit, OnModuleDestroy {
   private lastWarningAt = 0;
   private shuttingDown = false;
 
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    @Optional() private readonly realtime?: RealtimeBusService,
+  ) {
     this.redisUrl = configService.get<string>('REDIS_URL');
     if (!this.redisUrl) {
       return;
@@ -262,6 +267,13 @@ export class RankingCacheService implements OnModuleInit, OnModuleDestroy {
         arguments: [lockOwner, generation, ACTIVE_TTL_SECONDS.toString(10)],
       });
       if (activated === 1) {
+        try {
+          await this.realtime?.publishInvalidation({ kind: 'all' }, [
+            'rankings',
+          ]);
+        } catch {
+          // The new projection remains authoritative even if broadcasting fails.
+        }
         await this.retireGeneration(
           client,
           period,
