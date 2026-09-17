@@ -7,7 +7,7 @@
 - [x] Backend 43 suites/960 tests, production-start 3, build·spec typecheck·ESLint 통과.
 - [x] Front 51 suites/1,156 tests, typecheck 통과. ESLint error 0/warning 44; strict warning budget만 실패.
 - [x] 활성 memory의 과거 snapshot·중복 계획을 제거하고 현재 원장·외부 gate 중심으로 압축.
-- [/] exact 파일 stage, diff·UTF-8/LF·link/hash 검증, commit, `origin/main` push, 원격 SHA 대조.
+- [x] exact 파일 stage, diff·UTF-8/LF·link/hash 검증, commit `27ebca3`, `origin/main` push, 원격 SHA 대조.
 - [x] `DSM_Back/.local/` Jest cache는 보존하고 Git stage에서 제외.
 
 ## 로컬 구현·검증 완료

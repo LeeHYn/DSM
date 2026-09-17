@@ -1,12 +1,11 @@
 # DSM 실행 계획 — 2026-09-17
 
-## 현재 목표
+## 게시 checkpoint와 현재 목표
 
-- 사용자의 현재 요청은 지금까지의 저장소 변경을 정리해 `main`에 커밋하고 `origin/main`으로 push하는 것이다.
-- 함께 수행할 기록 작업은 활성 memory를 현재 상태와 남은 gate 중심으로 압축하고, 상세 완료 이력은 감사 보고서와 Git 이력으로 연결하는 것이다.
-- 시작 기준은 `main`과 `origin/main`이 `6e7988c`에서 일치한 상태다. 제품·감사·운영 문서의 기존 미커밋 변경은 보존해 게시 대상에 포함한다.
-- 실제 secret·credential·keystore·로컬 env·recovery 파일과 `DSM_Back/.local/` Jest cache는 stage하지 않는다. cache는 삭제하지 않고 Git ignore 대상으로만 정리한다.
-- 완료 기준은 전체 자동 검증 결과 기록, memory hash 갱신, exact 파일 stage, Conventional Commit, `origin/main` push, 로컬 HEAD와 원격 SHA 일치 확인이다.
+- 2026-09-17 지금까지의 제품·감사·운영 문서와 압축된 memory를 commit `27ebca3`으로 `origin/main`에 push했고, 로컬 HEAD와 원격 SHA 일치를 확인했다.
+- 활성 memory는 현재 상태와 남은 gate 중심으로 압축하고 상세 완료 이력은 감사 보고서와 Git 이력으로 연결했다.
+- 실제 secret·credential·keystore·로컬 env·recovery 파일과 `DSM_Back/.local/` Jest cache는 stage하지 않았다. cache는 삭제하지 않고 Git ignore 대상으로 보존했다.
+- 현재 제품 목표는 Render 공개 Backend와 legal/signing/OAuth/Firebase/실기기 환경을 준비해 열린 8건을 직접 검증하는 것이다.
 
 ## 제품·감사 현재 상태
 
