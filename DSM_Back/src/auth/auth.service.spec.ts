@@ -206,7 +206,9 @@ describe('AuthService', () => {
 
       expect(configMock.getOrThrow).toHaveBeenCalledTimes(1);
       expect(configMock.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_ID');
-      expect(OAuth2Client).toHaveBeenCalledWith('test-google-client-id');
+      expect(OAuth2Client).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'test-google-client-id' }),
+      );
       expect(verifyIdTokenMock).toHaveBeenCalledWith({
         idToken: 'google-id-token',
         audience: 'test-google-client-id',
@@ -247,6 +249,110 @@ describe('AuthService', () => {
           ),
       ).toThrow(/GOOGLE_CLIENT_ID/);
       expect(missingConfig.getOrThrow).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Google certificate transport', () => {
+    function realGoogleService() {
+      const actual = jest.requireActual<typeof import('google-auth-library')>(
+        'google-auth-library',
+      );
+      let client!: OAuth2Client;
+      jest.mocked(OAuth2Client).mockImplementation((...args) => {
+        client = new actual.OAuth2Client(...args);
+        return client;
+      });
+      const instance = new AuthService(
+        prismaMock as unknown as PrismaService,
+        jwtMock as unknown as JwtService,
+        configMock as unknown as ConfigService,
+      );
+      return { instance, client };
+    }
+
+    const certificates = () =>
+      new Response('{}', {
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'public, max-age=60',
+        },
+      });
+
+    it('aborts stalled concurrent certificate requests without retrying or writing user data', async () => {
+      const { instance, client } = realGoogleService();
+      const finish: Array<(response: Response) => void> = [];
+      let aborted = 0;
+      const fetchImplementation = jest.fn<
+        ReturnType<typeof fetch>,
+        Parameters<typeof fetch>
+      >(
+        (_input, init) =>
+          new Promise<Response>((resolve, reject) => {
+            finish.push(resolve);
+            init?.signal?.addEventListener(
+              'abort',
+              () => {
+                aborted++;
+                reject(new Error('Provider request aborted'));
+              },
+              { once: true },
+            );
+          }),
+      );
+      client.transporter.defaults.fetchImplementation = fetchImplementation;
+      const requests = Promise.all(
+        Array.from({ length: 3 }, () =>
+          instance
+            .socialLogin(SocialProvider.GOOGLE, 'invalid-token')
+            .catch((error: unknown) => error),
+        ),
+      );
+      let watchdog: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const outcomes = await Promise.race([
+          requests,
+          new Promise<string>((resolve) => {
+            watchdog = setTimeout(() => resolve('still pending'), 6500);
+          }),
+        ]);
+        if (!Array.isArray(outcomes)) {
+          throw new Error('Certificate requests exceeded the deadline');
+        }
+        for (const outcome of outcomes) {
+          expect(outcome).toBeInstanceOf(UnauthorizedException);
+        }
+        expect(aborted).toBe(3);
+        expect(fetchImplementation).toHaveBeenCalledTimes(3);
+        expect(prismaMock.socialAccount.findUnique).not.toHaveBeenCalled();
+        expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      } finally {
+        clearTimeout(watchdog);
+        // Also settle the pre-fix requests, which never receive an abort signal.
+        finish.forEach((resolve) => resolve(certificates()));
+        await requests;
+      }
+    }, 10000);
+
+    it('keeps the warm certificate cache and does not retry a failed expired-cache refresh', async () => {
+      const { instance, client } = realGoogleService();
+      const fetchImplementation = jest
+        .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+        .mockResolvedValueOnce(certificates())
+        .mockRejectedValue(new Error('Upstream unavailable'));
+      client.transporter.defaults.fetchImplementation = fetchImplementation;
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(
+          instance.socialLogin(SocialProvider.GOOGLE, 'invalid-token'),
+        ).rejects.toThrow(UnauthorizedException);
+      }
+      expect(fetchImplementation).toHaveBeenCalledTimes(1);
+      Reflect.set(client, 'certificateExpiry', new Date(0));
+      await expect(
+        instance.socialLogin(SocialProvider.GOOGLE, 'invalid-token'),
+      ).rejects.toThrow('Google token verification failed');
+      expect(fetchImplementation).toHaveBeenCalledTimes(2);
+      expect(prismaMock.socialAccount.findUnique).not.toHaveBeenCalled();
     });
   });
 

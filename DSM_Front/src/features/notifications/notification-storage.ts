@@ -56,7 +56,7 @@ function clone(doc: NotificationDocument): NotificationDocument {
 function prune(doc: NotificationDocument, now: number) {
   doc.displayed = doc.displayed.filter(row => now - row.displayedAt < retentionMs);
 }
-function parse(value: unknown, owner: string, now: number): NotificationDocument {
+function parse(value: unknown, owner: string): NotificationDocument {
   const row = object(value, ['version', 'userId', 'preferences', 'displayed']);
   valid(row.version === 1 && row.userId === owner);
   const preferences = object(row.preferences, preferenceKeys);
@@ -68,7 +68,7 @@ function parse(value: unknown, owner: string, now: number): NotificationDocument
     identifier(item.id);
     epoch(item.displayedAt);
     timestamp(item.expiresAt);
-    valid(!seen.has(item.id) && item.displayedAt <= now + maxClockSkewMs);
+    valid(!seen.has(item.id));
     valid(Date.parse(item.expiresAt) <= item.displayedAt + 2 * maxClockSkewMs);
     seen.add(item.id);
     return { id: item.id, displayedAt: item.displayedAt, expiresAt: item.expiresAt };
@@ -82,6 +82,8 @@ export class NotificationStorage {
   private snapshot: NotificationDocument | null = null;
   private tail: Promise<void> = Promise.resolve();
   private readonly key: string;
+  // Keep the first correction while a synchronous dedupe read cannot persist it.
+  private readonly corrections = new Map<string, { original: number; corrected: number }>();
 
   constructor(
     readonly userId: string,
@@ -122,8 +124,26 @@ export class NotificationStorage {
     identifier(id);
     valid(this.snapshot !== null, 'read');
     const now = this.clock();
-    valid(this.snapshot.displayed.every(row => row.displayedAt <= now + maxClockSkewMs));
-    return this.snapshot.displayed.some(row => row.id === id && now - row.displayedAt < retentionMs);
+    const doc = clone(this.snapshot);
+    this.normalizeHistory(doc, now);
+    return doc.displayed.some(row => row.id === id && now - row.displayedAt < retentionMs);
+  }
+
+  private normalizeHistory(doc: NotificationDocument, now: number): boolean {
+    let changed = false;
+    for (const row of doc.displayed) {
+      const prior = this.corrections.get(row.id);
+      let displayedAt = prior?.original === row.displayedAt ? prior.corrected : row.displayedAt;
+      if (displayedAt > now + maxClockSkewMs) displayedAt = now;
+      if (displayedAt === row.displayedAt) continue;
+      this.corrections.set(row.id, { original: row.displayedAt, corrected: displayedAt });
+      const expiry = Date.parse(row.expiresAt);
+      const lifetime = Math.max(0, expiry - row.displayedAt);
+      row.expiresAt = new Date(Math.min(expiry, displayedAt + lifetime)).toISOString();
+      row.displayedAt = displayedAt;
+      changed = true;
+    }
+    return changed;
   }
 
   private clock(): number {
@@ -141,22 +161,29 @@ export class NotificationStorage {
   }
 
   private async read(): Promise<NotificationDocument> {
-    if (this.snapshot !== null) return this.snapshot;
     const now = this.clock();
-    let raw: string | null;
-    try { raw = await this.storage.getItem(this.key); }
-    catch { throw new NotificationStorageError('read'); }
     let doc: NotificationDocument;
-    if (raw === null) {
-      doc = { version: 1, userId: this.userId, preferences: { sound: true, vibration: true, foreground: true }, displayed: [] };
+    if (this.snapshot !== null) {
+      doc = clone(this.snapshot);
     } else {
-      try {
-        valid(typeof raw === 'string' && byteLength(raw) <= maxBytes);
-        doc = parse(JSON.parse(raw) as unknown, this.userId, now);
-      } catch { throw new NotificationStorageError('corrupt'); }
+      let raw: string | null;
+      try { raw = await this.storage.getItem(this.key); }
+      catch { throw new NotificationStorageError('read'); }
+      if (raw === null) {
+        doc = { version: 1, userId: this.userId, preferences: { sound: true, vibration: true, foreground: true }, displayed: [] };
+      } else {
+        try {
+          valid(typeof raw === 'string' && byteLength(raw) <= maxBytes);
+          doc = parse(JSON.parse(raw) as unknown, this.userId);
+        } catch { throw new NotificationStorageError('corrupt'); }
+      }
     }
+    const corrected = this.normalizeHistory(doc, now);
     prune(doc, now);
+    // Persist the corrected retention anchor before publishing it across restarts.
+    if (corrected) await this.persist(doc);
     this.snapshot = doc;
+    this.corrections.clear();
     return doc;
   }
 
@@ -164,16 +191,22 @@ export class NotificationStorage {
     return this.enqueue(async () => {
       const doc = clone(await this.read());
       const now = this.clock();
+      this.normalizeHistory(doc, now);
       prune(doc, now);
       mutator(doc, now);
       valid(doc.displayed.length <= 200, 'limit');
-      parse(doc, this.userId, now);
-      const raw = JSON.stringify(doc);
-      valid(byteLength(raw) <= maxBytes, 'limit');
-      try { await this.storage.setItem(this.key, raw); }
-      catch { throw new NotificationStorageError('write'); }
+      parse(doc, this.userId);
+      await this.persist(doc);
       this.snapshot = doc;
+      this.corrections.clear();
       return clone(doc);
     });
+  }
+
+  private async persist(doc: NotificationDocument): Promise<void> {
+    const raw = JSON.stringify(doc);
+    valid(byteLength(raw) <= maxBytes, 'limit');
+    try { await this.storage.setItem(this.key, raw); }
+    catch { throw new NotificationStorageError('write'); }
   }
 }

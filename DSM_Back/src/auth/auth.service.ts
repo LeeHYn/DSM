@@ -25,6 +25,7 @@ const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const BCRYPT_ROUNDS = 10;
 const SOCIAL_SIGNUP_ATTEMPTS = 3;
+const GOOGLE_CERTIFICATE_TIMEOUT_MS = 5000;
 const KAKAO_TIMEOUT_MS = 5000;
 const MAX_REFRESH_FAMILY_ROWS = 4096;
 const REFRESH_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -53,7 +54,14 @@ export class AuthService {
   ) {
     this.googleClientId =
       this.configService.getOrThrow<string>('GOOGLE_CLIENT_ID');
-    this.googleClient = new OAuth2Client(this.googleClientId);
+    this.googleClient = new OAuth2Client({
+      clientId: this.googleClientId,
+      transporterOptions: {
+        timeout: GOOGLE_CERTIFICATE_TIMEOUT_MS,
+        // The SDK enables retries on certificate requests; retain one deadline.
+        retryConfig: { retry: 0 },
+      },
+    });
     this.appleTokenVerifier = new AppleTokenVerifier(configService, jwtService);
   }
 

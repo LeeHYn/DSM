@@ -13,7 +13,7 @@ import { Type } from 'class-transformer';
 export class UpdateTaskDto {
   @IsString()
   @IsNotEmpty()
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   title?: string;
 
   @IsString()
@@ -29,11 +29,11 @@ export class UpdateTaskDto {
   endAt?: string;
 
   @IsEnum(TaskDifficulty)
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   difficulty?: TaskDifficulty;
 
   @IsEnum(TaskStatus)
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   status?: TaskStatus;
 
   @IsString()
@@ -43,6 +43,6 @@ export class UpdateTaskDto {
   // Preserve the JSON type so implicit conversion cannot turn "false" into true.
   @Type(() => Object)
   @IsBoolean()
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   notificationEnabled?: boolean;
 }

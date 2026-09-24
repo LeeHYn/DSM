@@ -1,30 +1,39 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RankingPeriod } from '@prisma/client';
+import { Prisma, RankingPeriod } from '@prisma/client';
 import { RankingsService } from './rankings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RankingCacheService } from './ranking-cache.service';
 import { RankingProjectionService } from './ranking-projection.service';
 
-const makePrismaMock = () => ({
-  user: {
-    count: jest.fn(),
-    findUniqueOrThrow: jest.fn(),
-    findMany: jest.fn(),
-  },
-  dailyScore: {
-    findUnique: jest.fn(),
-    aggregate: jest.fn(),
-    count: jest.fn(),
-    groupBy: jest.fn(),
-    findMany: jest.fn(),
-  },
-  rankingSnapshot: {
-    findFirst: jest.fn(),
-    create: jest.fn(),
-    createMany: jest.fn(),
-    findFirstOrThrow: jest.fn(),
-  },
-});
+const makePrismaMock = () => {
+  const client = {
+    user: {
+      count: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      findMany: jest.fn(),
+    },
+    dailyScore: {
+      findUnique: jest.fn(),
+      aggregate: jest.fn(),
+      count: jest.fn(),
+      groupBy: jest.fn(),
+      findMany: jest.fn(),
+    },
+    rankingSnapshot: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      createMany: jest.fn(),
+      findFirstOrThrow: jest.fn(),
+    },
+  };
+  return {
+    ...client,
+    $transaction: jest.fn(
+      (callback: (transaction: typeof client) => Promise<unknown>) =>
+        callback(client),
+    ),
+  };
+};
 
 const makeCacheMock = () => ({
   isConfigured: jest.fn().mockReturnValue(false),
@@ -58,6 +67,100 @@ describe('RankingsService', () => {
     }).compile();
 
     service = module.get<RankingsService>(RankingsService);
+  });
+
+  describe('coherent database fallback', () => {
+    function concurrentScoreCommit() {
+      let committedScore = 0;
+      const readScore = (view: () => number) => {
+        const score = view();
+        // A task completion commits immediately after the subject score read.
+        committedScore = 45;
+        return score;
+      };
+      const delegates = (view: () => number) => ({
+        user: {
+          findUniqueOrThrow: jest.fn(() =>
+            Promise.resolve({ totalScore: readScore(view) }),
+          ),
+          count: jest.fn((args?: { where: { totalScore: { gt: number } } }) =>
+            Promise.resolve(
+              args ? Number(view() > args.where.totalScore.gt) : 1,
+            ),
+          ),
+        },
+        dailyScore: {
+          findUnique: jest.fn(() =>
+            Promise.resolve({ cappedScore: readScore(view) }),
+          ),
+          aggregate: jest.fn(() =>
+            Promise.resolve({ _sum: { cappedScore: readScore(view) } }),
+          ),
+          count: jest.fn((args: { where: { cappedScore: { gt: number } } }) =>
+            Promise.resolve(Number(view() > args.where.cappedScore.gt)),
+          ),
+          groupBy: jest.fn(
+            (args: { having: { cappedScore: { _sum: { gt: number } } } }) =>
+              Promise.resolve(
+                view() > args.having.cappedScore._sum.gt
+                  ? [{ userId: 'user-1' }]
+                  : [],
+              ),
+          ),
+        },
+      });
+      const database = {
+        ...makePrismaMock(),
+        ...delegates(() => committedScore),
+        $transaction: jest.fn(
+          (
+            callback: (
+              client: ReturnType<typeof delegates>,
+            ) => Promise<unknown>,
+            options?: { isolationLevel?: Prisma.TransactionIsolationLevel },
+          ) => {
+            const snapshot = committedScore;
+            const view =
+              options?.isolationLevel ===
+              Prisma.TransactionIsolationLevel.RepeatableRead
+                ? () => snapshot
+                : () => committedScore;
+            return callback(delegates(view));
+          },
+        ),
+      };
+      const rankings = new RankingsService(
+        database as unknown as PrismaService,
+        cacheMock as unknown as RankingCacheService,
+        projectionMock as unknown as RankingProjectionService,
+      );
+      return { database, rankings };
+    }
+
+    it.each(Object.values(RankingPeriod))(
+      'keeps %s score, higher count and population on one committed version',
+      async (period) => {
+        const { database, rankings } = concurrentScoreCommit();
+        await expect(rankings.getMyRanking('user-1', period)).resolves.toEqual({
+          period,
+          score: 0,
+          rank: 1,
+          percentile: 100,
+          totalUsers: 1,
+        });
+        expect(database.user.count).not.toHaveBeenCalled();
+      },
+    );
+
+    it('persists a coherent first snapshot during a concurrent score commit', async () => {
+      const { database, rankings } = concurrentScoreCommit();
+      database.rankingSnapshot.findFirst.mockResolvedValue(null);
+      await rankings.createSnapshot('user-1', RankingPeriod.TOTAL);
+      expect(database.rankingSnapshot.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ score: 0, rank: 1, percentile: 100 })],
+        skipDuplicates: true,
+      });
+    });
   });
 
   describe('getMyRanking', () => {

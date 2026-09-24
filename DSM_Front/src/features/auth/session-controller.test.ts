@@ -42,17 +42,33 @@ describe('durable local workspace and deferred offline exit', () => {
     await runtime.controller.bootstrap();
     expect(await runtime.localSession.readGrant(TOKEN_PAIR.refreshToken)).toEqual(verifiedUser);
   }
-  it('preserves a verified local user and epoch after refresh network failure, including restart', async () => {
+  it.each([
+    new ApiError('network', 'offline'),
+    new ApiError('timeout', 'timed out'),
+    ...[500, 502, 503, 599].map(status => new ApiError('http', 'unavailable', { status })),
+  ])('preserves a verified local user after refresh $kind/$status, restart and retry', async (error) => {
     const runtime = localRuntime();
     await loginLocal(runtime);
     const epoch = runtime.controller.getEpoch();
-    authApi.rotateRefreshToken.mockRejectedValue(new ApiError('network', 'offline'));
-    await expect(runtime.controller.refreshAccessToken()).rejects.toMatchObject({ kind: 'network' });
+    const saved = runtime.readEnvelope();
+    authApi.rotateRefreshToken.mockRejectedValue(error);
+    await expect(runtime.controller.refreshAccessToken()).rejects.toMatchObject({ kind: error.kind, status: error.status });
     expect(runtime.controller.getSnapshot().state).toEqual({ status: 'offline-workspace', retry: 'bootstrap', ...verifiedUser });
+    expect(runtime.controller.getSnapshot().action).toBe('idle');
     expect(runtime.controller.getEpoch()).toBe(epoch);
     const restarted = runtime.makeController();
     await restarted.bootstrap();
+    await restarted.retryRecovery();
     expect(restarted.getSnapshot().state).toEqual({ status: 'offline-workspace', retry: 'bootstrap', ...verifiedUser });
+    expect(restarted.getSnapshot().action).toBe('idle');
+    expect(restarted.getEpoch()).toBe(0);
+    expect(await runtime.tokens.read()).toBe(TOKEN_PAIR.refreshToken);
+    expect(runtime.readEnvelope()).toBe(saved);
+    expect(runtime.tokens.readAndClear).not.toHaveBeenCalled();
+    expect(authApi.revokeSession).not.toHaveBeenCalled();
+    authApi.rotateRefreshToken.mockResolvedValue(TOKEN_PAIR);
+    await restarted.retryRecovery();
+    expect(restarted.getSnapshot()).toMatchObject({ state: { status: 'authenticated', ...verifiedUser }, action: 'idle', error: null });
   });
   it('invalidates the prior local grant even when switching provider login fails', async () => {
     const runtime = localRuntime();
@@ -404,16 +420,30 @@ it.each([
   expect(controller.getSnapshot().state.status).toBe(expected);
 });
 
-it('preserves the stored token on bootstrap network failure', async () => {
+it.each([
+  new ApiError('network', 'Network unavailable'),
+  new ApiError('timeout', 'Request timed out'),
+  ...[500, 502, 503, 599].map(status => new ApiError('http', 'unavailable', { status })),
+])('preserves the stored token on bootstrap $kind/$status failure without a local grant', async (error) => {
   tokenStore.read.mockResolvedValue('record.secret');
-  authApi.rotateRefreshToken.mockRejectedValue(
-    new ApiError('network', 'Network unavailable'),
-  );
+  authApi.rotateRefreshToken.mockRejectedValue(error);
 
   await controller.bootstrap();
 
   expect(controller.getSnapshot().state.status).toBe('offline');
+  expect(controller.getSnapshot().action).toBe('idle');
+  expect(controller.getSnapshot().error).toMatchObject({ kind: error.kind, status: error.status });
   expect(tokenStore.readAndClear).not.toHaveBeenCalled();
+});
+
+it.each([400, 499, 600])('does not classify bootstrap HTTP %s as a recoverable server failure', async (status) => {
+  tokenStore.read.mockResolvedValue('record.secret');
+  authApi.rotateRefreshToken.mockRejectedValue(new ApiError('http', 'failed', { status }));
+
+  await controller.bootstrap();
+
+  expect(controller.getSnapshot().state.status).toBe('unauthenticated');
+  expect(tokenStore.readAndClear).toHaveBeenCalledTimes(1);
 });
 
 it.each([
@@ -1296,6 +1326,9 @@ it('blocks in clear storage-error when an unreadable refresh record cannot be cl
 it.each([
   ['network', new ApiError('network', 'Network unavailable')],
   ['timeout', new ApiError('timeout', 'Request timed out')],
+  ['HTTP 500', new ApiError('http', 'unavailable', { status: 500 })],
+  ['HTTP 503', new ApiError('http', 'unavailable', { status: 503 })],
+  ['HTTP 599', new ApiError('http', 'unavailable', { status: 599 })],
 ] as const)(
   'settles a direct %s refresh as retryable without clearing its stored token',
   async (_kind, error) => {

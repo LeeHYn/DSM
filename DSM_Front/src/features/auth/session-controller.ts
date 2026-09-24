@@ -80,7 +80,7 @@ const SAFE_ERROR_MESSAGES: Record<ApiErrorKind, string> = {
   storage: 'Secure token storage failed',
 };
 
-function isRetryableProfileError(error: ApiError): boolean {
+function isRetryableSessionError(error: ApiError): boolean {
   return error.kind === 'network' || error.kind === 'timeout' || (
     error.kind === 'http' &&
     error.status !== undefined &&
@@ -268,7 +268,7 @@ export class SessionController implements SessionControllerPort {
       if (
         epoch === this.epoch &&
         this.snapshot.state.status === 'onboarding' &&
-        isRetryableProfileError(sanitized)
+        isRetryableSessionError(sanitized)
       ) {
         this.publish({
           state: this.snapshot.state,
@@ -573,7 +573,7 @@ export class SessionController implements SessionControllerPort {
         return;
       }
       const sanitized = this.sanitizeError(error);
-      if (sanitized.kind === 'network' || sanitized.kind === 'timeout') {
+      if (isRetryableSessionError(sanitized)) {
         await this.publishOffline('bootstrap', sanitized, epoch);
       } else if (sanitized.kind === 'storage') {
         // Rotation either published a storage error or fenced a completed cleanup.
@@ -651,7 +651,7 @@ export class SessionController implements SessionControllerPort {
         await this.endUnauthorizedSession();
       } else if (
         epoch === this.epoch &&
-        (sanitized.kind === 'network' || sanitized.kind === 'timeout')
+        isRetryableSessionError(sanitized)
       ) {
         await this.publishOffline('bootstrap', sanitized, epoch);
       }
@@ -735,7 +735,7 @@ export class SessionController implements SessionControllerPort {
       return;
     }
 
-    if (isRetryableProfileError(sanitized)) {
+    if (isRetryableSessionError(sanitized)) {
       await this.publishOffline('profile', sanitized, operationEpoch);
       return;
     }

@@ -1,63 +1,60 @@
-# DSM 현재 맥락 — 2026-09-17
+# DSM 현재 맥락 — 2026-09-24
 
-## 프로젝트 기준
+## 현재 대조와 증거 경계
 
-- 작업 checkout은 `D:\DSM`, branch는 `main`, upstream은 `origin/main`이다. 정확한 현재 SHA와 dirty 상태는 Git을 직접 확인한다.
-- DSM v1.3은 Android-only다. Front는 React 19.2.0 / React Native 0.83.10 Community CLI, Backend는 NestJS 11 / Prisma 6.19.3 / PostgreSQL 17 / Redis다.
-- Android identity는 package/namespace `com.dsm.dailyup`, 표시 이름 `DailyUp`, minSdk 24, compile/targetSdk 36이다. 과거 Expo·웹 prototype과 learning-site 자료는 현재 제품 계약이 아니다.
-- branch 통합은 완료되어 main만 유지한다. 과거 `C:\DEV`와 `C:\dsm-integration-review`는 현재 checkout이 아니다.
+- PUB-20260924: 사용자 지시로 리뷰·수정·memory 변경30파일을 origin/main에 게시 중이다. 시작 fetch/ls-remote에서 로컬·원격 `efd77053c71a5e7bf4ec7a4e8e3c034594ad8ae2` 일치와 ahead/behind0/0을 확인했다. 현재는 commit/push 전이며 완료 시 직접 원격 SHA를 다시 확인한다. 아래 FIX 테스트는9월22일 증거이고 이번 게시에서 재실행한 것으로 표현하지 않는다.
 
-## Canonical audit
+- 최신 FIX-20260922: 사용자 로컬 수정 지시로 F-093~F-100 **8건 수정·독립 RECHECKED**, F-101 **CONFIRMED 유지**. [수정 기록](../audits/20260922-change-gate-review-fixes/README.md). HEAD/기존 리뷰 보고서/canonical92를 보존했고 commit·외부 배포는 수행하지 않았다.
 
-- 원장: [findings.jsonl](../audits/20260817-release-audit-full-project/findings.jsonl), schema: [finding.schema.json](../audits/finding.schema.json).
-- 현재 92건은 `RECHECKED 83 / UNKNOWN 5 / FIXING 3 / REFUTED 1`이다.
-- UNKNOWN은 F-003/F-013/F-017/F-065/F-092, FIXING은 F-015/F-067/F-068, REFUTED는 Android-only 계약과 충돌한 F-066이다.
-- 원래 CONFIRMED 55건의 로컬 처리와 독립 분석 반복은 끝났고 추가 재현 가능한 코드 수정 사항은 없었다. 이 결과는 외부 증거가 필요한 8건이나 전체 release 완료를 뜻하지 않는다.
-- 상세 상태 이력, fingerprint, fix/recheck, residual risk는 원장을 사용한다. 과거 memory의 85건·57건·55건 수치는 각 checkpoint일 뿐 현재 상태가 아니다.
+- MEM-20260920 시작 시 `D:\DSM`의 `main`은 clean, HEAD와 로컬 remote-tracking `origin/main`은 `efd7705`였다. 후속 REVIEW-20260920은 그 memory 정리 5파일 변경을 보존했다. 원격 서버 fetch/조회는 수행하지 않았다.
+- `27ebca3`은 제품·감사·배포 준비, 후속 `efd7705`는 게시 checkpoint 문서 커밋이다. 이후 현재 dirty/SHA는 Git으로 확인한다.
+- REVIEW-20260920은 현재 소스·원장·설정과 unit/HTTP/타입/lint·메모리 probe를 검증했다. 제품 코드·테스트·설정은 수정하지 않았고 기기/실DB/배포를 실행하지 않았다.
+- REVIEW-20260922 시작 HEAD도 `efd7705`, 제품 diff 없음. 기존 memory5파일·20260920 리뷰3파일 변경을 보존하고 전체 소스를 재리뷰했다. 당시 새 [보고서](../codeReview/2026-09-22-full-source-review.md)·[보충 원장](../audits/20260922-release-audit-source-review/findings.jsonl)은 F-100/101 **신규 P2 2건 / 당시 CONFIRMED / 미수정**으로 기록했다. 후속 F-100 수정 상태는 위 최신 항목을 따른다. Google 인증서 fetch deadline과 일반 API의 장문 제목/앱 완료 전환 계약 불일치이며 각2명 독립 반박 검증했다.
+- [감사 원장](../audits/20260817-release-audit-full-project/findings.jsonl) 92건: **RECHECKED 83 / UNKNOWN 5 / FIXING 3 / REFUTED 1**. [schema](../audits/finding.schema.json).
+- 미종결 8건의 상태·필요 증거는 [checklist](./checklist.md). F-066은 Android-only 계약과 충돌해 REFUTED다. RECHECKED는 기록된 조건 안에서의 종결이며 전체 release-ready를 뜻하지 않는다.
+- 이전 리뷰의 [보충 원장](../audits/20260920-release-audit-code-review/findings.jsonl)의 F-093~F-099는 **당시 P2 7건 / CONFIRMED / 미수정**이었고 후속 수정으로 모두 RECHECKED다. 세션5xx·알림 처리율·순위 읽기·E2E adapter·setup 보존·null PATCH·알림 시계 복구 문제이며 [이전 보고서](../codeReview/2026-09-20-full-code-review.md)의 조건을 유지한다. 9월22일 리뷰의 source/probe 확인 이후 fix/recheck 이력을 별도로 추가했고 원 발견 검증은 보존했다. canonical92·보충7·이번2를 구분하며 리뷰9건 중 현재 미수정은 F-101 하나다.
+- 원래 CONFIRMED55 중 로컬 처리 가능 54개 분야의 구현·회귀·독립 검토가 완료된 기록이 있다. 과거 85/57/55건 snapshot을 현재 집계로 사용하지 않는다.
 
-## 구현 checkpoint
+## 제품 계약과 진입점
 
-- Auth/session: access JWT `sid`, 활성 refresh family, user/epoch fence, logout commit 경계, provider/profile 복구 경쟁을 방어한다. 실제 provider 계정 전환과 운영 guard latency는 미검증이다.
-- Task/offline: authenticated user scope, idempotency, logical clock와 server time, durable outbox, owner 전환 fence, 날짜·interval·completion 및 DTO 입력을 방어한다. 실제 socket-cut·구버전 rollout·실기기 재실행은 남아 있다.
-- Notification/realtime: Android native expiry receiver, ticket/scope cancel, notification client lifecycle, Firebase retry, realtime bus/WebSocket와 owner fence를 구현했다. actual FCM과 다중 인스턴스 운영은 미검증이다.
-- Product UI: calendar, statistics, profile, notification panel, offline 상태, task sheet 접근성과 opener focus 복원을 구현했다. F-047은 API36 TalkBack16 AVD와 독립 검토로 RECHECKED다.
-- Ranking: PostgreSQL window projection, Redis immutable generation과 fencing, cache completeness 검증, bounded fallback을 구현했다. 실제 production cardinality·SLO·managed failover는 미검증이다.
-- Backend production: Docker non-root 실행, migration-before-start, liveness `/health`, dependency readiness `/health/ready`를 구현했다. 실제 platform traffic mapping은 미검증이다.
-- Account deletion/legal: DB cascade transaction, Android session/Keychain/store fence와 2단계 UI를 구현했다. 공개 URL·외부 요청 절차·Play Data safety·signed-device 증거가 없어 F-067/F-068은 FIXING이다.
+- DSM v1.3 Android-only: React 19.2.0 / React Native 0.83.10 Community CLI, NestJS 11 / Prisma 6.19.3 / PostgreSQL 17 / Redis.
+- Android: package/namespace `com.dsm.dailyup`, 표시 이름 DailyUp, minSdk24·compile/targetSdk36. Expo·웹 prototype·learning-site는 과거 자료다.
+- Front `DSM_Front/src/features/auth`는 session/epoch와 provider, `src/lib`는 API/동기화 등 기반 코드, `src/app`은 화면 진입점이다. Backend `DSM_Back/src`는 auth/tasks/scores/rankings/notifications 등 feature module, `prisma`는 DB 계약·migration이다.
+- Auth는 JWT `sid`·활성 refresh family·user/epoch fence·server logout commit을 사용한다. Task/offline은 authenticated owner scope·idempotency·logical clock/server time·durable outbox로 경쟁을 방어한다.
+- 알림은 Android native expiry receiver·ticket/scope cancel·client lifecycle·Firebase retry·realtime/WebSocket owner fence를 사용한다. Ranking은 PostgreSQL window projection·Redis immutable generation/fencing·completeness 검사·bounded fallback을 사용한다.
+- UI는 calendar/statistics/profile/notification/offline/task sheet 접근성을 포함한다. 계정 삭제는 DB cascade transaction과 Android session/Keychain/store fence·2단계 UI다.
+- Docker는 non-root·migration-before-start, liveness `/health`, PostgreSQL `SELECT 1` 기반 readiness `/health/ready`. Redis만의 장애는 readiness 실패 조건이 아니며 DB fallback·캐시 복구를 별도로 검증한다. [render.yaml](../../render.yaml)은 Singapore free Docker 서비스, `DSM_Back` context, production mode, FCM dispatch=false, 생성 JWT secret과 Dashboard-only DB/Redis/Google OAuth 입력을 선언한다.
+- 배포 구성·owner 경계·실행 순서는 [plan](./plan.md). 공개 배포나 외부 gate 완료를 입증하는 새 증거는 이번 작업에 없다.
 
-## 2026-09-17 현재 검증
+## 현재 검증 — FIX-20260922
 
-- Backend: Jest 43 suites/960 tests, production-start 3/3, Nest build, `tsc --noEmit -p tsconfig.spec.json`, non-fixing ESLint가 통과했다. Ranking Redis unavailable 경고는 test fallback 경로에서 예상된 로그다.
-- Front: Jest 51 suites/1,156 tests와 `tsc --noEmit --incremental false`가 통과했다. ESLint는 error 0, warning 44이며 `--max-warnings 0`에서 경고 budget 때문에 exit 1이다.
-- Git: 변경 후보의 일반적인 private-key/token 패턴을 경로 단위로 검사했다. 발견 항목은 test fixture의 placeholder token/secret 문자열이며 실제 credential은 확인되지 않았다.
-- `git diff --check`는 memory 압축 전 통과했다. memory 편집 뒤 UTF-8/LF, link, hash와 최종 staged diff를 다시 확인한다.
+- Backend no-cache **43 suites/970 tests**, Front no-cache **51 suites/1,175 tests**, 제외 없는 **HTTP E2E8 suites/176 tests**, production-start3/3, 양쪽 no-emit typecheck 통과. Backend non-fixing lint 통과, Front error0/기존 warning44.
+- setup 고유 temp fixture에서 기존6파일2회 byte 보존·누락 생성·한국어 heading 통과. PowerShell5용 setup의 UTF-8 BOM 최종 delta를 root와 독립 reviewer가 재실행했다.
+- 각 finding 수정 전 RED→수정 후 GREEN과 구현자 분리 fix-recheck 완료. dispatcher는 tick당100 schedule·20초 신규 claim 시작 예산, ranking은 관련 읽기 RepeatableRead, auth certificate fetch는5초 실제 AbortSignal·retry0이다. 이 수치는 운영 처리량/SLO 증거가 아니다.
+- 실DB/Redis·기기/provider/Google/FCM·symlink 성공·build/Docker·신규 advisory 미실행. 로그·명령·개별 한계는 [수정 기록](../audits/20260922-change-gate-review-fixes/README.md).
+- F-101은 REST legacy 장문 값과 sync 전체replace/title200/description4000/16KiB 계약 충돌이다. 상태 전용 sync 확장의 계약 결정·구버전/outbox 호환 검증이 필요하며 임의 데이터 수정·한도 제거는 하지 않았다.
 
-## 이전 실환경에 가까운 로컬 증거
+## 같은 날 수정 전 검증 — REVIEW-20260922
 
-- API24 debug APK에서 taskAffinity=null, native notification display/expiry/replacement/ticket·scope cancel, process kill 뒤 receiver 재시작을 확인했다.
-- API36 AVD에서 실제 TalkBack service/touch exploration으로 task sheet heading focus, 배경 tree 격리, Android Back 닫힘, opener focus 복원을 확인했다.
-- 격리 PostgreSQL17/Redis와 Linux Docker image에서 9 migrations, uid1000, migration→start, readiness 200→DB stop 503→복구 200, migration 실패 exit 1을 확인했다.
-- 50,000 user/350,000 score 단일 호스트 합성 benchmark와 장애·복구를 실행했다. 이 수치는 production SLO, managed Redis failover, 다중 인스턴스 증거가 아니다.
-- 최신 설치 audit는 Backend high 3, Front moderate 12/high 0이었다. dependency 경고가 남아 있으므로 audit 0 또는 release-ready로 표현하지 않는다.
+- Backend no-cache **43 suites/960 tests**, Front no-cache **51 suites/1,156 tests**, production-start3/3와 양쪽 no-emit typecheck 통과. Backend package TS glob non-fixing ESLint 통과, Front error0/warning44. 과거 learning 도구의 독립 paths/runtime/syntax/render/symbols20통과; 고정 corpus 전체suite 미실행.
+- **기본 HTTP E2E exit1**: AppModule test의 custom WebSocket adapter 누락(F-096). 해당 harness 제외 원인 분리 실행만7 suites/165 tests 통과. 전체 E2E 통과가 아니다.
+- 실제 클래스/pipe·메모리 의존성으로 F-093/095/098/099/100/101 조건을 재현했다. F-094 처리량 probe는9월20일 증거이며 이번에는 소스만 대조했다. setup 파괴적 실행 없음. R5/R6 별도 신규0이나 release-audit는 열려 있다.
+- build·strict warning budget·실DB/Redis·Docker·실기기·provider/FCM·새 dependency audit는 미실행이다. 이번 실행·독립 판정·로그는 [현재 감사 기록](../audits/20260922-release-audit-source-review/README.md), 이전 실행은 [9월20일 감사](../audits/20260920-release-audit-code-review/README.md).
 
-## 배포 결정과 외부 경계
+## 이전 로컬 증거 — 이번 재실행 아님
 
-- 포트폴리오 Backend는 Render Free Web Service, DB는 Neon Free, Redis는 Upstash Free로 결정했다. `render.yaml`의 local Docker preflight는 통과했다.
-- 신규 Play Console 등록은 보류한다. Render/Neon/Upstash 계정 연결, secret 입력, 공개 deploy, legal URL/DNS, Firebase/OAuth/signing, 실제 기기·provider 계정은 아직 제공되지 않았다.
-- 공개 배포·결제·약관·Console·운영 DB·credential·keystore는 owner action이다. 실제 값은 Git·문서·채팅·일반 로그에 남기지 않는다.
-- 열린 finding별 준비·자동 probe·사람 확인·종결 증거는 [외부 환경 작업표](../docs/2026-09-14-external-environment-provisioning.md)와 [잔여 gate 보고서](../audits/20260817-release-audit-full-project/2026-09-14-remaining-gates.md)를 따른다.
+- 2026-09-17 Backend build·secret 검사 기록은 과거 결과다. 테스트 placeholder 외 실제 credential을 찾지 못했다는 당시 결과를 현재 재검사로 표현하지 않는다.
+- 이전 로컬 실행: API24 debug APK의 taskAffinity=null·알림 display/expiry/replacement/ticket·scope cancel·process-kill receiver, API36 AVD/TalkBack16의 sheet heading·배경 격리·Back·opener focus 복원(F-047 RECHECKED).
+- 격리 PostgreSQL17/Redis/Linux Docker: 9 migrations, uid1000, migration→start, readiness 200→DB stop503→복구200, migration 실패 exit1.
+- 단일 호스트 합성 benchmark는 50,000 users/350,000 scores. 과거 dependency audit는 Backend high3, Front moderate12/high0. 현재 취약점 수·production SLO·managed failover·다중 인스턴스 증거가 아니다.
+- actual FCM, signed release/OAuth, OEM/Play, provider 전환, socket-cut/구버전 rollout/실기기 재실행, legacy data·guard/cache 성능·운영 장애 복구는 별도 gate다.
 
-## 로컬 실행
+## 로컬 실행과 근거 탐색
 
-- `. .local/env.ps1` 후 `.local/dev.cmd backend|metro|emulator|android|build|db|stop`, `.local/setup-resume.ps1 -Action db|health`를 사용한다.
-- Metro의 `FallbackWatcher`/`CMakeTmp ENOENT`는 `.local/metro.config.cjs`의 native build blocklist와 cold reset으로 처리한다. Jest Keychain failure가 cache에만 나타나면 fresh project-local cache에서 재검증하고 fail-closed storage를 유지한다.
-- Docker Desktop은 per-user 설치본을 사용한다. 실제 DB 작업은 `docker compose up -d --wait db redis`→Prisma generate/migrate→test/build/lint→loopback health 순서다.
-- `.local` 산출물과 실제 env/key, memory recovery 파일은 일반 검색·stage·handoff 입력에서 제외한다.
-
-## 근거 라우팅
-
-- 현재 목표·다음 순서: [plan.md](./plan.md)
-- 열린 gate와 완료 checkpoint: [checklist.md](./checklist.md)
-- 전체55 구현·검증: [2026-09-11-all55-progress.md](../audits/20260817-release-audit-full-project/2026-09-11-all55-progress.md)
-- release·실기기·운영 보충: [2026-09-14-remaining-gates.md](../audits/20260817-release-audit-full-project/2026-09-14-remaining-gates.md)
-- 조건부 오류 재사용: [error-resolution-playbook.md](./error-resolution-playbook.md)
+- [Windows 가이드](../../docs/setup/windows-clone-and-development.md): `. .local/env.ps1` 후 `.local/dev.cmd backend|metro|emulator|android|build|db|stop`; `.local/setup-resume.ps1 -Action db|health`.
+- per-user Docker Desktop에서 DB/Redis 준비 → Prisma generate/migrate → test/build/lint → loopback health. npm/npx는 Windows에서 `npm.cmd`/`npx.cmd` 사용.
+- Metro `FallbackWatcher/CMakeTmp ENOENT`는 native-build blocklist·cold reset, cache에서만 나타나는 Jest Keychain 실패는 fresh project-local cache로 재검증한다. fail-closed storage를 약화하지 않는다.
+- [오류 해결집](./error-resolution-playbook.md)은 signature·환경·root cause가 일치하는 VERIFIED record만 현재 checkout에서 재검증해 사용한다. MITIGATION_ONLY와 과거 Expo/web 기록을 현재 해결로 오인하지 않는다.
+- 상세 구현: [전체55 진행 기록](../audits/20260817-release-audit-full-project/2026-09-11-all55-progress.md), [확정 finding 계획](../docs/2026-09-11-confirmed-closure-plan.md).
+- 실환경 한계: [잔여 gate 보고서](../audits/20260817-release-audit-full-project/2026-09-14-remaining-gates.md), [Android·운영 모사](../audits/20260817-release-audit-full-project/2026-09-10-android-operations-validation.md).
+- 계약별 근거: [production migration](../audits/20260817-release-audit-full-project/2026-09-11-production-migration-gate.md), [readiness](../audits/20260817-release-audit-full-project/2026-09-11-readiness-contract.md), [Task 입력 검증](../audits/20260817-release-audit-full-project/2026-09-11-task-input-validation.md).

@@ -33,85 +33,94 @@
 
 ## 검색 index
 
-| Resolution ID | 상태 | Component / tags | 대표 증상 |
-|---|---|---|---|
-| `ER-20260715-001` | `VERIFIED` | Auth, Google OAuth, audience | Google ID token이 의도한 client용인지 강제하지 않음 |
-| `ER-20260715-002` | `VERIFIED` | Auth, refresh token, race | 동일 refresh token 동시 요청이 둘 다 성공할 수 있음 |
-| `ER-20260715-003` | `VERIFIED` | Task, Category, authorization | 다른 사용자의 category를 Task에 연결할 수 있음 |
-| `ER-20260715-004` | `VERIFIED` | Prisma, Serializable, `P2034` | Task와 score가 경합 시 stale 상태로 commit될 수 있음 |
-| `ER-20260715-005` | `VERIFIED` | Expo, TypeScript, CSS module, `TS2307` | `*.module.css` import의 type declaration을 찾지 못함 |
-| `ER-20260720-001` | `VERIFIED` | FCM, multicast, partial success | 일부 성공 때문에 transient 실패 device가 영구 누락됨 |
-| `ER-20260720-002` | `VERIFIED` | FCM, retry, `Retry-After` | 서버가 지시한 긴 retry 시간이 임의 cap으로 잘림 |
-| `ER-20260720-003` | `VERIFIED` | Firebase Admin, default app, project identity | 기존 default app을 다른 project 설정으로 재사용함 |
-| `ER-20260720-004` | `VERIFIED` | FCM, lease, at-most-once, `UNKNOWN` | 살아 있는 느린 worker와 stale recovery가 중복 발송함 |
-| `ER-20260720-005` | `VERIFIED` | FCM, privacy, data-only | 잠금 화면 또는 교차 계정 경로로 Task 정보가 노출될 수 있음 |
-| `ER-20260720-006` | `MITIGATION_ONLY` | FCM, cancellation, recall race | send 시작 뒤 Task 취소가 외부 side effect를 회수하지 못함 |
-| `ER-20260720-007` | `VERIFIED` | FCM, attempt accounting | 실제 send 없이 claim만으로 retry 횟수가 소진됨 |
-| `ER-20260720-008` | `VERIFIED` | FCM, batching, persistence | 뒤 batch 실패가 앞 batch의 결과를 유실시킴 |
-| `ER-20260720-009` | `VERIFIED` | FCM token, ownership, TOCTOU | token/FID 소유권 이전과 send가 교차 계정 발송을 만듦 |
-| `ER-20260720-010` | `VERIFIED` | Prisma migration, PostgreSQL, drift | 수동 migration이 실제 DB와 schema parity를 보장하지 못함 |
-| `ER-20260720-011` | `VERIFIED` | PostgreSQL, index, stale lease | 조건에 없는 중간 column 때문에 복합 index를 활용하지 못함 |
-| `ER-20260720-012` | `VERIFIED` | Prisma migration, provider lock | migration history에 provider가 고정되지 않음 |
-| `ER-20260720-013` | `VERIFIED` | NestJS, DI, `JwtService` | 보호된 feature module에서 `JwtService`를 해석하지 못함 |
-| `ER-20260720-014` | `VERIFIED` | Python, Windows, UTF-8, CP949, compression | locale text I/O가 UTF-8 backup과 primary를 손상시킴 |
-| `ER-20260722-001` | `VERIFIED` | Obsidian, IndexedDB, Windows junction, cache | junction 축소 뒤 stale cache에서 Vault 로딩이 멈추고 제거된 파일이 검색됨 |
-| `ER-20260725-001` | `VERIFIED` | Windows PowerShell, npm, ExecutionPolicy | `npm.ps1`이 정책에 차단돼 npm script가 시작되지 않음 |
-| `ER-20260725-002` | `VERIFIED` | Jest, sandbox, Windows Temp, `EPERM` | test는 통과해도 Jest cache write가 차단돼 exit 1이 됨 |
-| `ER-20260725-003` | `VERIFIED` | npm, sandbox, cache, `EPERM` | dependency install이 사용자 npm cache write에서 중단됨 |
-| `ER-20260725-004` | `VERIFIED` | Prisma, worktree, generated client | fresh worktree에서 생성된 Prisma Client를 찾지 못함 |
-| `ER-20260725-005` | `VERIFIED` | Expo CLI, install, config plugin, devDependency | install이 app config를 바꾸고 dev package를 runtime dependency에 둠 |
-| `ER-20260726-001` | `VERIFIED` | Jest, Promise queue, microtask, race test | queue 작업 시작 전 상태를 바꿔 in-flight race 기대가 틀리게 실패함 |
-| `ER-20260726-002` | `VERIFIED` | ApiError, SecureStore, normalization, error boundary | dependency가 ApiError를 reject하면 고정 공개 오류 대신 원 오류가 노출됨 |
-| `ER-20260726-003` | `VERIFIED` | Jest, CommonJS, dynamic import, module reload | runtime `import()` 오류가 대상 모듈 부재 RED를 가림 |
-| `ER-20260726-004` | `VERIFIED` | Jest, TypeScript, generic mock, `TS2322` | 고정 반환 mock이 generic method 계약에 할당되지 않음 |
-| `ER-20260726-005` | `VERIFIED` | Auth client, delayed `401`, single-flight, token generation | 첫 refresh 완료 뒤 늦은 같은-generation `401`이 refresh를 다시 시작함 |
-| `ER-20260726-006` | `VERIFIED` | Promise, synchronous throw, assignment race, cleanup | callback 동기 throw 뒤 rejected promise가 cache에 남음 |
-| `ER-20260726-007` | `VERIFIED` | Auth client, logout, account switch, stale replay | completed refresh cache가 이전 세션 요청을 replay함 |
-| `ER-20260726-008` | `VERIFIED` | Session controller, SecureStore, verified clear, read failure | token read 실패를 곧바로 blocking error로 처리해 정리 가능한 credential이 남음 |
-| `ER-20260726-009` | `VERIFIED` | Session controller, refresh, network, action state | 직접 refresh 실패 뒤 `refreshing` action이 영구 유지됨 |
-| `ER-20260726-010` | `VERIFIED` | Session controller, replay `401`, epoch, account switch | delegated cleanup 뒤 재진입한 cleanup이 새 세션 token을 지울 수 있음 |
-| `ER-20260726-011` | `VERIFIED` | Session controller, onboarding, state precondition | onboarding 외 상태에서도 완료 PATCH를 호출함 |
-| `ER-20260726-012` | `VERIFIED` | Session controller, protocol error, revoke, profile | malformed profile 뒤 발급된 server refresh token을 revoke하지 않음 |
-| `ER-20260811-001` | `VERIFIED` | Session controller, profile, epoch, stale success | error path는 fenced지만 늦은 profile 성공이 logout·계정 전환 상태를 덮음 |
-| `ER-20260811-002` | `VERIFIED` | Session controller, onboarding, single-flight, epoch | 중복 onboarding PATCH 또는 이전 session promise가 새 session 호출을 가로막음 |
-| `ER-20260811-003` | `VERIFIED` | Auth, refresh token family, logout, row lock | refresh successor가 성공한 logout 뒤에도 유효하게 남음 |
-| `ER-20260811-004` | `VERIFIED` | Expo Router, Jest, app route, Web export | `src/app` 아래 test module이 production route로 실행됨 |
-| `ER-20260811-005` | `VERIFIED` | Prisma generate, Windows DLL, `EPERM`, concurrency | build/test와 병렬 generate가 query engine DLL rename에서 실패함 |
-| `ER-20260813-001` | `VERIFIED` | Expo CLI, npm 11, peer dependency, `ERESOLVE`, lockfile | SDK patch 도중 구 Router/LogBox peer가 lock에 남아 두 번째 install이 실패함 |
-| `ER-20260813-002` | `VERIFIED` | Expo Font, Expo Asset, npm hoist, Jest, module resolution | `expo-asset`이 Expo 아래에만 중첩돼 top-level `expo-font` import가 실패함 |
-| `ER-20260813-003` | `VERIFIED` | Nitro Modules, Jest, TurboModule, native boundary | native Google package import가 Jest에서 `NitroModules`를 찾지 못함 |
-| `ER-20260813-004` | `VERIFIED` | Jest, TypeScript, callback arity, `TS2322` | 0-argument mock이 1-argument dependency callback에 할당되지 않음 |
-| `ER-20260813-005` | `VERIFIED` | Jest, mock factory, hoist, early binding | mock 객체가 초기화 전 함수를 값으로 캡처해 호출이 0회인 채 `TypeError`로 흐름 |
-| `ER-20260813-006` | `VERIFIED` | Expo config plugin, Android, autolinking, Google Sign-In | Android-only explicit client-ID 설정인데 plugin이 iOS/Firebase 설정을 요구해 config가 exit 1 |
-| `ER-20260816-001` | `VERIFIED` | ESLint 8, flat config, React Native, package exports | `eslint/config` subpath 또는 nested plugin을 찾지 못해 lint가 시작되지 않음 |
-| `ER-20260816-002` | `VERIFIED` | Jest29, virtual mock, shared resolver identity | 설치된 Keychain의 virtual mock ID가 다른 suite와 충돌 |
-| `ER-20260816-003` | `VERIFIED` | Metro, Windows Temp, cache, `EPERM` | Metro cache deserialize 실패 뒤 bundle이 멈추거나 reset이 권한 오류로 종료됨 |
-| `ER-20260817-001` | `VERIFIED` | Android, Google OAuth, debug signer, Credential Manager, `[16]` | 계정 선택 뒤 `Account reauth failed`로 ID token 전에 Login으로 복귀함 |
-| `ER-20260827-001` | `VERIFIED` | Prisma migration, PostgreSQL enum, disposable seed | migration upgrade seed가 존재하지 않는 enum literal로 중단됨 |
-| `ER-20260909-001` | `VERIFIED` | NestJS, class-validator, PATCH, null, Date | optional 날짜 `null`이 검증을 건너뛰고 epoch로 저장됨 |
-| `ER-20260909-002` | `VERIFIED` | Prisma migration, PostgreSQL CHECK, `NOT VALID`, legacy data | 기존 오염 row 때문에 무결성 CHECK 배포가 중단될 수 있음 |
-| `ER-20260909-003` | `VERIFIED` | RankingSnapshot, idempotency, UTC bucket, partial unique index | 반복 snapshot POST가 호출마다 영구 row를 생성함 |
-| `ER-20260909-004` | `VERIFIED` | Windows setup, Microsoft OpenJDK, SHA-256 | 추정한 checksum URL suffix 때문에 배포본 hash 검증이 실패함 |
-| `ER-20260909-005` | `VERIFIED` | Windows Metro, FallbackWatcher, ENOENT, CMakeTmp | native build의 임시 폴더 삭제로 Metro가 종료됨 |
-| `ER-20260909-006` | `VERIFIED` | Windows MSIX, Docker Desktop, AppData virtualization, AF_UNIX, 1920 | 명령 환경에만 보이는 Docker 소켓과 설치 정보 때문에 엔진이 시작되지 않음 |
-| `ER-20260910-001` | `VERIFIED` | Redis, ranking generation, marker, partial loss | 사용자 hash가 남아도 목록 유실을 [] cache hit로 반환 |
-| `ER-20260910-002` | `VERIFIED` | Jest, Date, PostgreSQL/Redis integration | 고정 fixture와 실행일 불일치로 DAILY rank assertion 실패 |
-| `ER-20260910-003` | `VERIFIED` | PowerShell, adb, component escape | 함수가 adb를 가리거나 device shell이 nested class 이름을 확장함 |
-| `ER-20260911-001` | `VERIFIED` | Prisma, production, npm, migration gate | Migration 실패에도 서버가 먼저 시작될 수 있음 |
-| `ER-20260911-002` | `VERIFIED` | Nest, Prisma, readiness, timeout | DB 연결을 확인하는 별도 readiness와 동시 조회 제한 |
-| `ER-20260911-003` | `VERIFIED` | Nest, DTO, implicit Boolean | JSON 문자열 false가 true로 변환됨 |
-| `ER-20260911-004` | `VERIFIED` | Task, Gregorian, strict date | 불가능한 날짜의 rollover 영속화 진입 |
-| `ER-20260911-005` | `VERIFIED` | Node, npm engines, dependency range | 설치 dependency보다 넓은 프로젝트 Node 범위 |
-| `ER-20260911-006` | `VERIFIED` | Notifee, Java hash, Android tag | 서로 다른 알림 ID가 같은 정수 hash로 덮어쓰기 |
-| `ER-20260911-007` | `VERIFIED` | Android24, notification expiry, native ticket | pre26 timeout 무효 및 늦은 표시·취소 경합 |
-| `ER-20260911-008` | `VERIFIED` | offline, logical clock, owner checkpoint | 시계 보정 뒤에도 미래 floor가 동기화를 차단 |
-| `ER-20260911-009` | `VERIFIED` | WebSocket, pending auth, revocation | 타 계정 폐기 중 인증 대기 연결의 잘못된 로그아웃 |
-| `ER-20260911-010` | `VERIFIED` | monotonic clock, notification, realtime | 벽시계 후퇴가 로컬 deadline을 연장 |
-| `ER-20260914-001` | `VERIFIED` | Air, Windows, Git, PATH, repository discovery | Air에서 Git 실행 파일을 찾지 못하고 저장소 탐지가 실패함 |
-| `ER-20260914-002` | `VERIFIED` | React Native, Android Modal, TalkBack, Fabric, focus | sheet 닫힘 뒤 focus event가 첫 화면 heading 선택에 덮임 |
-| `ER-20260809-001` | `VERIFIED` | historical learning site, source exposure | exact path·reason 집합으로 검토 범위를 제한 |
-| `ER-20260809-002` | `VERIFIED` | historical learning site, fixture scanner | visible fixture token과 파일명 오탐 분리 |
-| `ER-20260809-003` | `VERIFIED` | historical learning site, CSS overflow | 긴 path/hash의 반응형 줄바꿈 |
+상태·증상은 각 record 본문에서 확인한다. index는 ID와 검색 tag만 유지한다. 2026-09-20 정리 당시 77개 record를 보존했다. FIX-20260922에서 같은 null 원인의 ER-20260909-001을 재검증·확장하고 새7개를 추가해 현재84개다. 과거 Expo/web/학습 자료는 현재 Android 제품에 자동 적용하지 않는다.
+
+| Resolution ID | Component / tags |
+|---|---|
+| `ER-20260715-001` | Auth, Google OAuth, audience |
+| `ER-20260715-002` | Auth, refresh token, race |
+| `ER-20260715-003` | Task, Category, authorization |
+| `ER-20260715-004` | Prisma, Serializable, `P2034` |
+| `ER-20260715-005` | Expo, TypeScript, CSS module, `TS2307` |
+| `ER-20260720-001` | FCM, multicast, partial success |
+| `ER-20260720-002` | FCM, retry, `Retry-After` |
+| `ER-20260720-003` | Firebase Admin, default app, project identity |
+| `ER-20260720-004` | FCM, lease, at-most-once, `UNKNOWN` |
+| `ER-20260720-005` | FCM, privacy, data-only |
+| `ER-20260720-006` | FCM, cancellation, recall race |
+| `ER-20260720-007` | FCM, attempt accounting |
+| `ER-20260720-008` | FCM, batching, persistence |
+| `ER-20260720-009` | FCM token, ownership, TOCTOU |
+| `ER-20260720-010` | Prisma migration, PostgreSQL, drift |
+| `ER-20260720-011` | PostgreSQL, index, stale lease |
+| `ER-20260720-012` | Prisma migration, provider lock |
+| `ER-20260720-013` | NestJS, DI, `JwtService` |
+| `ER-20260720-014` | Python, Windows, UTF-8, CP949, compression |
+| `ER-20260722-001` | Obsidian, IndexedDB, Windows junction, cache |
+| `ER-20260725-001` | Windows PowerShell, npm, ExecutionPolicy |
+| `ER-20260725-002` | Jest, sandbox, Windows Temp, `EPERM` |
+| `ER-20260725-003` | npm, sandbox, cache, `EPERM` |
+| `ER-20260725-004` | Prisma, worktree, generated client |
+| `ER-20260725-005` | Expo CLI, install, config plugin, devDependency |
+| `ER-20260726-001` | Jest, Promise queue, microtask, race test |
+| `ER-20260726-002` | ApiError, SecureStore, normalization, error boundary |
+| `ER-20260726-003` | Jest, CommonJS, dynamic import, module reload |
+| `ER-20260726-004` | Jest, TypeScript, generic mock, `TS2322` |
+| `ER-20260726-005` | Auth client, delayed `401`, single-flight, token generation |
+| `ER-20260726-006` | Promise, synchronous throw, assignment race, cleanup |
+| `ER-20260726-007` | Auth client, logout, account switch, stale replay |
+| `ER-20260726-008` | Session controller, SecureStore, verified clear, read failure |
+| `ER-20260726-009` | Session controller, refresh, network, action state |
+| `ER-20260726-010` | Session controller, replay `401`, epoch, account switch |
+| `ER-20260726-011` | Session controller, onboarding, state precondition |
+| `ER-20260726-012` | Session controller, protocol error, revoke, profile |
+| `ER-20260811-001` | Session controller, profile, epoch, stale success |
+| `ER-20260811-002` | Session controller, onboarding, single-flight, epoch |
+| `ER-20260811-003` | Auth, refresh token family, logout, row lock |
+| `ER-20260811-004` | Expo Router, Jest, app route, Web export |
+| `ER-20260811-005` | Prisma generate, Windows DLL, `EPERM`, concurrency |
+| `ER-20260813-001` | Expo CLI, npm 11, peer dependency, `ERESOLVE`, lockfile |
+| `ER-20260813-002` | Expo Font, Expo Asset, npm hoist, Jest, module resolution |
+| `ER-20260813-003` | Nitro Modules, Jest, TurboModule, native boundary |
+| `ER-20260813-004` | Jest, TypeScript, callback arity, `TS2322` |
+| `ER-20260813-005` | Jest, mock factory, hoist, early binding |
+| `ER-20260813-006` | Expo config plugin, Android, autolinking, Google Sign-In |
+| `ER-20260816-001` | ESLint 8, flat config, React Native, package exports |
+| `ER-20260816-002` | Jest29, virtual mock, shared resolver identity |
+| `ER-20260816-003` | Metro, Windows Temp, cache, `EPERM` |
+| `ER-20260817-001` | Android, Google OAuth, debug signer, Credential Manager, `[16]` |
+| `ER-20260827-001` | Prisma migration, PostgreSQL enum, disposable seed |
+| `ER-20260909-001` | NestJS, class-validator, PATCH, null, Date, required scalar |
+| `ER-20260909-002` | Prisma migration, PostgreSQL CHECK, `NOT VALID`, legacy data |
+| `ER-20260909-003` | RankingSnapshot, idempotency, UTC bucket, partial unique index |
+| `ER-20260909-004` | Windows setup, Microsoft OpenJDK, SHA-256 |
+| `ER-20260909-005` | Windows Metro, FallbackWatcher, ENOENT, CMakeTmp |
+| `ER-20260909-006` | Windows MSIX, Docker Desktop, AppData virtualization, AF_UNIX, 1920 |
+| `ER-20260910-001` | Redis, ranking generation, marker, partial loss |
+| `ER-20260910-002` | Jest, Date, PostgreSQL/Redis integration |
+| `ER-20260910-003` | PowerShell, adb, component escape |
+| `ER-20260911-001` | Prisma, production, npm, migration gate |
+| `ER-20260911-002` | Nest, Prisma, readiness, timeout |
+| `ER-20260911-003` | Nest, DTO, implicit Boolean |
+| `ER-20260911-004` | Task, Gregorian, strict date |
+| `ER-20260911-005` | Node, npm engines, dependency range |
+| `ER-20260911-006` | Notifee, Java hash, Android tag |
+| `ER-20260911-007` | Android24, notification expiry, native ticket |
+| `ER-20260911-008` | offline, logical clock, owner checkpoint |
+| `ER-20260911-009` | WebSocket, pending auth, revocation |
+| `ER-20260911-010` | monotonic clock, notification, realtime |
+| `ER-20260914-001` | Air, Windows, Git, PATH, repository discovery |
+| `ER-20260914-002` | React Native, Android Modal, TalkBack, Fabric, focus |
+| `ER-20260809-001` | historical learning site, source exposure |
+| `ER-20260809-002` | historical learning site, fixture scanner |
+| `ER-20260809-003` | historical learning site, CSS overflow |
+| `ER-20260922-001` | Session controller, refresh, 5xx, offline grant |
+| `ER-20260922-002` | Notification dispatcher, schedule, throughput, bounded loop |
+| `ER-20260922-003` | Ranking, RepeatableRead, snapshot, transaction client |
+| `ER-20260922-004` | NestJS, HTTP E2E, RealtimeWsAdapter |
+| `ER-20260922-005` | setup-ai, rerun, preservation, PowerShell5, UTF-8 BOM |
+| `ER-20260922-006` | Notification history, wall clock correction, dedupe, persistence |
+| `ER-20260922-007` | Google OAuth, certificate, Gaxios, AbortSignal, timeout |
 
 ## 해결 record
 
@@ -197,7 +206,7 @@
 - 검증: 프런트 `tsc --noEmit --incremental false`가 통과하고 기존 CSS module import가 유지되는지 확인한다.
 - 재발 방지/금지: 오류를 숨기려고 `skipLibCheck`, 광범위한 `any`, `@ts-ignore`를 추가하지 않는다.
 - 적용 불가: bundler 자체가 CSS module을 지원하지 않는 경우에는 type declaration만으로 runtime 문제가 해결되지 않는다.
-- 근거: [CSS module declaration](../../DSM_Front/src/types/css-modules.d.ts), [구현 기록](./plan.md)
+- 근거: CSS module declaration(과거 경로 `../../DSM_Front/src/types/css-modules.d.ts`; 현재 checkout에 없음), [구현 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-15`
 
 ### ER-20260720-001 — FCM multicast 부분 성공의 per-device 영속화
@@ -446,7 +455,7 @@
 - 재발 방지/금지: locale default I/O, `errors='ignore'`, primary 직접 truncate/write, text readback equality만으로 backup 무결성을 주장하지 않는다.
 - 적용 불가/잔여 위험: 손실된 byte-exact pre-image는 Git/다른 snapshot이 없으면 복구할 수 없다. semantic reconstruction은 반드시 출처와 비정확성을 기록한다.
 - 2026-08-16 재검증: installed `caveman-compress/scripts/compress.py`가 `filepath.read_text(errors="ignore")`, 인코딩 미지정 `backup_path.write_text(original_text)`·`filepath.write_text(...)`를 계속 사용해 적용 조건과 정확히 일치했다. active memory 직접 실행과 외부 Claude 전송을 중단하고 날짜가 붙은 byte-exact local backup + `apply_patch` 압축으로 전환했다.
-- 근거: [Memory routing](./README.md), [압축·복구 기록](./plan.md), [복구 context snapshot](./context.original.md)
+- 근거: [Memory routing](./README.md), [압축·복구 기록](./plan.md), 복구 context snapshot(과거 복구용 근거; 현재 없음, 활성 문서 의존 대상 아님)
 - `lastVerifiedAt`: `2026-08-16`
 
 ### ER-20260722-001 — Obsidian Windows junction 전환 후 stale IndexedDB 복구
@@ -677,8 +686,8 @@
 - 적용 불가/잔여 위험: 프로젝트가 ESM Jest runtime으로 전환되거나 실제 dynamic
   import 자체가 검증 대상이면 해당 runtime의 공식 ESM 설정을 별도로 검토해야 한다.
   `jest.requireActual`은 CommonJS reload 테스트에서만 적용한다.
-- 근거: [Web token-store tests](../../DSM_Front/src/features/auth/token-store.web.test.ts),
-  [Web token-store](../../DSM_Front/src/features/auth/token-store.web.ts),
+- 근거: Web token-store tests(과거 경로 `../../DSM_Front/src/features/auth/token-store.web.test.ts`; 현재 checkout에 없음),
+  Web token-store(과거 경로 `../../DSM_Front/src/features/auth/token-store.web.ts`; 현재 checkout에 없음),
   [Front secure session 실행 기록](./plan.md)
 - `lastVerifiedAt`: `2026-07-26`
 
@@ -1221,7 +1230,7 @@
   URL scheme/Google Services 설정이 필요하다. EAS Android build와 physical-device 동작은 미검증이다.
 - 근거: [Google login design](../../docs/superpowers/specs/2026-08-12-android-google-provider-login-design.md),
   [implementation plan](../../docs/superpowers/plans/2026-08-12-android-google-provider-login.md),
-  [Expo app config](../../DSM_Front/app.json)
+  Expo app config(과거 경로 `../../DSM_Front/app.json`; 현재 checkout에 없음)
 - `lastVerifiedAt`: `2026-08-13`
 
 ### ER-20260816-001 — ESLint 8과 React Native flat-config/plugin 해석 충돌
@@ -1321,18 +1330,18 @@
   [forward migration](../../DSM_Back/prisma/migrations/20260825_integration_backend_deltas/migration.sql)
 - `lastVerifiedAt`: `2026-08-27`
 
-### ER-20260909-001 — class-validator optional 날짜의 explicit null 차단
+### ER-20260909-001 — class-validator optional 필드의 explicit null 차단
 
 - `status`: `VERIFIED`
-- 증상/signature: PATCH의 optional 날짜에 `null`을 보내도 validation error가 0건이고, service의 `new Date(null)`이 Unix epoch를 만들어 유효 timestamp로 저장한다.
-- 적용 조건: NestJS ValidationPipe, class-validator 0.15의 `IsOptional`, 문자열 날짜 DTO와 service-side `Date` 변환을 함께 사용하는 경우.
+- 증상/signature: PATCH 날짜의 null이 validation을 통과해 `new Date(null)`의 Unix epoch로 저장되거나, title/difficulty/status/notificationEnabled/name/color의 null이 required scalar 저장 경계까지 도달한다.
+- 적용 조건: NestJS ValidationPipe/class-validator 0.15의 IsOptional을 사용하지만 persistence에서 null을 허용하지 않는 PATCH 필드. 날짜 변환과 required scalar를 함께 대조한다.
 - root cause: `IsOptional`은 `undefined`와 `null` 모두에서 나머지 validator를 건너뛰지만 service는 둘을 다르게 처리했다.
 - 해결 절차: 생략만 허용할 필드에는 `ValidateIf((_object, value) => value !== undefined)`와 원래 validator를 결합한다. Service도 입력 type과 parse 결과를 write 전에 검사하고, omitted·null·malformed 사례와 side-effect 부재를 회귀 테스트한다.
-- 검증: null 두 필드가 오류 0건인 baseline과 9건 RED를 재현했다. 수정 뒤 Task focused 2 suites/91, Backend full 26 suites/314, e2e 2, build/type/lint/format이 통과했다.
+- 검증: 2026-09-09 날짜 null2필드 baseline/RED9 → Task focused2/91, Backend26/314, e2e2, build/type/lint/format 통과 기록. 2026-09-22 F-098은 Task4/Category2 scalar null의 RED6 → app/input/name HTTP71 및 전체 E2E176 통과, 구현자 분리 reviewer가 RECHECKED. undefined·유효값·nullable description/categoryId와 POST boolean 기본값을 유지했다.
 - 재발 방지/금지: 실제로 null이 “값 지우기”인 nullable 필드까지 일괄 변경하지 않는다. 각 PATCH 필드의 absent/null 계약과 persistence type을 먼저 대조한다.
 - 적용 불가 또는 잔여 위험: public DTO를 거치지 않는 내부 호출은 service 방어 검사가 필요하고, 다른 optional 필드는 별도 계약 검토 대상이다.
-- 근거: [UpdateTaskDto](../../DSM_Back/src/tasks/dto/update-task.dto.ts), [Task service](../../DSM_Back/src/tasks/tasks.service.ts), [release audit](../audits/20260817-release-audit-full-project/README.md)
-- `lastVerifiedAt`: `2026-09-09`
+- 근거: [UpdateTaskDto](../../DSM_Back/src/tasks/dto/update-task.dto.ts), [UpdateCategoryDto](../../DSM_Back/src/categories/dto/update-category.dto.ts), [Task service](../../DSM_Back/src/tasks/tasks.service.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
 
 ### ER-20260909-002 — legacy data가 있는 PostgreSQL CHECK의 staged rollout
 
@@ -1637,6 +1646,83 @@
 - 재발 방지/잔여 위험: `setAccessibilityFocus` numeric tag에 의존하지 않고 host instance API를 사용한다. timer가 실행되기 전 trigger unmount와 새 opening을 항상 검사한다. 1.5초 고정 지연은 iOS에서 느리게 느껴질 수 있고 현재 시각 증거는 Android AVD이며 물리 기기 matrix는 아니다.
 - 근거: [Task sheets](../../DSM_Front/src/components/dailyup/task-sheets.tsx), [focus 회귀](../../DSM_Front/src/components/dailyup/task-sheets.test.tsx), [잔여 gate 보고서](../audits/20260817-release-audit-full-project/2026-09-14-remaining-gates.md)
 - `lastVerifiedAt`: `2026-09-14`
+
+### ER-20260922-001 — refresh5xx 이후 로컬 세션 보존
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 저장된 refresh credential/grant가 있는 session controller에서 bootstrap/direct refresh의 HTTP5xx 뒤 재로그인을 요구한다.
+- root cause: network/timeout만 재시도 오류로 분류해5xx가 terminal cleanup에 들어갔다. ER-20260726-009의 action 종료 누락과 구분한다.
+- 해결 절차: session 재시도 분류를 network/timeout/HTTP500~599로 공유하고 bootstrap/refresh/profile/onboarding에 적용한다. credential/grant·epoch fence와 401/storage fail-closed는 유지한다.
+- 검증: RED11 → focused117 PASS, Front full51/1175 PASS; 독립 F-093 RECHECKED. 400/499/600은5xx로 분류하지 않는 경계와 재시작/재시도를 확인했다.
+- 재발 방지/잔여 위험: 모든 HTTP 오류를 일시 오류로 취급하지 않는다. 실제 provider/기기/Keychain 장애는 미실행.
+- 근거: [controller](../../DSM_Front/src/features/auth/session-controller.ts), [회귀](../../DSM_Front/src/features/auth/session-controller.test.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
+
+### ER-20260922-002 — dispatcher의 여러 schedule 순차 처리
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건:30초 tick에서1개 schedule만 claim하여12사용자의 즉시 성공 알림도 마지막 전송까지330초가 걸린다. 여러 사용자 due schedule이 쌓인 dispatcher에 적용한다.
+- root cause: token batch 크기와 무관하게 schedule claim을 tick당1회로 제한했다.
+- 해결 절차: tick당 최대100 schedule·20초 신규 claim 시작 예산을 적용하고 처리한 schedule을 제외한다. visited는 transaction commit 뒤에 추가하고 취소된 batch도 진행량이 있으면 다음 schedule을 처리한다. lease/send marker·transport 상한2·send deadline30초는 유지한다.
+- 검증: 핵심 RED3 → dispatcher52 PASS; 독립 F-094 RECHECKED.12사용자1tick·취소·100상한·20초예산·late send와 P2034 재시도 중 visited 불변을 확인했다.
+- 재발 방지/잔여 위험:20초를 전체 tick 절대deadline으로 표현하지 않는다. 실DB 경합·실FCM·운영 처리량은 미실행.
+- 근거: [dispatcher](../../DSM_Back/src/notifications/notification-dispatcher.service.ts), [회귀](../../DSM_Back/src/notifications/notification-dispatcher.service.spec.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
+
+### ER-20260922-003 — 개인 순위의 일관된 복수 조회
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 점수 조회와 higher/total 조회 사이에 점수가 바뀌어 개인 순위 또는 저장 snapshot이 서로 다른 DB 시점을 섞는다.
+- root cause: 관련 SELECT가 root Prisma client의 개별 읽기로 실행됐다.
+- 해결 절차: DAILY/WEEKLY/TOTAL의 관련 읽기를 RepeatableRead transaction으로 묶고 helper에 transaction client를 명시적으로 전달한다. UTC 기준시각·cache fallback·기존 snapshot 재사용 계약은 유지한다.
+- 검증:3기간/snapshot RED4 → rankings18 PASS, 독립 F-095 RECHECKED. 첫 읽기 뒤 root score를0→45로 바꾸는 대역으로 isolation/client 우회를 탐지했다.
+- 재발 방지/잔여 위험: transaction 내부에서 root client를 쓰지 않는다. 실제 PostgreSQL 경합·성능·timeout 검증은 미실행.
+- 근거: [service](../../DSM_Back/src/rankings/rankings.service.ts), [회귀](../../DSM_Back/src/rankings/rankings.service.spec.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
+
+### ER-20260922-004 — AppModule E2E의 WebSocket adapter 일치
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 실제 realtime gateway가 포함된 Nest AppModule E2E가 driver 탐색에서 exit1로 끝난다.
+- root cause: 운영 bootstrap의 custom RealtimeWsAdapter 등록이 test harness에 빠져 있었다.
+- 해결 절차: test app init 전에 같은 adapter를 등록한다. 실패 harness를 제외한 실행은 진단으로만 쓰고 표준 E2E 전체를 다시 실행한다.
+- 검증: driver exit1 → app/input/name71 및 제외 없는8 suites176 PASS, 독립 F-096 RECHECKED.
+- 재발 방지/잔여 위험: 운영 bootstrap 필수 adapter 변경을 harness에도 반영한다. 실DB/Redis/운영 WebSocket 연결은 별도 검증이다.
+- 근거: [E2E](../../DSM_Back/test/app.e2e-spec.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
+
+### ER-20260922-005 — setup 재실행의 기존 안내·메모리 보존
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 기존 .ai 환경에서 setup을 재실행하면 현재 prompt가 기본 템플릿으로 바뀐다. Windows PowerShell5에서는 BOM 없는 한글 script도 깨질 수 있다.
+- root cause: 초기화가 기존 파일 존재와 관계없이 쓰기를 수행하고 PowerShell5의 script decoding을 고려하지 않았다.
+- 해결 절차: prompt/memory/entry 각각 literal path의 기존 item을 확인해 보존하고 누락된 파일만 생성한다. prompt에는 NoClobber를 적용한다. PowerShell5용 setup은 UTF-8 BOM/LF를 사용한다.
+- 검증: overwrite RED → 임시 fixture에서6파일을2회 byte exact 보존, 누락4파일 생성·한국어 heading PASS. 최종 BOM delta를 독립 reviewer가 재실행하여 F-097 RECHECKED.
+- 재발 방지/잔여 위험: 사용자 checkout에 파괴적 baseline을 실행하지 않는다. fixture cleanup은 고유 temp 하위 절대 경로를 검증한다. 실제 symlink 성공은 미실행이며 권한 실패를 대역으로 검증했다.
+- 근거: [setup](../../setup-ai.ps1), [fixture](../scripts/test-setup-ai.ps1), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
+
+### ER-20260922-006 — 시계 복구 후 유효 알림 이력 보정
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: 기기 시계가+1시간일 때 저장한 표시 이력이 정상 시각 복원 뒤 미래 값으로 판정되어 신규 알림과 설정 변경까지 막는다.
+- root cause: 이력 parser가 현재시각+5분 상한으로 envelope 전체를 거절했다. ER-20260911-010의 서버 TTL/monotonic 역할 분리와 구분한다.
+- 해결 절차: 구조/owner/절대범위/expiry 관계를 검증한 유효 이력만 현재시각 anchor로 보정하고 직렬 저장 뒤 snapshot을 공개한다. 최초 보정 anchor를 저장 실패·재시도에서도 유지하며 expiry는 연장하지 않는다. hasDisplayed는 복사본을 정규화한다.
+- 검증: RED4 → storage48, 알림 전체245 PASS; 독립 storage/controller/native113와 실제 클래스 probe로 F-099 RECHECKED. 신규1회표시·중복차단·24시간 후 만료·재시작·쓰기 실패 원문 보존을 확인했다.
+- 재발 방지/잔여 위험: 손상된 owner/schema를 복구 대상으로 허용하거나 native TTL을 완화하지 않는다. 실제 Android/OEM·FCM·기기 시각 변경은 미실행.
+- 근거: [storage](../../DSM_Front/src/features/notifications/notification-storage.ts), [회귀](../../DSM_Front/src/features/notifications/notification-storage.test.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
+
+### ER-20260922-007 — Google 인증서 transport 종료 기한
+
+- `status`: `VERIFIED`
+- 증상/signature·적용 조건: verifyIdToken의 cold/expired 인증서 fetch가 응답하지 않으면 인증 요청이 종료되지 않는다.
+- root cause: OAuth2Client transport에 timeout을 지정하지 않아 외부 fetch가 무제한 pending일 수 있었다.
+- 해결 절차: 실제 SDK transporterOptions에 timeout5000ms/retryConfig.retry0을 설정한다. 단순 Promise.race 대신 Gaxios AbortSignal로 하위 fetch를 취소하고 SDK cache·audience·서명 검증을 유지한다.
+- 검증: 실제 SDK RED2 → auth64 PASS; 독립 F-100 RECHECKED. cold 동시3요청5초 abort·401·추가 fetch/DB쓰기0, warm-cache와 expired-cache noRetry를 확인했다.
+- 재발 방지/잔여 위험: SDK 자체를 mock하여 timeout을 검증했다고 주장하지 않는다. 이번 fetch는 메모리 대역이며 실제 Google/socket·로그인 성공 smoke는 미실행. singleflight/운영 처리량 검증은 별개다.
+- 근거: [service](../../DSM_Back/src/auth/auth.service.ts), [회귀](../../DSM_Back/src/auth/auth.service.spec.ts), [수정 검증](../audits/20260922-change-gate-review-fixes/README.md)
+- `lastVerifiedAt`: `2026-09-22`
 
 ## 새 record 작성 형식
 

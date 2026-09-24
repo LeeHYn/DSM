@@ -1,4 +1,4 @@
-# ========================================================
+﻿# ========================================================
 # 파일명: setup-ai.ps1
 # 실행 방법: 터미널에서 .\setup-ai.ps1 입력
 # ========================================================
@@ -82,15 +82,23 @@ $GlobalAIPrompt = @"
 # 2. 폴더 및 빈 파일 자동 생성
 Write-Host "📁 .ai 디렉토리 및 메모리 파일을 생성 중..."
 New-Item -Path .ai\manuals, .ai\memory, .ai\scripts -ItemType Directory -Force | Out-Null
-$GlobalAIPrompt | Out-File -FilePath ".\.ai\system_prompt.md" -Encoding UTF8
-New-Item -Path .ai\memory\plan.md, .ai\memory\context.md, .ai\memory\checklist.md -ItemType File -Force | Out-Null
+if (-not (Get-Item -LiteralPath '.\.ai\system_prompt.md' -Force -ErrorAction SilentlyContinue)) {
+    $GlobalAIPrompt | Out-File -FilePath '.\.ai\system_prompt.md' -Encoding UTF8 -NoClobber
+}
+foreach ($memoryPath in @('.ai\memory\plan.md', '.ai\memory\context.md', '.ai\memory\checklist.md')) {
+    if (-not (Get-Item -LiteralPath $memoryPath -Force -ErrorAction SilentlyContinue)) {
+        New-Item -Path $memoryPath -ItemType File -ErrorAction Stop | Out-Null
+    }
+}
 
 # 3. 심볼릭 링크(바로가기) 생성
 Write-Host "🔗 AI 에이전트 설정 파일(심볼릭 링크) 연결 중..."
 try {
-    New-Item -ItemType SymbolicLink -Path CLAUDE.md -Target .\.ai\system_prompt.md -Force -ErrorAction Stop | Out-Null
-    New-Item -ItemType SymbolicLink -Path GEMINI.md -Target .\.ai\system_prompt.md -Force -ErrorAction Stop | Out-Null
-    New-Item -ItemType SymbolicLink -Path AGENTS.md -Target .\.ai\system_prompt.md -Force -ErrorAction Stop | Out-Null
+    foreach ($linkPath in @('CLAUDE.md', 'GEMINI.md', 'AGENTS.md')) {
+        if (-not (Get-Item -LiteralPath $linkPath -Force -ErrorAction SilentlyContinue)) {
+            New-Item -ItemType SymbolicLink -Path $linkPath -Target .\.ai\system_prompt.md -ErrorAction Stop | Out-Null
+        }
+    }
     
     Write-Host "`n✅ 성공: 모든 AI 환경 세팅이 완료되었습니다! 이제 claude, gemini, junie를 실행하세요." -ForegroundColor Green
 } catch {

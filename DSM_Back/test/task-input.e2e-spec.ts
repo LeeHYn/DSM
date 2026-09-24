@@ -66,7 +66,7 @@ describe('Task mutation input (HTTP)', () => {
       },
     );
 
-    it.each([false, true, null])(
+    it.each([false, true])(
       'preserves notificationEnabled=%j',
       async (notificationEnabled) => {
         await send({ notificationEnabled }).expect(status);
@@ -74,6 +74,17 @@ describe('Task mutation input (HTTP)', () => {
         expect(submittedDto().notificationEnabled).toBe(notificationEnabled);
       },
     );
+
+    it('treats null notificationEnabled according to create/patch semantics', async () => {
+      await send({ notificationEnabled: null }).expect(
+        method === 'POST' ? 201 : 400,
+      );
+      if (method === 'POST') {
+        expect(submittedDto().notificationEnabled).toBeNull();
+      } else {
+        expect(update).not.toHaveBeenCalled();
+      }
+    });
 
     it('preserves omitted optional fields and partial PATCH', async () => {
       await send({ title: 'Changed title' }).expect(status);
@@ -111,5 +122,28 @@ describe('Task mutation input (HTTP)', () => {
         expect(submittedDto()[field]).toBe(date);
       });
     });
+  });
+
+  it.each(['title', 'difficulty', 'status'])(
+    'rejects null required PATCH field %s before persistence',
+    async (field) => {
+      await request(app.getHttpServer())
+        .patch('/tasks/task')
+        .send({ [field]: null })
+        .expect(400);
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves explicit null for nullable PATCH fields', async () => {
+    await request(app.getHttpServer())
+      .patch('/tasks/task')
+      .send({ description: null, categoryId: null })
+      .expect(200);
+    expect(update).toHaveBeenCalledWith(
+      'task-input-user',
+      'task',
+      expect.objectContaining({ description: null, categoryId: null }),
+    );
   });
 });

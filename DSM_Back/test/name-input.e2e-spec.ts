@@ -38,6 +38,33 @@ describe('Names in partial updates (HTTP)', () => {
   beforeEach(() => jest.clearAllMocks());
   afterAll(async () => app.close());
 
+  it.each(['name', 'color'])(
+    'rejects null category %s before persistence',
+    async (field) => {
+      await request(app.getHttpServer())
+        .patch('/categories/category')
+        .send({ [field]: null })
+        .expect(400);
+      expect(categoryUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves valid color and omitted name', async () => {
+    await request(app.getHttpServer())
+      .patch('/categories/category')
+      .send({ color: '#123456' })
+      .expect(200);
+    expect(categoryUpdate).toHaveBeenCalledWith(
+      'name-input-user',
+      'category',
+      expect.objectContaining({ color: '#123456' }),
+    );
+    expect(
+      ((categoryUpdate.mock.calls[0] as unknown[])[2] as { name?: string })
+        .name,
+    ).toBeUndefined();
+  });
+
   describe.each([
     ['/tasks/task', 'title', taskUpdate],
     ['/categories/category', 'name', categoryUpdate],

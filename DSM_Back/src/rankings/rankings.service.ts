@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type RankingSnapshot, RankingPeriod } from '@prisma/client';
+import { Prisma, type RankingSnapshot, RankingPeriod } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RankingCacheService } from './ranking-cache.service';
 import { RankingProjectionService } from './ranking-projection.service';
@@ -111,11 +111,26 @@ export class RankingsService {
     period: RankingPeriod,
     reference: Date,
   ): Promise<MyRanking> {
-    const score = await this.scoreForUser(userId, period, reference);
-    const higherCount = await this.countHigher(period, score, reference);
-    const totalUsers = await this.prisma.user.count();
-    const { rank, percentile } = computeRanking(higherCount, totalUsers);
-    return { period, score, rank, percentile, totalUsers };
+    return this.prisma.$transaction(
+      async (client) => {
+        const score = await this.scoreForUser(
+          userId,
+          period,
+          reference,
+          client,
+        );
+        const higherCount = await this.countHigher(
+          period,
+          score,
+          reference,
+          client,
+        );
+        const totalUsers = await client.user.count();
+        const { rank, percentile } = computeRanking(higherCount, totalUsers);
+        return { period, score, rank, percentile, totalUsers };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   private getLeaderboardFromDatabase(
@@ -134,9 +149,10 @@ export class RankingsService {
     userId: string,
     period: RankingPeriod,
     reference: Date,
+    client: Prisma.TransactionClient,
   ): Promise<number> {
     if (period === RankingPeriod.TOTAL) {
-      const user = await this.prisma.user.findUniqueOrThrow({
+      const user = await client.user.findUniqueOrThrow({
         where: { id: userId },
         select: { totalScore: true },
       });
@@ -144,7 +160,7 @@ export class RankingsService {
     }
 
     if (period === RankingPeriod.DAILY) {
-      const row = await this.prisma.dailyScore.findUnique({
+      const row = await client.dailyScore.findUnique({
         where: {
           userId_scoreDate: { userId, scoreDate: startOfUtcDay(reference) },
         },
@@ -154,7 +170,7 @@ export class RankingsService {
     }
 
     const { gte, lt } = weeklyRange(reference);
-    const aggregate = await this.prisma.dailyScore.aggregate({
+    const aggregate = await client.dailyScore.aggregate({
       where: { userId, scoreDate: { gte, lt } },
       _sum: { cappedScore: true },
     });
@@ -165,13 +181,14 @@ export class RankingsService {
     period: RankingPeriod,
     score: number,
     reference: Date,
+    client: Prisma.TransactionClient,
   ): Promise<number> {
     if (period === RankingPeriod.TOTAL) {
-      return this.prisma.user.count({ where: { totalScore: { gt: score } } });
+      return client.user.count({ where: { totalScore: { gt: score } } });
     }
 
     if (period === RankingPeriod.DAILY) {
-      return this.prisma.dailyScore.count({
+      return client.dailyScore.count({
         where: {
           scoreDate: startOfUtcDay(reference),
           cappedScore: { gt: score },
@@ -180,7 +197,7 @@ export class RankingsService {
     }
 
     const { gte, lt } = weeklyRange(reference);
-    const groups = await this.prisma.dailyScore.groupBy({
+    const groups = await client.dailyScore.groupBy({
       by: ['userId'],
       where: { scoreDate: { gte, lt } },
       _sum: { cappedScore: true },

@@ -18,6 +18,8 @@ import {
 
 const MAX_SERIALIZABLE_TRANSACTION_RETRIES = 2;
 const MAX_SCHEDULES_MATERIALIZED_PER_TICK = 100;
+const MAX_SCHEDULES_DISPATCHED_PER_TICK = 100;
+const DISPATCH_START_BUDGET_MS = 20_000;
 const MAX_DELIVERIES_PER_BATCH = 500;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const DELIVERY_LEASE_MS = 5 * 60 * 1000;
@@ -125,17 +127,34 @@ export class NotificationDispatcherService {
     await this.reconcileTerminalSchedules();
     await this.materializeDueSchedules(now);
 
-    // A timeout cannot cancel the SDK transport. Keep one spare slot so a
-    // single hung transport does not block other schedules, but bound buildup.
-    if (this.outstandingSends >= MAX_OUTSTANDING_SENDS) {
-      return;
+    const startedAt = performance.now();
+    const visitedSchedules = new Set<string>();
+    for (let batch = 0; batch < MAX_SCHEDULES_DISPATCHED_PER_TICK; batch++) {
+      // Bound new work without abandoning an owned lease or an in-flight send.
+      if (
+        performance.now() - startedAt >= DISPATCH_START_BUDGET_MS ||
+        this.outstandingSends >= MAX_OUTSTANDING_SENDS
+      ) {
+        return;
+      }
+      const previousCount = visitedSchedules.size;
+      const claimed = await this.claimDueDeliveryBatch(
+        new Date(),
+        visitedSchedules,
+      );
+      if (claimed.length === 0) {
+        // A cancelled schedule still counts as progress; continue with others.
+        if (visitedSchedules.size === previousCount) return;
+        continue;
+      }
+      for (const delivery of claimed) visitedSchedules.add(delivery.scheduleId);
+      await this.dispatchClaimedBatch(claimed);
     }
+  }
 
-    const claimed = await this.claimDueDeliveryBatch(now);
-    if (claimed.length === 0) {
-      return;
-    }
-
+  private async dispatchClaimedBatch(
+    claimed: ClaimedDelivery[],
+  ): Promise<void> {
     const active = await this.revalidateClaimedBatch(claimed, new Date());
     if (active.length === 0) {
       await this.aggregateSchedules([
@@ -451,7 +470,10 @@ export class NotificationDispatcherService {
     }
   }
 
-  private async claimDueDeliveryBatch(now: Date): Promise<ClaimedDelivery[]> {
+  private async claimDueDeliveryBatch(
+    now: Date,
+    visitedSchedules: Set<string> = new Set(),
+  ): Promise<ClaimedDelivery[]> {
     const claimId = randomUUID();
 
     const result = await this.runSerializableTransaction(async (client) => {
@@ -460,13 +482,20 @@ export class NotificationDispatcherService {
           status: NOTIFICATION_DELIVERY_STATUS.PENDING,
           attemptCount: { lt: MAX_DELIVERY_ATTEMPTS },
           sendStartedAt: null,
+          ...(visitedSchedules.size > 0 && {
+            scheduleId: { notIn: [...visitedSchedules] },
+          }),
           OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
         },
         orderBy: [{ nextAttemptAt: 'asc' }, { createdAt: 'asc' }],
         select: { scheduleId: true },
       });
-      if (!first) {
-        return { claimedDeliveries: [], scheduleIds: [] };
+      if (!first || visitedSchedules.has(first.scheduleId)) {
+        return {
+          claimedDeliveries: [],
+          scheduleIds: [],
+          visitedScheduleId: null,
+        };
       }
 
       const candidates = (
@@ -539,11 +568,16 @@ export class NotificationDispatcherService {
 
       return {
         claimedDeliveries,
+        visitedScheduleId: first.scheduleId,
         scheduleIds: [
           ...new Set(candidates.map((candidate) => candidate.scheduleId)),
         ],
       };
     });
+    // Mark progress only after commit so transaction retries see the same work.
+    if (result.visitedScheduleId !== null) {
+      visitedSchedules.add(result.visitedScheduleId);
+    }
     // Retain schedules touched by cancellation even when no delivery was claimed.
     if (result.scheduleIds.length > 0) {
       await this.aggregateSchedules(result.scheduleIds);

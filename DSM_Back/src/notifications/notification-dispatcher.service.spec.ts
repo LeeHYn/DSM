@@ -74,7 +74,10 @@ interface TestClaimedDelivery {
 interface DispatcherInternals {
   recoverStaleDeliveryLeases(now: Date): Promise<void>;
   materializeDueSchedules(now: Date): Promise<void>;
-  claimDueDeliveryBatch(now: Date): Promise<TestClaimedDelivery[]>;
+  claimDueDeliveryBatch(
+    now: Date,
+    visitedSchedules?: Set<string>,
+  ): Promise<TestClaimedDelivery[]>;
   revalidateClaimedBatch(
     claimed: TestClaimedDelivery[],
     now: Date,
@@ -200,7 +203,15 @@ const isolateDispatchDbSteps = (
 ) => {
   jest.spyOn(internals, 'recoverStaleDeliveryLeases').mockResolvedValue();
   jest.spyOn(internals, 'materializeDueSchedules').mockResolvedValue();
-  jest.spyOn(internals, 'claimDueDeliveryBatch').mockResolvedValue(claimed);
+  jest
+    .spyOn(internals, 'claimDueDeliveryBatch')
+    .mockImplementation((_now, visitedSchedules) =>
+      Promise.resolve(
+        claimed.filter(
+          (delivery) => !visitedSchedules?.has(delivery.scheduleId),
+        ),
+      ),
+    );
   jest.spyOn(internals, 'revalidateClaimedBatch').mockResolvedValue(claimed);
   const aggregateSchedules = jest
     .spyOn(internals, 'aggregateSchedules')
@@ -237,6 +248,124 @@ describe('NotificationDispatcherService', () => {
     expect(db.notificationSchedule.findMany).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(firebase.sendEachForMulticast).not.toHaveBeenCalled();
+  });
+
+  function queuedSchedules(count: number) {
+    const harness = makeHarness();
+    const { db, firebase, internals } = harness;
+    jest.spyOn(internals, 'recoverStaleDeliveryLeases').mockResolvedValue();
+    jest.spyOn(internals, 'materializeDueSchedules').mockResolvedValue();
+    jest.spyOn(internals, 'aggregateSchedules').mockResolvedValue();
+    const deliveries = Array.from({ length: count }, (_, index) => {
+      const delivery = makeClaimedDelivery({
+        id: `delivery-${index}`,
+        scheduleId: `schedule-${index}`,
+        fcmTokenId: `token-${index}`,
+      });
+      delivery.schedule.id = delivery.scheduleId;
+      delivery.schedule.userId = `user-${index}`;
+      delivery.schedule.task.userId = `user-${index}`;
+      delivery.fcmToken.userId = `user-${index}`;
+      delivery.fcmToken.token = `synthetic-token-${index}`;
+      delivery.schedule.scheduledAt = now;
+      delivery.schedule.task.startAt = now;
+      return delivery;
+    });
+    const pending = [...deliveries];
+    db.notificationDelivery.findFirst.mockImplementation(() => {
+      const next = pending.shift();
+      return Promise.resolve(next ? { scheduleId: next.scheduleId } : null);
+    });
+    db.notificationDelivery.findMany.mockImplementation((input) => {
+      const where = input.where as {
+        scheduleId?: string;
+        id?: { in: string[] };
+      };
+      return Promise.resolve(
+        deliveries.filter((delivery) =>
+          where.scheduleId !== undefined
+            ? delivery.scheduleId === where.scheduleId
+            : where.id?.in.includes(delivery.id),
+        ),
+      );
+    });
+    db.notificationDelivery.updateMany.mockResolvedValue({ count: 1 });
+    firebase.sendEachForMulticast.mockResolvedValue({
+      successCount: 1,
+      failureCount: 0,
+      responses: [{ success: true }],
+    });
+    return { ...harness, deliveries, pending };
+  }
+
+  it('sends twelve distinct due users in one tick within the reminder window', async () => {
+    jest.useFakeTimers({ now });
+    const { service, firebase, pending } = queuedSchedules(12);
+    await service.dispatchDueNotifications();
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(12);
+    expect(
+      new Set(
+        firebase.sendEachForMulticast.mock.calls.flatMap(
+          ([message]) => message.tokens,
+        ),
+      ).size,
+    ).toBe(12);
+    expect(pending).toHaveLength(0);
+    expect(Date.now() - now.getTime()).toBeLessThan(300_000);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('continues past a cancelled schedule without reclaiming it in the same tick', async () => {
+    jest.useFakeTimers({ now });
+    const { service, firebase, db, deliveries } = queuedSchedules(2);
+    deliveries[0].fcmToken.revokedAt = now;
+
+    await service.dispatchDueNotifications();
+
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(1);
+    expect(firebase.sendEachForMulticast.mock.calls[0][0].tokens).toEqual([
+      'synthetic-token-1',
+    ]);
+    expect(db.notificationDelivery.findFirst.mock.calls[1][0].where).toEqual(
+      expect.objectContaining({ scheduleId: { notIn: ['schedule-0'] } }),
+    );
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('bounds a busy tick and leaves remaining schedules for the next tick', async () => {
+    jest.useFakeTimers({ now });
+    const { service, firebase, pending } = queuedSchedules(105);
+    await service.dispatchDueNotifications();
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(100);
+    expect(pending).toHaveLength(5);
+    await service.dispatchDueNotifications();
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(105);
+    expect(pending).toHaveLength(0);
+  });
+
+  it('stops starting batches after the time budget and releases all send timers', async () => {
+    jest.useFakeTimers({ now });
+    const { service, firebase, pending } = queuedSchedules(12);
+    firebase.sendEachForMulticast.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                successCount: 1,
+                failureCount: 0,
+                responses: [{ success: true }],
+              }),
+            11_000,
+          );
+        }),
+    );
+    const dispatch = service.dispatchDueNotifications();
+    await jest.advanceTimersByTimeAsync(22_000);
+    await dispatch;
+    expect(firebase.sendEachForMulticast).toHaveBeenCalledTimes(2);
+    expect(pending).toHaveLength(10);
+    expect(jest.getTimerCount()).toBe(0);
   });
 
   it('terminalizes stale post-send leases as UNKNOWN and only retries pre-send leases', async () => {
@@ -1343,12 +1472,15 @@ describe('NotificationDispatcherService', () => {
     await jest.advanceTimersByTimeAsync(30_000);
     expect(firstFinished).toBe(true);
     await first;
-    jest.spyOn(internals, 'claimDueDeliveryBatch').mockResolvedValue([
-      makeClaimedDelivery({
-        id: 'next-delivery',
-        scheduleId: 'next-schedule',
-      }),
-    ]);
+    jest
+      .spyOn(internals, 'claimDueDeliveryBatch')
+      .mockResolvedValueOnce([
+        makeClaimedDelivery({
+          id: 'next-delivery',
+          scheduleId: 'next-schedule',
+        }),
+      ])
+      .mockResolvedValue([]);
     jest.spyOn(internals, 'revalidateClaimedBatch').mockResolvedValue([
       makeClaimedDelivery({
         id: 'next-delivery',

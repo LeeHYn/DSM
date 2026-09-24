@@ -6,6 +6,7 @@ import { configureApp } from './../src/app.bootstrap';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 import { RankingCacheService } from './../src/rankings/ranking-cache.service';
+import { RealtimeWsAdapter } from './../src/realtime/realtime-ws.adapter';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -23,6 +24,7 @@ describe('AppController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.useWebSocketAdapter(new RealtimeWsAdapter(app));
     configureApp(app);
     await app.init();
   });

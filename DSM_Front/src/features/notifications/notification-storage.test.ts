@@ -40,6 +40,64 @@ test.each([-3_600_000, 3_600_000])('stores a server-validated remaining lifetime
   expect(restarted.hasDisplayed('r')).toBe(true);
 });
 
+test('preserves dedupe, new reminders and preferences after correcting a fast clock', async () => {
+  const f = fixture();
+  f.advance(3_600_000);
+  await f.storage.markDisplayed('previous', expiry, 120_000);
+  const before = f.storage.getSnapshot();
+  f.advance(-3_600_000);
+
+  expect(f.storage.hasDisplayed('previous')).toBe(true);
+  expect(f.storage.hasDisplayed('new')).toBe(false);
+  expect(f.storage.getSnapshot()).toEqual(before);
+  await f.storage.setPreferences({ sound: false });
+  await f.storage.markDisplayed('new', expiry, 300_000);
+  await f.storage.markDisplayed('previous', expiry, 300_000);
+  const restarted = f.restart();
+  const restored = await restarted.load();
+
+  expect(restored.preferences.sound).toBe(false);
+  expect(restored.displayed).toEqual([
+    { id: 'previous', displayedAt: initialNow, expiresAt: new Date(initialNow + 120_000).toISOString() },
+    { id: 'new', displayedAt: initialNow, expiresAt: expiry },
+  ]);
+  expect(restarted.hasDisplayed('previous')).toBe(true);
+  expect(restarted.hasDisplayed('new')).toBe(true);
+});
+
+test('persists a cold-load clock correction once without renewing retention on restart', async () => {
+  const f = fixture();
+  f.advance(3_600_000);
+  await f.storage.markDisplayed('previous', expiry, 120_000);
+  f.advance(-3_600_000);
+  await f.restart().load();
+  expect(f.backing.setItem).toHaveBeenCalledTimes(2);
+  f.advance(3_600_000);
+  const restarted = f.restart();
+  const restored = await restarted.load();
+  expect(restored.displayed[0].displayedAt).toBe(initialNow);
+  expect(f.backing.setItem).toHaveBeenCalledTimes(2);
+  f.advance(day - 3_600_000);
+  expect(restarted.hasDisplayed('previous')).toBe(false);
+});
+
+test('keeps a failed correction write unpublished and retries the same retention anchor', async () => {
+  const f = fixture();
+  f.advance(3_600_000);
+  await f.storage.markDisplayed('previous', expiry, 120_000);
+  const raw = f.values.get('dsm.notifications.v1:owner');
+  f.advance(-3_600_000);
+  const restarted = f.restart();
+  f.backing.setItem.mockRejectedValueOnce(new Error('sensitive-fixture'));
+
+  await expect(restarted.load()).rejects.toMatchObject({ kind: 'write' });
+  expect(restarted.getSnapshot()).toBeNull();
+  expect(f.values.get('dsm.notifications.v1:owner')).toBe(raw);
+  f.advance(60_000);
+  expect((await restarted.load()).displayed[0].displayedAt).toBe(initialNow);
+  expect(restarted.hasDisplayed('previous')).toBe(true);
+});
+
 test('preferences and displayed history persist across restart and expiry retains dedupe', async () => {
   const f = fixture();
   await f.storage.setPreferences({ sound: false, foreground: false });
@@ -172,7 +230,7 @@ test.each(['not-json', JSON.stringify({ version: 2 }), 'x'.repeat(65_537)])('pre
 test.each([
   (doc: NotificationDocument) => { doc.userId = 'other'; },
   (doc: NotificationDocument) => { (doc.preferences as unknown as Record<string, unknown>).token = 'private-fixture'; },
-  (doc: NotificationDocument) => { doc.displayed[0].displayedAt = initialNow + 300_001; },
+  (doc: NotificationDocument) => { doc.displayed[0].displayedAt = 253402300800000; },
   (doc: NotificationDocument) => { doc.displayed[0].displayedAt = -1; },
   (doc: NotificationDocument) => { doc.displayed.push(doc.displayed[0]); },
   (doc: NotificationDocument) => { doc.displayed[0].expiresAt = '2099-01-01T00:00:00.000Z'; },
@@ -201,16 +259,17 @@ test('read failures are safe and can recover on the next load', async () => {
   await expect(f.storage.load()).resolves.toMatchObject({ userId: 'owner' });
 });
 
-test('bounds clock rollback on a live instance without persisting an unreadable envelope', async () => {
+test('bounds live dedupe after clock correction even when no later write occurs', async () => {
   const f = fixture();
-  await f.storage.markDisplayed('id', expiry);
+  f.advance(3_600_000);
+  await f.storage.markDisplayed('id', expiry, 120_000);
   const before = f.storage.getSnapshot();
-  f.advance(-300_001);
-  expect(() => f.storage.hasDisplayed('id')).toThrow();
-  await expect(f.storage.setPreferences({ sound: false })).rejects.toMatchObject({ kind: 'invalid' });
-  expect(f.storage.getSnapshot()).toEqual(before);
-  f.advance(300_001);
+  f.advance(-3_600_000);
   expect(f.storage.hasDisplayed('id')).toBe(true);
+  expect(f.storage.getSnapshot()).toEqual(before);
+  f.advance(day);
+  expect(f.storage.hasDisplayed('id')).toBe(false);
+  expect(f.backing.setItem).toHaveBeenCalledTimes(1);
 });
 
 test('accepts bounded clock skew without discarding recent dedupe history', async () => {
