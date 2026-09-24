@@ -1,12 +1,14 @@
 # DSM 실행 계획 — 2026-09-24
 
-## 진행: PUB-20260924 — 현재 작업 Git 게시
+## 최근 완료: PUB-20260924 — 현재 작업 Git 게시
 
 - 승인: 사용자 `현재까지 작업 내역 깃에 푸쉬 진행해`. 기존 리뷰·수정·memory 변경30파일의 명시적 stage/commit 및 origin/main 일반 push를 승인 범위로 사용한다.
 - 시작: main/HEAD/원격 main 모두 `efd77053c71a5e7bf4ec7a4e8e3c034594ad8ae2`, fetch/ls-remote 대조와 ahead/behind0/0 확인. Git index는 비어 있고30파일 변경이 있다.
 - 실행 프로파일: 메인은 게시·memory를 담당하고 기존 reviewer1명이 변경 범위·게시 제외 파일·과거 검증 경계를 읽기 전용으로 교차 확인한다. 모델/effort 상속·전환 없음, 정확 effort 미확인. 제품 변경/새 release-audit 없이 이전 FIX-20260922 증거를 재사용한다.
 - writable: memory의 plan/context/checklist/README 네 파일만 게시 상태로 갱신한다. stage allowlist는 시작 시 확인한 FIX-20260922 제품17파일과 검증 runner1파일, memory5파일, 리뷰보고서2파일, 보충감사4파일·수정감사1파일의 정확30경로다. ignored local/env/credential/cache/recovery는 포함하지 않는다.
 - 절차/완료 기준: 현재 diff·이전 검증·기밀/문서 무결성 확인 → exact paths stage와 staged diff 검증 → 작업 commit/push → 확인된 게시 사실을 memory checkpoint로 commit/push → local HEAD와 원격 refs/heads/main SHA 일치 및 clean 확인. force push·제품 추가 수정·운영 배포는 수행하지 않는다. F-101/외부8건은 그대로 유지한다.
+- 완료 증거: 작업30파일을 `8e03d93b1cc4022506ceaaf7d9ac8825661c5931` (`fix: resolve eight DSM review findings and update audit records`)로 commit/push했다. 직접 ls-remote SHA 일치·ahead/behind0/0·clean을 확인했다. reviewer의 추가1,557줄 점검과 메인의 staged/worktree byte 일치30건·문서12/링크294/hash4·원장 검증이 통과했다. 제품 테스트는9월22일 통과 기록이며 새로 실행하지 않았다.
+- 이 게시 checkpoint는 확인된 작업 커밋을 기록하는 후속 문서 커밋이다. 자기 SHA를 본문에 넣지 않으며 최종 게시 SHA/clean은 Git과 세션 최종 응답으로 확인한다.
 
 ## 최근 완료: FIX-20260922 — 로컬 리뷰 결함 8건
 

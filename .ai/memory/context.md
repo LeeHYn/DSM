@@ -2,7 +2,8 @@
 
 ## 현재 대조와 증거 경계
 
-- PUB-20260924: 사용자 지시로 리뷰·수정·memory 변경30파일을 origin/main에 게시 중이다. 시작 fetch/ls-remote에서 로컬·원격 `efd77053c71a5e7bf4ec7a4e8e3c034594ad8ae2` 일치와 ahead/behind0/0을 확인했다. 현재는 commit/push 전이며 완료 시 직접 원격 SHA를 다시 확인한다. 아래 FIX 테스트는9월22일 증거이고 이번 게시에서 재실행한 것으로 표현하지 않는다.
+- PUB-20260924: 리뷰·수정·memory 변경30파일을 `8e03d93b1cc4022506ceaaf7d9ac8825661c5931`로 commit하고 origin/main에 push했다. 시작 SHA는 `efd77053c71a5e7bf4ec7a4e8e3c034594ad8ae2`; push 후 직접 ls-remote가 작업 commit과 일치하고 ahead/behind0/0·clean을 확인했다. 현재 문서는 그 사실을 기록하는 후속 checkpoint다. 최종 HEAD는 Git으로 확인한다.
+- 게시 검사: 독립 reviewer가 staged30경로/추가1,557줄과 보고서·기존 로그를 확인했고 기밀/로컬 산출물 포함 또는 범위 불일치를 찾지 못했다. 문서12개 UTF-8/LF·링크294·memory hash4·원장92+7+2·staged/worktree byte 일치30건을 현재 확인했다. 아래 FIX 테스트는9월22일 증거이며 이번 게시에서 재실행하지 않았다. F-101/외부8건은 유지한다.
 
 - 최신 FIX-20260922: 사용자 로컬 수정 지시로 F-093~F-100 **8건 수정·독립 RECHECKED**, F-101 **CONFIRMED 유지**. [수정 기록](../audits/20260922-change-gate-review-fixes/README.md). HEAD/기존 리뷰 보고서/canonical92를 보존했고 commit·외부 배포는 수행하지 않았다.
 

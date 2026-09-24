@@ -3,9 +3,9 @@
 ## PUB-20260924: 현재 작업 Git 게시
 
 - [x] 사용자 push 승인·main/원격 일치·기존30파일 변경과 빈 index 확인.
-- [/] 게시 범위·과거 테스트 증거·문서/원장 무결성·staged diff 확인.
-- [ ] 작업 커밋과 origin/main 일반 push.
-- [ ] 게시 결과 memory checkpoint·최종 원격 SHA/clean 확인.
+- [x] 게시 범위·과거 테스트 증거·문서/원장 무결성·staged diff 확인. 독립 reviewer 발견 사항 없음.
+- [x] 작업 커밋 `8e03d93`과 origin/main 일반 push; 직접 원격 SHA 일치·ahead/behind0/0·clean 확인.
+- [x] 확인된 작업 게시 결과를 memory checkpoint에 반영. 후속 checkpoint의 최종 SHA는 Git/세션 완료 응답에서 확인한다.
 
 ## FIX-20260922: 승인된 로컬 수정
 
